@@ -53,23 +53,29 @@ class _AgentOrderManagementScreenState
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            RadioListTile(
-              title: const Text('تم الاستلام'),
-              value: 'received',
+            RadioGroup<String>(
               groupValue: _currentStatus,
-              onChanged: (v) => setState(() => _currentStatus = v.toString()),
-            ),
-            RadioListTile(
-              title: const Text('قيد الغسيل / المعالجة'),
-              value: 'washing',
-              groupValue: _currentStatus,
-              onChanged: (v) => setState(() => _currentStatus = v.toString()),
-            ),
-            RadioListTile(
-              title: const Text('جاهز للتسليم'),
-              value: 'ready',
-              groupValue: _currentStatus,
-              onChanged: (v) => setState(() => _currentStatus = v.toString()),
+              onChanged: (String? v) {
+                if (v != null) {
+                  setState(() => _currentStatus = v);
+                }
+              },
+              child: Column(
+                children: [
+                  RadioListTile<String>(
+                    title: const Text('تم الاستلام'),
+                    value: 'received',
+                  ),
+                  RadioListTile<String>(
+                    title: const Text('قيد الغسيل / المعالجة'),
+                    value: 'washing',
+                  ),
+                  RadioListTile<String>(
+                    title: const Text('جاهز للتسليم'),
+                    value: 'ready',
+                  ),
+                ],
+              ),
             ),
             const Spacer(),
             ElevatedButton(

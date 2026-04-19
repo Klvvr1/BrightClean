@@ -55,7 +55,7 @@ class LoginScreen extends StatelessWidget {
                 const SizedBox(height: 24),
                 ElevatedButton(
                   onPressed: () {
-                    // TODO: Implement actual login logic based on role
+                    // Note: Implement actual login logic based on role when backend is ready
                     // For now, let's route to Customer Home as default
                     context.go('/customer_home');
                   },

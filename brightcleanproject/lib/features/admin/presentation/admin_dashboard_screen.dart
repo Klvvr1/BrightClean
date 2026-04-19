@@ -96,7 +96,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   title: const Text('إيقاف النظام (وضع الصيانة)'),
                   value: _systemSuspended,
                   onChanged: (v) => setState(() => _systemSuspended = v),
-                  activeColor: AppColors.error,
+                  activeThumbColor: AppColors.error,
                 ),
                 if (_systemSuspended) ...[
                   const Padding(
