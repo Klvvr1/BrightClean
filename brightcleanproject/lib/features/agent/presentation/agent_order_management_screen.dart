@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../../core/theme/app_colors.dart';
+//import '../../../../core/theme/app_colors.dart';
 
 class AgentOrderManagementScreen extends StatefulWidget {
   final String orderId;
@@ -7,10 +7,12 @@ class AgentOrderManagementScreen extends StatefulWidget {
   const AgentOrderManagementScreen({super.key, required this.orderId});
 
   @override
-  State<AgentOrderManagementScreen> createState() => _AgentOrderManagementScreenState();
+  State<AgentOrderManagementScreen> createState() =>
+      _AgentOrderManagementScreenState();
 }
 
-class _AgentOrderManagementScreenState extends State<AgentOrderManagementScreen> {
+class _AgentOrderManagementScreenState
+    extends State<AgentOrderManagementScreen> {
   String _currentStatus = 'received'; // received, washing, ready
 
   @override
@@ -22,7 +24,10 @@ class _AgentOrderManagementScreenState extends State<AgentOrderManagementScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text('تفاصيل الطلب:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const Text(
+              'تفاصيل الطلب:',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 8),
             Card(
               child: Padding(
@@ -34,13 +39,19 @@ class _AgentOrderManagementScreenState extends State<AgentOrderManagementScreen>
                     Text('الخدمة: غسيل ملابس (كي فقط)'),
                     Text('الكمية: 10 قطع'),
                     Divider(),
-                    Text('الإجمالي: 100 درهم', style: TextStyle(fontWeight: FontWeight.bold)),
+                    Text(
+                      'الإجمالي: 100 درهم',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   ],
                 ),
               ),
             ),
             const SizedBox(height: 32),
-            const Text('تحديث حالة الطلب:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const Text(
+              'تحديث حالة الطلب:',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 16),
             RadioListTile(
               title: const Text('تم الاستلام'),
