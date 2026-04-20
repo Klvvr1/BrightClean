@@ -52,27 +52,25 @@ class CheckoutScreen extends StatelessWidget {
             // Payment Method
             const Text('طريقة الدفع', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            Column(
-              children: [
-                RadioListTile(
-                  title: const Text('دفع عند الاستلام'),
-                  value: 'cash',
-                  groupValue: 'cash',
-                  onChanged: (v) {},
-                ),
-                RadioListTile(
-                  title: const Text('بطاقة ائتمان'),
-                  value: 'card',
-                  groupValue: 'cash', // Fake logic for UI
-                  onChanged: (v) {},
-                ),
-                RadioListTile(
-                  title: const Text('المحفظة (150 درهم متوفر)'),
-                  value: 'wallet',
-                  groupValue: 'cash', // Fake logic for UI
-                  onChanged: (v) {},
-                ),
-              ],
+            RadioGroup<String>(
+              groupValue: 'cash', // Fake logic for UI
+              onChanged: (String? v) {},
+              child: Column(
+                children: [
+                  RadioListTile<String>(
+                    title: const Text('دفع عند الاستلام'),
+                    value: 'cash',
+                  ),
+                  RadioListTile<String>(
+                    title: const Text('بطاقة ائتمان'),
+                    value: 'card',
+                  ),
+                  RadioListTile<String>(
+                    title: const Text('المحفظة (150 درهم متوفر)'),
+                    value: 'wallet',
+                  ),
+                ],
+              ),
             ),
             const Divider(),
             const Row(

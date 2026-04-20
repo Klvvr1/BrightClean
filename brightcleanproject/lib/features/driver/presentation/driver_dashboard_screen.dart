@@ -65,7 +65,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
               Text(_isOnline ? 'متاح' : 'غير متاح', style: const TextStyle(fontWeight: FontWeight.bold)),
               Switch(
                 value: _isOnline,
-                activeColor: AppColors.success,
+                activeThumbColor: AppColors.success,
                 onChanged: (v) => setState(() => _isOnline = v),
               ),
             ],
