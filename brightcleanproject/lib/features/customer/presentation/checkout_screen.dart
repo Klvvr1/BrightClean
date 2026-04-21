@@ -1,11 +1,79 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
+import 'package:intl/intl.dart';
 
-class CheckoutScreen extends StatelessWidget {
+class CheckoutScreen extends StatefulWidget {
   const CheckoutScreen({super.key});
 
   @override
+  State<CheckoutScreen> createState() => _CheckoutScreenState();
+}
+
+class _CheckoutScreenState extends State<CheckoutScreen> {
+  DateTime? _selectedDate;
+  String? _selectedTimeSlot;
+  String _selectedPaymentMethod = 'cash';
+  bool _isLocationVerified = false;
+
+  void _pickDate() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate ?? DateTime.now(),
+      firstDate: DateTime.now(), // Prevent selecting past dates
+      lastDate: DateTime.now().add(const Duration(days: 30)),
+    );
+    if (picked != null && picked != _selectedDate) {
+      setState(() {
+        _selectedDate = picked;
+      });
+    }
+  }
+
+  Widget _buildPaymentOption(String title, String value, IconData icon) {
+    final isSelected = _selectedPaymentMethod == value;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedPaymentMethod = value;
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary.withOpacity(0.08) : Colors.white,
+          border: Border.all(
+            color: isSelected ? AppColors.primary : Colors.grey.shade300,
+            width: isSelected ? 2 : 1,
+          ),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: isSelected ? AppColors.primary : Colors.grey),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  color: isSelected ? AppColors.primary : AppColors.textMain,
+                ),
+              ),
+            ),
+            if (isSelected)
+              const Icon(Icons.check_circle, color: AppColors.primary),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final canCompleteOrder = _isLocationVerified && _selectedDate != null && _selectedTimeSlot != null;
+
     return Scaffold(
       appBar: AppBar(title: const Text('إتمام الطلب')),
       body: SingleChildScrollView(
@@ -17,78 +85,171 @@ class CheckoutScreen extends StatelessWidget {
             const Text('ملخص الطلب', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             Card(
-              child: ListTile(
-                title: const Text('غسيل ملابس (غسيل وكي)'),
-                subtitle: const Text('الكمية: 5 قطع'),
-                trailing: const Text('50 درهم', style: TextStyle(fontWeight: FontWeight.bold)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              elevation: 2,
+              child: const ListTile(
+                title: Text('غسيل ملابس (غسيل وكي)', style: TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: Text('الكمية: 5 قطع'),
+                trailing: Text('50 درهم', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
               ),
             ),
             const SizedBox(height: 24),
             // Location
-            const Text('موقع التوصيل', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('موقع التوصيل', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                if (_isLocationVerified)
+                  const Row(
+                    children: [
+                      Icon(Icons.check_circle, color: AppColors.success, size: 16),
+                      SizedBox(width: 4),
+                      Text('تم التحقق', style: TextStyle(color: AppColors.success, fontSize: 12, fontWeight: FontWeight.bold)),
+                    ],
+                  )
+              ],
+            ),
             const SizedBox(height: 8),
             Card(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(
+                  color: _isLocationVerified ? AppColors.success : Colors.transparent,
+                  width: 1,
+                )
+              ),
+              elevation: 2,
               child: ListTile(
-                leading: const Icon(Icons.location_on, color: AppColors.primary),
+                leading: Icon(Icons.location_on, color: _isLocationVerified ? AppColors.success : AppColors.primary),
                 title: const Text('المنزل'),
                 subtitle: const Text('شارع الشيخ زايد، دبي'),
-                trailing: TextButton(onPressed: () {}, child: const Text('تغيير')),
+                trailing: TextButton(
+                  onPressed: () {
+                    setState(() {
+                      _isLocationVerified = true;
+                    });
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('تم التحقق من الموقع بنجاح')),
+                    );
+                  },
+                  child: Text(_isLocationVerified ? 'تغيير' : 'تأكيد الموقع'),
+                ),
               ),
             ),
             const SizedBox(height: 24),
-            // Delivery Time Slots
-            const Text('وقت التوصيل', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            // Delivery Date & Time
+            const Text('موعد الاستلام', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            DropdownButtonFormField<String>(
-              decoration: const InputDecoration(hintText: 'اختر الموعد'),
-              items: const [
-                DropdownMenuItem(value: 'morning', child: Text('09:00 ص - 12:00 م')),
-                DropdownMenuItem(value: 'afternoon', child: Text('12:00 م - 03:00 م')),
-                DropdownMenuItem(value: 'evening', child: Text('03:00 م - 06:00 م')),
+            Row(
+              children: [
+                Expanded(
+                  child: InkWell(
+                    onTap: _pickDate,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: _selectedDate == null ? Colors.grey.shade400 : AppColors.primary),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.calendar_today, color: _selectedDate == null ? Colors.grey : AppColors.primary, size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            _selectedDate == null
+                                ? 'اختر التاريخ'
+                                : DateFormat('yyyy/MM/dd').format(_selectedDate!),
+                            style: TextStyle(
+                              color: _selectedDate == null ? Colors.grey.shade700 : AppColors.primary,
+                              fontWeight: _selectedDate == null ? FontWeight.normal : FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: DropdownButtonFormField<String>(
+                    decoration: InputDecoration(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                      hintText: 'اختر الوقت',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    value: _selectedTimeSlot,
+                    items: const [
+                      DropdownMenuItem(value: 'morning', child: Text('09:00 - 12:00')),
+                      DropdownMenuItem(value: 'afternoon', child: Text('12:00 - 15:00')),
+                      DropdownMenuItem(value: 'evening', child: Text('15:00 - 18:00')),
+                    ],
+                    onChanged: (v) {
+                      setState(() {
+                        _selectedTimeSlot = v;
+                      });
+                    },
+                  ),
+                ),
               ],
-              onChanged: (v) {},
             ),
             const SizedBox(height: 24),
             // Payment Method
             const Text('طريقة الدفع', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            RadioGroup<String>(
-              groupValue: 'cash', // Fake logic for UI
-              onChanged: (String? v) {},
-              child: Column(
-                children: [
-                  RadioListTile<String>(
-                    title: const Text('دفع عند الاستلام'),
-                    value: 'cash',
-                  ),
-                  RadioListTile<String>(
-                    title: const Text('بطاقة ائتمان'),
-                    value: 'card',
-                  ),
-                  RadioListTile<String>(
-                    title: const Text('المحفظة (150 درهم متوفر)'),
-                    value: 'wallet',
-                  ),
-                ],
-              ),
-            ),
+            _buildPaymentOption('دفع عند الاستلام', 'cash', Icons.money),
+            _buildPaymentOption('بطاقة ائتمان', 'card', Icons.credit_card),
+            _buildPaymentOption('المحفظة (150 درهم متوفر)', 'wallet', Icons.account_balance_wallet),
+            const SizedBox(height: 16),
             const Divider(),
+            const SizedBox(height: 8),
             const Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text('المجموع الكلي:', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                Text('50 درهم', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.primary)),
+                Text('50 درهم', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.primary)),
               ],
             ),
+            const SizedBox(height: 100), // padding for bottom bar
           ],
         ),
       ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: ElevatedButton(
-            onPressed: () {},
-            child: const Text('تأكيد الطلب'),
+      bottomSheet: Container(
+        padding: const EdgeInsets.all(16.0),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, -5),
+            ),
+          ],
+        ),
+        child: SafeArea(
+          child: SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: canCompleteOrder
+                  ? () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('تم تأكيد الطلب بنجاح!')),
+                      );
+                    }
+                  : () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('الرجاء التحقق من الموقع واختيار موعد الاستلام لتأكيد الطلب'),
+                          backgroundColor: AppColors.error,
+                        ),
+                      );
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: canCompleteOrder ? AppColors.primary : Colors.grey.shade400,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: const Text('تأكيد الطلب', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
           ),
         ),
       ),
