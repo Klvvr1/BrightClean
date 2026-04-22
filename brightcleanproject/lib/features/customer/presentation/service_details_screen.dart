@@ -12,6 +12,9 @@ class ServiceDetailsScreen extends StatefulWidget {
 
 class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
   int quantity = 1;
+  final double basePrice = 10.0;
+
+  double get totalPrice => basePrice * quantity;
 
   Widget _buildClothesForm() {
     return Column(
@@ -70,9 +73,9 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
                 Row(
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.remove_circle, color: AppColors.primary),
+                      icon: Icon(Icons.remove_circle, color: quantity > 0 ? AppColors.primary : Colors.grey),
                       onPressed: () {
-                        if (quantity > 1) setState(() => quantity--);
+                        if (quantity > 0) setState(() => quantity--);
                       },
                     ),
                     Text('$quantity', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
@@ -86,6 +89,16 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
                 ),
               ],
             ),
+            const SizedBox(height: 24),
+            const Divider(),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('السعر الإجمالي:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                Text('${totalPrice.toStringAsFixed(2)} درهم', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.primary)),
+              ],
+            ),
           ],
         ),
       ),
@@ -93,8 +106,22 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: ElevatedButton(
-            onPressed: () {},
-            child: const Text('إضافة إلى السلة / متابعة للإكمال'),
+            onPressed: quantity > 0 ? () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('تم إضافة $quantity عنصر إلى السلة بنجاح!'),
+                  backgroundColor: AppColors.success,
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            } : null,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('إضافة إلى السلة / متابعة للإكمال', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           ),
         ),
       ),
