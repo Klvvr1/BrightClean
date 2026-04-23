@@ -55,7 +55,7 @@ class _LoginScreenState extends State<LoginScreen> {
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('خطأ في رقم الجوال أو كلمة المرور'),
+                content: Text('رقم الجوال أو كلمة المرور غير صحيحة'),
                 backgroundColor: Colors.red,
               ),
             );

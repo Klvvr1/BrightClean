@@ -39,6 +39,11 @@ dependencies:
   google_fonts: ^6.2.1
   intl: ^0.20.2
   cupertino_icons: ^1.0.8
+  sqflite_common_ffi_web: ^1.1.1
+  sqflite_common_ffi: ^2.4.0+3
+  flutter_map: ^8.3.0
+  latlong2: ^0.9.1
+  geocoding: ^4.0.0
 
 dev_dependencies:
   flutter_test:

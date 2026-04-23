@@ -33,6 +33,19 @@
   <link rel="manifest" href="manifest.json">
 </head>
 <body>
+  <script>
+    // تسجيل الخدمة اليدوية لقاعدة البيانات
+    window.addEventListener('load', function() {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sqflite_sw.js')
+          .then(function(registration) {
+            console.log('SQFLite Service Worker registered successfully:', registration.scope);
+          }).catch(function(error) {
+            console.log('SQFLite ServiceWorker registration failed:', error);
+          });
+      }
+    });
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
