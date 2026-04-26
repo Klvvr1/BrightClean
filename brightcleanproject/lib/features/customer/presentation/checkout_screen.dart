@@ -42,7 +42,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary.withOpacity(0.08) : Colors.white,
+          color: isSelected ? AppColors.primary.withValues(alpha: 0.08) : Colors.white,
           border: Border.all(
             color: isSelected ? AppColors.primary : Colors.grey.shade300,
             width: isSelected ? 2 : 1,
@@ -177,7 +177,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       hintText: 'اختر الوقت',
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                     ),
-                    value: _selectedTimeSlot,
+                    initialValue: _selectedTimeSlot,
                     items: const [
                       DropdownMenuItem(value: 'morning', child: Text('09:00 - 12:00')),
                       DropdownMenuItem(value: 'afternoon', child: Text('12:00 - 15:00')),
@@ -219,7 +219,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           color: Colors.white,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: const Offset(0, -5),
             ),

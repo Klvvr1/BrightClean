@@ -66,7 +66,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: bgColor.withOpacity(0.4),
+            color: bgColor.withValues(alpha: 0.4),
             blurRadius: 8,
             offset: const Offset(0, 4),
           )
@@ -117,7 +117,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: _isSearching ? AppColors.primary.withOpacity(0.2) : Colors.black.withOpacity(0.05),
+                      color: _isSearching ? AppColors.primary.withValues(alpha: 0.2) : Colors.black.withValues(alpha: 0.05),
                       blurRadius: _isSearching ? 8 : 4,
                       spreadRadius: _isSearching ? 2 : 0,
                     ),
