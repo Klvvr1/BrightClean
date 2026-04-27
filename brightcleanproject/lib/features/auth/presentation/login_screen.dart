@@ -102,6 +102,7 @@ class _LoginScreenState extends State<LoginScreen> {
             _debugLoginButton('مدير النظام', '0500000000', 'Password123'),
             _debugLoginButton('المدير', '0511111111', 'Password123'),
             _debugLoginButton('عميل', '0522222222', 'Password123'),
+            _debugLoginButton('مندوب التوصيل', '0533333333', 'Password123'),
           ],
         ),
       ],

@@ -39,6 +39,7 @@ CREATE TABLE users (
       {'phone': '0500000000', 'password': 'Password123', 'role': 'Admin'},
       {'phone': '0511111111', 'password': 'Password123', 'role': 'Manager'},
       {'phone': '0522222222', 'password': 'Password123', 'role': 'Customer'},
+      {'phone': '0533333333', 'password': 'Password123', 'role': 'Driver'},
     ];
     
     for (var user in testUsers) {
