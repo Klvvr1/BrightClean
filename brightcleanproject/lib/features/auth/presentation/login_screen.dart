@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/custom_text_field.dart';
@@ -78,6 +79,49 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       }
     }
+  }
+
+  Widget _buildDebugLoginSection() {
+    return Column(
+      children: [
+        const Divider(),
+        const SizedBox(height: 16),
+        Text(
+          'حسابات تجريبية (للتطوير فقط)',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: AppColors.textLight,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          alignment: WrapAlignment.center,
+          children: [
+            _debugLoginButton('مدير النظام', '0500000000', 'Password123'),
+            _debugLoginButton('المدير', '0511111111', 'Password123'),
+            _debugLoginButton('عميل', '0522222222', 'Password123'),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _debugLoginButton(String role, String phone, String password) {
+    return ActionChip(
+      label: Text(role),
+      onPressed: () {
+        _phoneController.text = phone;
+        _passwordController.text = password;
+        // Small delay to ensure UI updates fields before logging in
+        Future.delayed(const Duration(milliseconds: 100), () {
+          _handleLogin();
+        });
+      },
+      backgroundColor: AppColors.primary.withOpacity(0.1),
+      side: const BorderSide(color: AppColors.primary),
+    );
   }
 
   @override
@@ -202,6 +246,10 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ],
                     ),
+                    if (kDebugMode) ...[
+                      const SizedBox(height: 24),
+                      _buildDebugLoginSection(),
+                    ],
                   ],
                 ),
               ),
