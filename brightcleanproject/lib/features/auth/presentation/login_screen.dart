@@ -23,6 +23,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   // State variable to manage the loading indicator
   bool _isLoading = false;
+  bool _loginInProgress = false;
 
   @override
   void dispose() {
@@ -32,8 +33,11 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _handleLogin() async {
+    if (_loginInProgress) return;
+    _loginInProgress = true;
+
     // Validate the form fields based on provided validators
-    if (_formKey.currentState!.validate()) {
+    if (_formKey.currentState?.validate() ?? false) {
       setState(() {
         _isLoading = true;
       });
@@ -77,7 +81,10 @@ class _LoginScreenState extends State<LoginScreen> {
             _isLoading = false;
           });
         }
+        _loginInProgress = false;
       }
+    } else {
+      _loginInProgress = false;
     }
   }
 
@@ -117,6 +124,7 @@ class _LoginScreenState extends State<LoginScreen> {
         _passwordController.text = password;
         // Small delay to ensure UI updates fields before logging in
         Future.delayed(const Duration(milliseconds: 100), () {
+          if (!mounted || _loginInProgress) return;
           _handleLogin();
         });
       },
