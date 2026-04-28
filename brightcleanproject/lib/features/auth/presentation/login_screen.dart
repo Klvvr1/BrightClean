@@ -128,7 +128,7 @@ class _LoginScreenState extends State<LoginScreen> {
           _handleLogin();
         });
       },
-      backgroundColor: AppColors.primary.withOpacity(0.1),
+      backgroundColor: AppColors.primary.withValues(alpha: 0.1),
       side: const BorderSide(color: AppColors.primary),
     );
   }
