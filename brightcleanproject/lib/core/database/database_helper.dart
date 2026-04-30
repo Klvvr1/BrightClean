@@ -28,18 +28,33 @@ class DatabaseHelper {
     await db.execute('''
 CREATE TABLE users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  phone TEXT NOT NULL,
+  first_name TEXT,
+  last_name TEXT,
+  phone TEXT NOT NULL UNIQUE,
+  email TEXT,
   password TEXT NOT NULL,
+  gender TEXT,
+  dob TEXT,
   role TEXT NOT NULL
 )
 ''');
     
     // Insert seed data
     await db.insert('users', {
+      'first_name': 'Test',
+      'last_name': 'User',
       'phone': '0500000000',
+      'email': 'test@example.com',
       'password': 'password1234',
+      'gender': 'M',
+      'dob': '1990-01-01',
       'role': 'customer',
     });
+  }
+
+  Future<int> registerUser(Map<String, dynamic> userData) async {
+    final db = await instance.database;
+    return await db.insert('users', userData);
   }
 
   Future<Map<String, dynamic>?> loginUser(String phone, String password) async {
