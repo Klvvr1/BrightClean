@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:geolocator/geolocator.dart';
 import '../theme/app_colors.dart';
 
 class MapPickerScreen extends StatefulWidget {
@@ -22,7 +23,27 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
   @override
   void initState() {
     super.initState();
-    _selectedLocation = widget.initialLocation;
+    _selectedLocation = null; // Do not mark initial as selected
+    _determinePosition();
+  }
+
+  Future<void> _determinePosition() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) return;
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) return;
+    }
+
+    if (permission == LocationPermission.deniedForever) return;
+
+    final position = await Geolocator.getCurrentPosition();
+    _mapController.move(LatLng(position.latitude, position.longitude), 13.0);
   }
 
   @override
@@ -51,6 +72,9 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
               TileLayer(
                 urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 userAgentPackageName: 'com.brightclean.app',
+                additionalOptions: const {
+                  'attribution': '© OpenStreetMap contributors',
+                },
               ),
               if (_selectedLocation != null)
                 MarkerLayer(
@@ -122,7 +146,8 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
                         ? null
                         : () => Navigator.pop(context, {
                               'coordinates': _selectedLocation,
-                              'address': 'الموقع المختار',
+                              'address':
+                                  'Lat: ${_selectedLocation!.latitude.toStringAsFixed(4)}, Lng: ${_selectedLocation!.longitude.toStringAsFixed(4)}',
                             }),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,

@@ -95,6 +95,16 @@ class _CustomerRegistrationScreenState
       return;
     }
 
+    if (_selectedAddress == null || _selectedCoordinates == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('يرجى تحديد موقعك على الخريطة أولاً'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     if (_formKey.currentState!.validate()) {
       setState(() {
         _isLoading = true;

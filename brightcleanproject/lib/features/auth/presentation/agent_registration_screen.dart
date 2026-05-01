@@ -310,6 +310,16 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
         return;
       }
 
+      if (_commercialRegImage == null || _idImage == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('يرجى رفع السجل التجاري وصورة الهوية'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
       setState(() => _hasAttemptedSubmit = true); // Using a loading state if needed, but the prompt asked for loading indicators. I'll add a local loading state.
 
       _performRegistration(selectedServices);
