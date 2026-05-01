@@ -266,7 +266,7 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
         width: double.infinity,
         margin: const EdgeInsets.only(bottom: 16),
         decoration: BoxDecoration(
-          color: isUploaded ? AppColors.primary.withOpacity(0.05) : AppColors.background,
+          color: isUploaded ? AppColors.primary.withValues(alpha: 0.05) : AppColors.background,
           border: Border.all(
             color: isUploaded ? AppColors.primary : Colors.grey.shade400,
             width: isUploaded ? 2 : 1,
@@ -274,7 +274,7 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
           borderRadius: BorderRadius.circular(8),
           image: isUploaded
               ? DecorationImage(
-                  image: FileImage(File(imageFile!.path)),
+                  image: FileImage(File(imageFile.path)),
                   fit: BoxFit.cover,
                   opacity: 0.2,
                 )
@@ -412,30 +412,28 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
                 const SizedBox(height: 12),
-                Column(
-                  children: [
-                    RadioListTile<String>(
-                      title: const Text('سيارة'),
-                      value: 'سيارة',
-                      groupValue: _selectedVehicleType,
-                      activeColor: AppColors.primary,
-                      onChanged: (v) => setState(() => _selectedVehicleType = v),
-                    ),
-                    RadioListTile<String>(
-                      title: const Text('دراجة نارية'),
-                      value: 'دراجة نارية',
-                      groupValue: _selectedVehicleType,
-                      activeColor: AppColors.primary,
-                      onChanged: (v) => setState(() => _selectedVehicleType = v),
-                    ),
-                    RadioListTile<String>(
-                      title: const Text('تك تك'),
-                      value: 'تك تك',
-                      groupValue: _selectedVehicleType,
-                      activeColor: AppColors.primary,
-                      onChanged: (v) => setState(() => _selectedVehicleType = v),
-                    ),
-                  ],
+                RadioGroup<String>(
+                  groupValue: _selectedVehicleType ?? '',
+                  onChanged: (v) => setState(() => _selectedVehicleType = v),
+                  child: Column(
+                    children: [
+                      RadioListTile<String>(
+                        title: const Text('سيارة'),
+                        value: 'سيارة',
+                        activeColor: AppColors.primary,
+                      ),
+                      RadioListTile<String>(
+                        title: const Text('دراجة نارية'),
+                        value: 'دراجة نارية',
+                        activeColor: AppColors.primary,
+                      ),
+                      RadioListTile<String>(
+                        title: const Text('تك تك'),
+                        value: 'تك تك',
+                        activeColor: AppColors.primary,
+                      ),
+                    ],
+                  ),
                 ),
                 if (_hasAttemptedSubmit && _selectedVehicleType == null)
                   const Padding(
