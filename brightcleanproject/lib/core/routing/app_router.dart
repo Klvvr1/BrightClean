@@ -1,4 +1,5 @@
 import 'package:go_router/go_router.dart';
+import 'package:brightcleanprojet/core/enums/order_status.dart';
 import '../../features/auth/presentation/splash_screen.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/role_selection_screen.dart';
@@ -65,7 +66,14 @@ class AppRouter {
         path: '/agent_order_management/:id',
         builder: (context, state) {
           final id = state.pathParameters['id'] ?? 'unknown';
-          return AgentOrderManagementScreen(orderId: id);
+          final extra = state.extra as Map<String, dynamic>?;
+          final initialStatus = extra?['status'] as OrderStatus? ?? OrderStatus.received;
+          final isReadOnly = extra?['isReadOnly'] as bool? ?? false;
+          return AgentOrderManagementScreen(
+            orderId: id, 
+            initialStatus: initialStatus, 
+            isReadOnly: isReadOnly
+          );
         },
       ),
       GoRoute(
