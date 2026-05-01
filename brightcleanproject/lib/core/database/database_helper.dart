@@ -39,17 +39,17 @@ CREATE TABLE users (
 )
 ''');
     
-    // Insert seed data
-    await db.insert('users', {
-      'first_name': 'Test',
-      'last_name': 'User',
-      'phone': '0500000000',
-      'email': 'test@example.com',
-      'password': 'password1234',
-      'gender': 'M',
-      'dob': '1990-01-01',
-      'role': 'customer',
-    });
+    // Insert seed data for testing
+    final testUsers = [
+      {'phone': '0500000000', 'password': 'Password123', 'role': 'Admin'},
+      {'phone': '0511111111', 'password': 'Password123', 'role': 'Manager'},
+      {'phone': '0522222222', 'password': 'Password123', 'role': 'Customer'},
+      {'phone': '0533333333', 'password': 'Password123', 'role': 'Driver'},
+    ];
+    
+    for (var user in testUsers) {
+      await db.insert('users', user);
+    }
   }
 
   Future<int> registerUser(Map<String, dynamic> userData) async {
