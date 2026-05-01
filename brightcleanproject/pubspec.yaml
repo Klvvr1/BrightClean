@@ -49,6 +49,7 @@ dependencies:
   latlong2: ^0.9.1
   flutter_map: ^6.1.0
   image_picker: ^1.2.2
+  crypto: ^3.0.3
 
 dev_dependencies:
   flutter_test:

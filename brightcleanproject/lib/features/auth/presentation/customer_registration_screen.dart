@@ -34,6 +34,7 @@ class _CustomerRegistrationScreenState
   LatLng? _selectedCoordinates;
   bool _isTermsAccepted = false;
   bool _isLoading = false;
+  bool _hasAttemptedSubmit = false;
 
   @override
   void dispose() {
@@ -81,6 +82,8 @@ class _CustomerRegistrationScreenState
 
   // Submit Form Handling
   Future<void> _submitForm() async {
+    setState(() => _hasAttemptedSubmit = true);
+
     // 4. Strict Validation for Terms & Conditions
     if (!_isTermsAccepted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -98,15 +101,21 @@ class _CustomerRegistrationScreenState
       });
 
       try {
+        final dbHelper = DatabaseHelper.instance;
         final userData = {
           'first_name': _firstNameController.text.trim(),
           'last_name': _lastNameController.text.trim(),
           'phone': _phoneController.text.trim(),
           'email': _emailController.text.trim(),
-          'password': _passwordController.text,
+          'password': dbHelper.hashPassword(_passwordController.text),
           'gender': _selectedGender ?? '',
           'dob': _dobController.text.trim(),
           'role': 'customer',
+          'address_string': _selectedAddress,
+          'latitude': _selectedCoordinates?.latitude,
+          'longitude': _selectedCoordinates?.longitude,
+          'status': 'active',
+          'created_at': DateTime.now().toIso8601String(),
         };
 
         if (kIsWeb) {
@@ -115,7 +124,6 @@ class _CustomerRegistrationScreenState
           );
         }
 
-        final dbHelper = DatabaseHelper.instance;
         await dbHelper.registerUser(userData);
 
         if (mounted) {
@@ -359,8 +367,7 @@ class _CustomerRegistrationScreenState
                       ),
                     ),
                   ),
-                  if (_selectedAddress ==
-                      null) // Very basic required validation for map visually
+                  if (_hasAttemptedSubmit && _selectedAddress == null)
                     const Padding(
                       padding: EdgeInsets.only(top: 8, right: 12),
                       child: Text(

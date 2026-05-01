@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
+import 'dart:convert';
 import '../../../../core/widgets/custom_text_field.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/map_picker_screen.dart';
+import '../../../../core/database/database_helper.dart';
 
 class AgentRegistrationScreen extends StatefulWidget {
   const AgentRegistrationScreen({super.key});
@@ -308,15 +310,68 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
         return;
       }
 
-      // هنا يتم إرسال selectedServices مع باقي البيانات
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'جاري التسجيل... الخدمات: ${selectedServices.join(", ")}',
+      setState(() => _hasAttemptedSubmit = true); // Using a loading state if needed, but the prompt asked for loading indicators. I'll add a local loading state.
+
+      _performRegistration(selectedServices);
+    }
+  }
+
+  bool _isLoading = false;
+
+  bool _isSubmitting = false;
+
+  Future<void> _performRegistration(List<String> selectedServices) async {
+    setState(() => _isSubmitting = true);
+    
+    try {
+      final dbHelper = DatabaseHelper.instance;
+      final userData = {
+        'first_name': _firstNameController.text.trim(),
+        'father_name': _fatherNameController.text.trim(),
+        'grandfather_name': _grandfatherNameController.text.trim(),
+        'last_name': _lastNameController.text.trim(),
+        'dob': _dobController.text.trim(),
+        'business_name': _businessNameController.text.trim(),
+        'email': _emailController.text.trim(),
+        'phone': _phoneController.text.trim(),
+        'password': dbHelper.hashPassword(_passwordController.text),
+        'role': 'agent',
+        'selected_services': jsonEncode(selectedServices),
+        'address_string': _selectedAddress,
+        'latitude': _selectedCoordinates?.latitude,
+        'longitude': _selectedCoordinates?.longitude,
+        'commercial_reg_image_path': _commercialRegImage?.path,
+        'id_image_path': _idImage?.path,
+        'status': 'pending',
+        'created_at': DateTime.now().toIso8601String(),
+      };
+
+      await dbHelper.registerUser(userData);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('تم تسجيل المغسلة بنجاح!'),
+            backgroundColor: Colors.green,
           ),
-          backgroundColor: AppColors.primary,
-        ),
-      );
+        );
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, '/login');
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('حدث خطأ أثناء التسجيل: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
     }
   }
 
@@ -527,8 +582,17 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
                   width: double.infinity,
                   height: 50,
                   child: ElevatedButton(
-                    onPressed: _submitForm,
-                    child: const Text('تسجيل الآن'),
+                    onPressed: _isSubmitting ? null : _submitForm,
+                    child: _isSubmitting
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Text('تسجيل الآن'),
                   ),
                 ),
               ],

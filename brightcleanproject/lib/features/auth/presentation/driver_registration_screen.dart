@@ -6,6 +6,7 @@ import 'package:latlong2/latlong.dart';
 import '../../../../core/widgets/custom_text_field.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/map_picker_screen.dart';
+import '../../../../core/database/database_helper.dart';
 
 class DriverRegistrationScreen extends StatefulWidget {
   const DriverRegistrationScreen({super.key});
@@ -150,7 +151,7 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
     return null;
   }
 
-  void _submitForm() {
+  Future<void> _submitForm() async {
     setState(() => _hasAttemptedSubmit = true);
 
     if (!_isTermsAccepted) {
@@ -194,14 +195,63 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
         return;
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('جاري تسجيل السائق...'),
-          backgroundColor: AppColors.primary,
-        ),
-      );
+      setState(() => _isSubmitting = true);
+
+      try {
+        final dbHelper = DatabaseHelper.instance;
+        final userData = {
+          'first_name': _firstNameController.text.trim(),
+          'father_name': _fatherNameController.text.trim(),
+          'grandfather_name': _grandfatherNameController.text.trim(),
+          'last_name': _lastNameController.text.trim(),
+          'phone': _phoneController.text.trim(),
+          'email': _emailController.text.trim(),
+          'password': dbHelper.hashPassword(_passwordController.text),
+          'dob': _dobController.text.trim(),
+          'vehicle_type': _selectedVehicleType,
+          'plate_number': _plateNumberController.text.trim(),
+          'role': 'driver',
+          // Optional but good to keep:
+          'address_string': _selectedAddress,
+          'latitude': _selectedCoordinates?.latitude,
+          'longitude': _selectedCoordinates?.longitude,
+          'id_image_path': _idImage?.path,
+          'license_image_path': _licenseImage?.path,
+          'car_image_path': _carImage?.path,
+          'status': 'pending',
+          'created_at': DateTime.now().toIso8601String(),
+        };
+
+        await dbHelper.registerUser(userData);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('تم التسجيل بنجاح!'),
+              backgroundColor: AppColors.primary,
+            ),
+          );
+          Navigator.pushReplacementNamed(context, '/login');
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('حدث خطأ أثناء التسجيل: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } finally {
+        if (mounted) {
+          setState(() => _isSubmitting = false);
+        }
+      }
     }
   }
+
+  bool _isSubmitting = false;
+
 
   Widget _buildFileUploadPlaceholder({
     required String title,
@@ -477,8 +527,17 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
                   width: double.infinity,
                   height: 50,
                   child: ElevatedButton(
-                    onPressed: _submitForm,
-                    child: const Text('تسجيل الآن'),
+                    onPressed: _isSubmitting ? null : _submitForm,
+                    child: _isSubmitting
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Text('تسجيل الآن'),
                   ),
                 ),
               ],
