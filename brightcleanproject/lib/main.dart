@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+
 import 'core/routing/app_router.dart';
 import 'core/theme/app_theme.dart';
+import 'controllers/language_controller.dart'; // غيّر المسار إذا كان مختلف عندك
 
 void main() {
   runApp(const BrightCleanApp());
@@ -12,21 +14,26 @@ class BrightCleanApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp.router(
-      title: 'BrightClean',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      routerConfig: AppRouter.router,
-      // RTL Support
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: const [
-        Locale('ar', 'AE'), // Arabic
-      ],
-      locale: const Locale('ar', 'AE'), // Force Arabic
+    return ValueListenableBuilder<Locale>(
+      valueListenable: LanguageController().locale,
+      builder: (context, locale, child) {
+        return MaterialApp.router(
+          title: 'BrightClean',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.lightTheme,
+          routerConfig: AppRouter.router,
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: const [
+            Locale('ar', 'AE'),
+            Locale('en'),
+          ],
+          locale: locale,
+        );
+      },
     );
   }
 }
