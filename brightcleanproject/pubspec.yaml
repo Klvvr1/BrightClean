@@ -51,6 +51,7 @@ dependencies:
   image_picker: ^1.2.2
   crypto: ^3.0.3
   geolocator: ^11.0.0
+  sqflite_common_ffi: ^2.4.0+3
 
 dev_dependencies:
   flutter_test:

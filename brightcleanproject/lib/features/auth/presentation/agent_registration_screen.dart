@@ -139,7 +139,7 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
         margin: const EdgeInsets.only(bottom: 16),
         decoration: BoxDecoration(
           color: isUploaded
-              ? AppColors.primary.withOpacity(0.05)
+              ? AppColors.primary.withValues(alpha: 0.05)
               : AppColors.background,
           border: Border.all(
             color: isUploaded ? AppColors.primary : Colors.grey.shade400,
@@ -148,7 +148,7 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
           borderRadius: BorderRadius.circular(8),
           image: isUploaded
               ? DecorationImage(
-                  image: FileImage(File(imageFile!.path)),
+                  image: FileImage(File(imageFile.path)),
                   fit: BoxFit.cover,
                   opacity: 0.2,
                 )
@@ -189,7 +189,7 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
         duration: const Duration(milliseconds: 250),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary.withOpacity(0.1) : Colors.white,
+          color: isSelected ? AppColors.primary.withValues(alpha: 0.1) : Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected ? AppColors.primary : Colors.grey.shade300,
@@ -198,7 +198,7 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: AppColors.primary.withOpacity(0.1),
+                    color: AppColors.primary.withValues(alpha: 0.1),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -256,8 +256,9 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
   String? _validatePassword(String? value) {
     if (value == null || value.isEmpty) return 'كلمة المرور مطلوبة';
     if (value.length < 8) return 'يجب أن لا تقل عن 8 رموز';
-    if (!RegExp(r'[A-Z]').hasMatch(value))
+    if (!RegExp(r'[A-Z]').hasMatch(value)) {
       return 'أدخل حرفاً كبيراً واحداً على الأقل';
+    }
     if (!RegExp(r'[0-9]').hasMatch(value)) return 'أدخل رقماً واحداً على الأقل';
     return null;
   }
@@ -326,7 +327,6 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
     }
   }
 
-  bool _isLoading = false;
 
   bool _isSubmitting = false;
 
