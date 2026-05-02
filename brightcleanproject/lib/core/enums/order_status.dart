@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:brightcleanprojet/core/theme/app_colors.dart';
 
 enum OrderStatus {
-  received('تم الاستلام', 'Received', AppColors.primary),
-  inProgress('قيد التنفيذ', 'In Progress', AppColors.tertiary),
-  ready('جاهز للتسليم', 'Ready', AppColors.success),
-  delivered('تم التسليم', 'Delivered', AppColors.secondary);
+  pending('قيد الانتظار', 'Pending', Colors.orange),
+  received('تم استلام الطلب', 'Received', AppColors.primary),
+  washing('قيد الغسيل', 'Washing', Colors.blue),
+  ironing('قيد الكوي', 'Ironing', Colors.purple),
+  ready('جاهز للتسليم', 'Ready for Delivery', AppColors.success),
+  completed('مكتمل', 'Completed', AppColors.secondary);
 
   final String title;
   final String englishTitle;

@@ -56,19 +56,19 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
     super.initState();
     _allOrders = [
       AgentOrderModel(id: '1025', laundryType: LaundryType.clothes, services: ['غسيل', 'كوي'], status: OrderStatus.received, customerLocation: 'شارع الشيخ زايد', time: 'الآن'),
-      AgentOrderModel(id: '1026', laundryType: LaundryType.clothes, services: ['تنظيف جاف'], status: OrderStatus.inProgress, customerLocation: 'حي الملك فهد', time: 'منذ ساعتين'),
-      AgentOrderModel(id: '1027', laundryType: LaundryType.clothes, services: ['كوي'], status: OrderStatus.delivered, customerLocation: 'البرشاء', time: 'أمس'),
+      AgentOrderModel(id: '1026', laundryType: LaundryType.clothes, services: ['تنظيف جاف'], status: OrderStatus.washing, customerLocation: 'حي الملك فهد', time: 'منذ ساعتين'),
+      AgentOrderModel(id: '1027', laundryType: LaundryType.clothes, services: ['كوي'], status: OrderStatus.completed, customerLocation: 'البرشاء', time: 'أمس'),
       AgentOrderModel(id: '2001', laundryType: LaundryType.carsBikes, services: ['غسيل خارجي', 'تلميع'], status: OrderStatus.received, customerLocation: 'حي العليا', time: 'الآن'),
       AgentOrderModel(id: '3001', laundryType: LaundryType.carpets, services: ['غسيل سجاد', 'تعطير'], status: OrderStatus.ready, customerLocation: 'حي الملقا', time: 'أمس'),
-      AgentOrderModel(id: '4001', laundryType: LaundryType.ac, services: ['تنظيف فلاتر', 'تعبئة فريون'], status: OrderStatus.inProgress, customerLocation: 'حي النرجس', time: 'منذ ساعة'),
+      AgentOrderModel(id: '4001', laundryType: LaundryType.ac, services: ['تنظيف فلاتر', 'تعبئة فريون'], status: OrderStatus.ironing, customerLocation: 'حي النرجس', time: 'منذ ساعة'),
     ];
   }
 
   List<AgentOrderModel> get _currentOrders => 
-      _allOrders.where((o) => o.laundryType == widget.laundryType && o.status != OrderStatus.delivered).toList();
+      _allOrders.where((o) => o.laundryType == widget.laundryType && o.status != OrderStatus.completed).toList();
 
   List<AgentOrderModel> get _previousOrders => 
-      _allOrders.where((o) => o.laundryType == widget.laundryType && o.status == OrderStatus.delivered).toList();
+      _allOrders.where((o) => o.laundryType == widget.laundryType && o.status == OrderStatus.completed).toList();
 
   Widget _buildStatCard(String title, String count, Color color, IconData icon) {
     return Expanded(
@@ -315,9 +315,9 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
             children: [
               _buildStatCard(isArabic ? 'طلبات استلمت' : 'Received', orders.where((o) => o.status == OrderStatus.received).length.toString(), AppColors.primary, Icons.download_rounded),
               const SizedBox(width: 12),
-              _buildStatCard(isArabic ? 'قيد التنفيذ' : 'In Progress', orders.where((o) => o.status == OrderStatus.inProgress).length.toString(), AppColors.tertiary, Icons.sync_rounded),
+              _buildStatCard(isArabic ? 'قيد التنفيذ' : 'In Progress', orders.where((o) => o.status == OrderStatus.washing || o.status == OrderStatus.ironing).length.toString(), AppColors.tertiary, Icons.sync_rounded),
               const SizedBox(width: 12),
-              _buildStatCard(isArabic ? 'مكتمل' : 'Completed', _allOrders.where((o) => o.laundryType == widget.laundryType && (o.status == OrderStatus.ready || o.status == OrderStatus.delivered)).length.toString(), AppColors.success, Icons.check_circle_rounded),
+              _buildStatCard(isArabic ? 'مكتمل' : 'Completed', _allOrders.where((o) => o.laundryType == widget.laundryType && (o.status == OrderStatus.ready || o.status == OrderStatus.completed)).length.toString(), AppColors.success, Icons.check_circle_rounded),
             ],
           ),
           const SizedBox(height: 32),
