@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:brightcleanprojet/core/theme/app_colors.dart';
-import 'package:brightcleanprojet/core/localization/language_controller.dart';
+import 'package:brightcleanprojet/controllers/language_controller.dart';
 
 import 'package:brightcleanprojet/controllers/theme_controller.dart';
 

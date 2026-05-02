@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:brightcleanprojet/core/enums/order_status.dart';
 import 'package:brightcleanprojet/core/theme/app_colors.dart';
-import 'package:brightcleanprojet/core/localization/language_controller.dart';
+import 'package:brightcleanprojet/controllers/language_controller.dart';
 import 'package:brightcleanprojet/features/agent/presentation/widgets/agent_app_bar_actions.dart';
 
 class AgentOrderManagementScreen extends StatefulWidget {
@@ -118,17 +118,17 @@ class _AgentOrderManagementScreenState extends State<AgentOrderManagementScreen>
     if (confirm == true) {
       setState(() => _isLoading = true);
       await Future.delayed(const Duration(seconds: 1)); // Simulate network
-      if (!context.mounted) return;
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
         _currentStatus = OrderStatus.received;
         _hasChanges = false;
       });
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(isArabic ? 'تم قبول الطلب بنجاح' : 'Order accepted successfully'),
-          backgroundColor: AppColors.success,
-        ));
-        context.pop(_currentStatus);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(isArabic ? 'تم قبول الطلب بنجاح' : 'Order accepted successfully'),
+        backgroundColor: AppColors.success,
+      ));
+      context.pop(_currentStatus);
     }
   }
 
@@ -180,17 +180,16 @@ class _AgentOrderManagementScreenState extends State<AgentOrderManagementScreen>
     if (confirm == true) {
       setState(() => _isLoading = true);
       await Future.delayed(const Duration(seconds: 1)); // Simulate network
-      if (!context.mounted) return;
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
         // In a real app, status might change to 'rejected', but here we might just go back
       });
-      if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(isArabic ? 'تم رفض الطلب بنجاح' : 'Order rejected successfully'),
-          backgroundColor: Colors.red,
-        ));
-        context.pop(_currentStatus);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(isArabic ? 'تم رفض الطلب بنجاح' : 'Order rejected successfully'),
+        backgroundColor: Colors.red,
+      ));
+      context.pop(_currentStatus);
     }
   }
 
@@ -224,17 +223,16 @@ class _AgentOrderManagementScreenState extends State<AgentOrderManagementScreen>
     if (confirm == true) {
       setState(() => _isLoading = true);
       await Future.delayed(const Duration(seconds: 1)); // Simulate network
-      if (!context.mounted) return;
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
         _hasChanges = false;
       });
-      if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(isArabic ? 'تم تحديث حالة الطلب بنجاح' : 'Order status updated successfully'),
-          backgroundColor: AppColors.success,
-        ));
-        context.pop(_currentStatus);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(isArabic ? 'تم تحديث حالة الطلب بنجاح' : 'Order status updated successfully'),
+        backgroundColor: AppColors.success,
+      ));
+      context.pop(_currentStatus);
     }
   }
 
