@@ -96,9 +96,9 @@ class _LoginScreenState extends State<LoginScreen> {
         Text(
           'حسابات تجريبية (للتطوير فقط)',
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: AppColors.textLight,
-            fontWeight: FontWeight.bold,
-          ),
+                color: AppColors.textLight,
+                fontWeight: FontWeight.bold,
+              ),
         ),
         const SizedBox(height: 16),
         Wrap(
@@ -151,28 +151,27 @@ class _LoginScreenState extends State<LoginScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Icon(
-                      Icons.water_drop,
-                      size: 80,
-                      color: AppColors.primary,
+                    Image.asset(
+                      'assets/images/app_logo.png',
+                      height: 160,
                     ),
                     const SizedBox(height: 16),
                     Text(
                       'تسجيل الدخول',
                       textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.headlineMedium
-                          ?.copyWith(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.bold,
-                          ),
+                      style:
+                          Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.bold,
+                              ),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       'مرحباً بك مجدداً في برايت كلين',
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColors.textLight,
-                      ),
+                            color: AppColors.textLight,
+                          ),
                     ),
                     const SizedBox(height: 48),
                     CustomTextField(
