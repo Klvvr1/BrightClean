@@ -159,17 +159,17 @@ class _SplashScreenState extends State<SplashScreen>
                       'برايت كلين',
                       style:
                           Theme.of(context).textTheme.headlineLarge?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 1.5,
-                                shadows: [
-                                  Shadow(
-                                    color: Colors.black.withValues(alpha: 0.3),
-                                    blurRadius: 12,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1.5,
+                        shadows: [
+                          Shadow(
+                            color: Colors.black.withValues(alpha: 0.3),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -282,7 +282,8 @@ class _SplashScreenState extends State<SplashScreen>
                   boxShadow: [
                     // Outer glow
                     BoxShadow(
-                      color: AppColors.lightBlue.withValues(alpha: 0.25 * scale),
+                      color:
+                          AppColors.lightBlue.withValues(alpha: 0.25 * scale),
                       blurRadius: 40,
                       spreadRadius: 8,
                     ),
@@ -379,8 +380,8 @@ class _BubblePainter extends CustomPainter {
       // Each bubble loops at its own speed
       final t = (progress * b.speed + b.startY) % 1.0;
       final y = size.height * (1.0 - t);
-      final x = size.width * b.x +
-          sin(t * 2 * pi + b.x * 6) * size.width * b.drift;
+      final x =
+          size.width * b.x + sin(t * 2 * pi + b.x * 6) * size.width * b.drift;
 
       final paint = Paint()
         ..color = AppColors.lightBlue.withValues(alpha: b.opacity)
