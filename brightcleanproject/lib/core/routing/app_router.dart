@@ -69,10 +69,12 @@ class AppRouter {
           final extra = state.extra as Map<String, dynamic>?;
           final initialStatus = extra?['status'] as OrderStatus? ?? OrderStatus.received;
           final isReadOnly = extra?['isReadOnly'] as bool? ?? false;
+          final order = extra?['order'] as AgentOrderModel;
           return AgentOrderManagementScreen(
-            orderId: id, 
-            initialStatus: initialStatus, 
-            isReadOnly: isReadOnly
+            orderId: id,
+            initialStatus: initialStatus,
+            isReadOnly: isReadOnly,
+            order: order,
           );
         },
       ),

@@ -7,7 +7,8 @@ enum OrderStatus {
   washing('قيد الغسيل', 'Washing', Colors.blue),
   ironing('قيد الكوي', 'Ironing', Colors.purple),
   ready('جاهز للتسليم', 'Ready for Delivery', AppColors.success),
-  completed('مكتمل', 'Completed', AppColors.secondary);
+  completed('مكتمل', 'Completed', AppColors.secondary),
+  rejected('مرفوض', 'Rejected', Colors.red);
 
   final String title;
   final String englishTitle;

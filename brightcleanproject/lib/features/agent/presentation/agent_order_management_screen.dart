@@ -4,31 +4,25 @@ import 'package:brightcleanprojet/core/enums/order_status.dart';
 import 'package:brightcleanprojet/core/theme/app_colors.dart';
 import 'package:brightcleanprojet/controllers/language_controller.dart';
 import 'package:brightcleanprojet/features/agent/presentation/widgets/agent_app_bar_actions.dart';
+import 'package:brightcleanprojet/features/agent/presentation/agent_dashboard_screen.dart';
 
 class AgentOrderManagementScreen extends StatefulWidget {
   final String orderId;
   final OrderStatus initialStatus;
   final bool isReadOnly;
+  final AgentOrderModel order;
 
   const AgentOrderManagementScreen({
-    super.key, 
+    super.key,
     required this.orderId,
     required this.initialStatus,
     this.isReadOnly = false,
+    required this.order,
   });
 
   @override
   State<AgentOrderManagementScreen> createState() =>
       _AgentOrderManagementScreenState();
-}
-
-class OrderItemMock {
-  final String itemName;
-  final String serviceType;
-  final int quantity;
-  final IconData icon;
-
-  OrderItemMock(this.itemName, this.serviceType, this.quantity, this.icon);
 }
 
 class _AgentOrderManagementScreenState extends State<AgentOrderManagementScreen> {
@@ -40,7 +34,7 @@ class _AgentOrderManagementScreenState extends State<AgentOrderManagementScreen>
   @override
   void initState() {
     super.initState();
-    _currentStatus = widget.initialStatus;
+    _currentStatus = widget.order.status;
   }
 
   @override
@@ -49,11 +43,6 @@ class _AgentOrderManagementScreenState extends State<AgentOrderManagementScreen>
     super.dispose();
   }
 
-  final List<OrderItemMock> _items = [
-    OrderItemMock('ثوب', 'كوي', 5, Icons.iron),
-    OrderItemMock('تيشيرت', 'غسيل', 3, Icons.local_laundry_service),
-    OrderItemMock('شماغ', 'غسيل وكوي', 2, Icons.dry_cleaning),
-  ];
 
   String _translateItem(String item) {
     final Map<String, String> translations = {
@@ -183,13 +172,12 @@ class _AgentOrderManagementScreenState extends State<AgentOrderManagementScreen>
       if (!mounted) return;
       setState(() {
         _isLoading = false;
-        // In a real app, status might change to 'rejected', but here we might just go back
       });
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(isArabic ? 'تم رفض الطلب بنجاح' : 'Order rejected successfully'),
         backgroundColor: Colors.red,
       ));
-      context.pop(_currentStatus);
+      context.pop(OrderStatus.rejected);
     }
   }
 
@@ -246,7 +234,7 @@ class _AgentOrderManagementScreenState extends State<AgentOrderManagementScreen>
       valueListenable: langController.locale,
       builder: (context, locale, _) {
         final isArabic = locale.languageCode == 'ar';
-        final isReadOnly = widget.isReadOnly || _currentStatus == OrderStatus.completed;
+        final isReadOnly = widget.isReadOnly || widget.initialStatus == OrderStatus.completed;
 
         return PopScope(
           canPop: !_hasChanges,
@@ -349,7 +337,7 @@ class _AgentOrderManagementScreenState extends State<AgentOrderManagementScreen>
                                           child: Column(
                                             crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
-                                              Text(isArabic ? 'أحمد محمد' : 'Ahmed Mohamed', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                                              Text(widget.order.customerName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
                                               Text(isArabic ? 'الطلب #${widget.orderId}' : 'Order #${widget.orderId}', style: TextStyle(fontSize: 12, color: isDark ? Colors.white54 : Colors.grey.shade600, letterSpacing: 0.5)),
                                             ],
                                           ),
@@ -371,11 +359,8 @@ class _AgentOrderManagementScreenState extends State<AgentOrderManagementScreen>
                                           ],
                                         ),
                                         const SizedBox(height: 16),
-                                        ..._items.map((item) => _buildItemRow(item, isArabic, isDark)),
-                                        if (isArabic)
-                                          _buildNotesRow(isArabic, isDark, 'ملاحظة: القطع تحتاج عناية خاصة للملابس الحساسة')
-                                        else
-                                          _buildNotesRow(isArabic, isDark, 'Note: Items need special care for sensitive fabrics'),
+                                        ...widget.order.items.map((item) => _buildItemRow(item, isArabic, isDark)),
+                                        _buildNotesRow(isArabic, isDark, widget.order.notes),
                                       ],
                                     ),
                                   ),
@@ -385,7 +370,7 @@ class _AgentOrderManagementScreenState extends State<AgentOrderManagementScreen>
                             
                             const SizedBox(height: 32),
                             
-                            if (!isReadOnly && _currentStatus != OrderStatus.pending) ...[
+                            if (!isReadOnly && widget.initialStatus != OrderStatus.pending) ...[
                               _buildSectionHeader(isArabic ? 'تحديث حالة الغسيل' : 'Update Laundry Status', theme),
                               const SizedBox(height: 16),
                               DropdownButtonFormField<OrderStatus>(
@@ -437,7 +422,7 @@ class _AgentOrderManagementScreenState extends State<AgentOrderManagementScreen>
                             ),
                             child: Text(isArabic ? 'العودة للخلف' : 'Go Back', style: TextStyle(color: isDark ? Colors.white : Colors.black87, fontWeight: FontWeight.bold)),
                           )
-                        : (_currentStatus == OrderStatus.pending)
+                        : (widget.initialStatus == OrderStatus.pending)
                           ? Row(
                               children: [
                                 Expanded(

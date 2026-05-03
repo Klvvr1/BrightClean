@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 
 class ThemeController {
   static final ThemeController _instance = ThemeController._internal();
@@ -17,9 +18,13 @@ class ThemeController {
     } else if (themeMode.value == ThemeMode.light) {
       themeMode.value = ThemeMode.dark;
     } else {
-      // If system, switch to the opposite of current brightness, but we can't easily read context here,
-      // so let's default to dark if toggling from system
-      themeMode.value = ThemeMode.dark;
+      // If system, switch to the opposite of current platform brightness
+      final platformBrightness = SchedulerBinding.instance.platformDispatcher.platformBrightness;
+      if (platformBrightness == Brightness.dark) {
+        themeMode.value = ThemeMode.light;
+      } else {
+        themeMode.value = ThemeMode.dark;
+      }
     }
   }
   

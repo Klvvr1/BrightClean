@@ -14,6 +14,9 @@ class AgentOrderModel {
   OrderStatus status;
   final String customerLocation;
   final String time;
+  final String customerName;
+  final List<OrderItemMock> items;
+  final String notes;
 
   AgentOrderModel({
     required this.id,
@@ -22,7 +25,19 @@ class AgentOrderModel {
     required this.status,
     required this.customerLocation,
     required this.time,
+    required this.customerName,
+    required this.items,
+    required this.notes,
   });
+}
+
+class OrderItemMock {
+  final String itemName;
+  final String serviceType;
+  final int quantity;
+  final IconData icon;
+
+  OrderItemMock(this.itemName, this.serviceType, this.quantity, this.icon);
 }
 
 class AgentDashboardScreen extends StatefulWidget {
@@ -55,20 +70,93 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
   void initState() {
     super.initState();
     _allOrders = [
-      AgentOrderModel(id: '1025', laundryType: LaundryType.clothes, services: ['غسيل', 'كوي'], status: OrderStatus.received, customerLocation: 'شارع الشيخ زايد', time: 'الآن'),
-      AgentOrderModel(id: '1026', laundryType: LaundryType.clothes, services: ['تنظيف جاف'], status: OrderStatus.washing, customerLocation: 'حي الملك فهد', time: 'منذ ساعتين'),
-      AgentOrderModel(id: '1027', laundryType: LaundryType.clothes, services: ['كوي'], status: OrderStatus.completed, customerLocation: 'البرشاء', time: 'أمس'),
-      AgentOrderModel(id: '2001', laundryType: LaundryType.carsBikes, services: ['غسيل خارجي', 'تلميع'], status: OrderStatus.received, customerLocation: 'حي العليا', time: 'الآن'),
-      AgentOrderModel(id: '3001', laundryType: LaundryType.carpets, services: ['غسيل سجاد', 'تعطير'], status: OrderStatus.ready, customerLocation: 'حي الملقا', time: 'أمس'),
-      AgentOrderModel(id: '4001', laundryType: LaundryType.ac, services: ['تنظيف فلاتر', 'تعبئة فريون'], status: OrderStatus.ironing, customerLocation: 'حي النرجس', time: 'منذ ساعة'),
+      AgentOrderModel(
+        id: '1025',
+        laundryType: LaundryType.clothes,
+        services: ['غسيل', 'كوي'],
+        status: OrderStatus.received,
+        customerLocation: 'شارع الشيخ زايد',
+        time: 'الآن',
+        customerName: 'أحمد محمد',
+        items: [
+          OrderItemMock('ثوب', 'كوي', 5, Icons.iron),
+          OrderItemMock('تيشيرت', 'غسيل', 3, Icons.local_laundry_service),
+        ],
+        notes: 'ملاحظة: القطع تحتاج عناية خاصة للملابس الحساسة',
+      ),
+      AgentOrderModel(
+        id: '1026',
+        laundryType: LaundryType.clothes,
+        services: ['تنظيف جاف'],
+        status: OrderStatus.washing,
+        customerLocation: 'حي الملك فهد',
+        time: 'منذ ساعتين',
+        customerName: 'فاطمة علي',
+        items: [
+          OrderItemMock('فستان', 'تنظيف جاف', 2, Icons.dry_cleaning),
+        ],
+        notes: 'يرجى الحفاظ على نوعية القماش',
+      ),
+      AgentOrderModel(
+        id: '1027',
+        laundryType: LaundryType.clothes,
+        services: ['كوي'],
+        status: OrderStatus.completed,
+        customerLocation: 'البرشاء',
+        time: 'أمس',
+        customerName: 'سعيد خالد',
+        items: [
+          OrderItemMock('قميص', 'كوي', 10, Icons.iron),
+        ],
+        notes: 'طلب عادي بدون ملاحظات خاصة',
+      ),
+      AgentOrderModel(
+        id: '2001',
+        laundryType: LaundryType.carsBikes,
+        services: ['غسيل خارجي', 'تلميع'],
+        status: OrderStatus.received,
+        customerLocation: 'حي العليا',
+        time: 'الآن',
+        customerName: 'محمد عبدالله',
+        items: [
+          OrderItemMock('سيارة', 'غسيل وتلميع', 1, Icons.car_rental),
+        ],
+        notes: 'سيارة فاخرة - عناية خاصة',
+      ),
+      AgentOrderModel(
+        id: '3001',
+        laundryType: LaundryType.carpets,
+        services: ['غسيل سجاد', 'تعطير'],
+        status: OrderStatus.ready,
+        customerLocation: 'حي الملقا',
+        time: 'أمس',
+        customerName: 'عمر حسن',
+        items: [
+          OrderItemMock('سجاد', 'غسيل عميق', 3, Icons.texture),
+        ],
+        notes: 'سجاد فارسي - يحتاج عناية',
+      ),
+      AgentOrderModel(
+        id: '4001',
+        laundryType: LaundryType.ac,
+        services: ['تنظيف فلاتر', 'تعبئة فريون'],
+        status: OrderStatus.ironing,
+        customerLocation: 'حي النرجس',
+        time: 'منذ ساعة',
+        customerName: 'ياسر إبراهيم',
+        items: [
+          OrderItemMock('مكيف', 'تنظيف كامل', 2, Icons.ac_unit),
+        ],
+        notes: 'مكيفات سبليت - فحص شامل',
+      ),
     ];
   }
 
   List<AgentOrderModel> get _currentOrders => 
       _allOrders.where((o) => o.laundryType == widget.laundryType && o.status != OrderStatus.completed).toList();
 
-  List<AgentOrderModel> get _previousOrders => 
-      _allOrders.where((o) => o.laundryType == widget.laundryType && o.status == OrderStatus.completed).toList();
+  List<AgentOrderModel> get _previousOrders =>
+      _allOrders.where((o) => o.laundryType == widget.laundryType && (o.status == OrderStatus.completed || o.status == OrderStatus.ready)).toList();
 
   Widget _buildStatCard(String title, String count, Color color, IconData icon) {
     return Expanded(
@@ -271,6 +359,7 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
                       extra: {
                         'status': order.status,
                         'isReadOnly': isReadOnly,
+                        'order': order,
                       },
                     );
                     if (newStatus != null && !isReadOnly) {

@@ -46,6 +46,7 @@ class AgentAppBarActions extends StatelessWidget {
           ),
         IconButton(
           icon: Icon(isDark ? Icons.light_mode : Icons.dark_mode),
+          tooltip: isDark ? "Switch to light theme" : "Switch to dark theme",
           onPressed: () {
             ThemeController().toggleTheme();
           },
