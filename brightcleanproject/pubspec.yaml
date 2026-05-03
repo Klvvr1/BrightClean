@@ -52,6 +52,8 @@ dependencies:
   crypto: ^3.0.3
   geolocator: ^11.0.0
   sqflite_common_ffi: ^2.4.0+3
+  shared_preferences: ^2.5.5
+  url_launcher: ^6.2.5
 
 dev_dependencies:
   flutter_test:
