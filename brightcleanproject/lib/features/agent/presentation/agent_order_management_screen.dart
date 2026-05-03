@@ -189,6 +189,12 @@ class _AgentOrderManagementScreenState extends State<AgentOrderManagementScreen>
       return;
     }
 
+    // Guard: if the new status is rejected, route to the explicit rejection handler
+    if (_currentStatus == OrderStatus.rejected) {
+      await _handleReject(isArabic);
+      return;
+    }
+
     final bool? confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -381,7 +387,7 @@ class _AgentOrderManagementScreenState extends State<AgentOrderManagementScreen>
                                   fillColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
                                 ),
                                 items: OrderStatus.values
-                                    .where((s) => s != OrderStatus.pending) // Exclude pending from dropdown
+                                    .where((s) => s != OrderStatus.pending && s != OrderStatus.rejected) // Exclude pending and rejected from dropdown
                                     .map((status) => DropdownMenuItem(
                                           value: status,
                                           child: Text(isArabic ? status.title : status.englishTitle),

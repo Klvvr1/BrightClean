@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:brightcleanprojet/core/enums/order_status.dart';
 import '../../features/auth/presentation/splash_screen.dart';
@@ -67,9 +68,23 @@ class AppRouter {
         builder: (context, state) {
           final id = state.pathParameters['id'] ?? 'unknown';
           final extra = state.extra as Map<String, dynamic>?;
-          final initialStatus = extra?['status'] as OrderStatus? ?? OrderStatus.received;
-          final isReadOnly = extra?['isReadOnly'] as bool? ?? false;
-          final order = extra?['order'] as AgentOrderModel;
+
+          // Validate the payload before casting
+          if (extra == null || !extra.containsKey('order') || extra['order'] is! AgentOrderModel) {
+            // Fallback: redirect to agent dashboard if order data is missing or invalid
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              context.go('/agent_dashboard');
+            });
+            return const Scaffold(
+              body: Center(
+                child: CircularProgressIndicator(),
+              ),
+            );
+          }
+
+          final initialStatus = extra['status'] as OrderStatus? ?? OrderStatus.received;
+          final isReadOnly = extra['isReadOnly'] as bool? ?? false;
+          final order = extra['order'] as AgentOrderModel;
           return AgentOrderManagementScreen(
             orderId: id,
             initialStatus: initialStatus,
