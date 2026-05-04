@@ -55,8 +55,16 @@ class _LoginScreenState extends State<LoginScreen> {
         // After async gaps, check if the widget is still mounted
         if (mounted) {
           if (user != null) {
-            // If needed, check user['role'] to route appropriately
-            context.go('/customer_home');
+            final String role = user['role'] as String? ?? 'Customer';
+            if (role == 'Admin') {
+              context.go('/admin');
+            } else if (role == 'Manager' || role == 'Agent') {
+              context.go('/agent_dashboard');
+            } else if (role == 'Driver') {
+              context.go('/driver_dashboard');
+            } else {
+              context.go('/customer_home');
+            }
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:brightcleanprojet/core/theme/app_colors.dart';
-import 'package:brightcleanprojet/core/localization/language_controller.dart';
+import 'package:brightcleanprojet/controllers/language_controller.dart';
+
+import 'package:brightcleanprojet/controllers/theme_controller.dart';
 
 class AgentAppBarActions extends StatelessWidget {
   final bool? isLaundryOpen;
@@ -17,7 +19,7 @@ class AgentAppBarActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isArabic = LanguageController().isArabic;
-    // final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -42,6 +44,13 @@ class AgentAppBarActions extends StatelessWidget {
               ),
             ],
           ),
+        IconButton(
+          icon: Icon(isDark ? Icons.light_mode : Icons.dark_mode),
+          tooltip: isDark ? "Switch to light theme" : "Switch to dark theme",
+          onPressed: () {
+            ThemeController().toggleTheme();
+          },
+        ),
         IconButton(
           icon: const Icon(Icons.notifications_outlined),
           onPressed: () {},

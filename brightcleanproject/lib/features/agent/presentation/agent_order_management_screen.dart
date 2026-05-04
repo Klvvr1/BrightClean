@@ -2,19 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:brightcleanprojet/core/enums/order_status.dart';
 import 'package:brightcleanprojet/core/theme/app_colors.dart';
-import 'package:brightcleanprojet/core/localization/language_controller.dart';
+import 'package:brightcleanprojet/controllers/language_controller.dart';
 import 'package:brightcleanprojet/features/agent/presentation/widgets/agent_app_bar_actions.dart';
+import 'package:brightcleanprojet/features/agent/presentation/agent_dashboard_screen.dart';
 
 class AgentOrderManagementScreen extends StatefulWidget {
   final String orderId;
   final OrderStatus initialStatus;
   final bool isReadOnly;
+  final AgentOrderModel order;
 
   const AgentOrderManagementScreen({
-    super.key, 
+    super.key,
     required this.orderId,
     required this.initialStatus,
     this.isReadOnly = false,
+    required this.order,
   });
 
   @override
@@ -22,31 +25,24 @@ class AgentOrderManagementScreen extends StatefulWidget {
       _AgentOrderManagementScreenState();
 }
 
-// نموذج بيانات للعنصر في الطلب
-class OrderItemMock {
-  final String itemName;
-  final String serviceType;
-  final int quantity;
-  final IconData icon;
-
-  OrderItemMock(this.itemName, this.serviceType, this.quantity, this.icon);
-}
-
 class _AgentOrderManagementScreenState extends State<AgentOrderManagementScreen> {
   late OrderStatus _currentStatus;
+  bool _isLoading = false;
+  bool _hasChanges = false;
+  final TextEditingController _rejectReasonController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _currentStatus = widget.initialStatus;
+    _currentStatus = widget.order.status;
   }
 
-  // عناصر وهمية للطلب
-  final List<OrderItemMock> _items = [
-    OrderItemMock('ثوب', 'كوي', 5, Icons.iron),
-    OrderItemMock('تيشيرت', 'غسيل', 3, Icons.local_laundry_service),
-    OrderItemMock('شماغ', 'غسيل وكوي', 2, Icons.dry_cleaning),
-  ];
+  @override
+  void dispose() {
+    _rejectReasonController.dispose();
+    super.dispose();
+  }
+
 
   String _translateItem(String item) {
     final Map<String, String> translations = {
@@ -67,6 +63,173 @@ class _AgentOrderManagementScreenState extends State<AgentOrderManagementScreen>
     return translations[service] ?? service;
   }
 
+  Future<bool> _showUnsavedChangesDialog(BuildContext context, bool isArabic) async {
+    return await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(isArabic ? 'تغييرات غير محفوظة' : 'Unsaved Changes'),
+        content: Text(isArabic ? 'لديك تغييرات لم تقم بحفظها، هل أنت متأكد من رغبتك في الخروج؟' : 'You have unsaved changes. Are you sure you want to leave?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(isArabic ? 'البقاء' : 'Stay'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(isArabic ? 'الخروج بدون حفظ' : 'Leave without saving'),
+          ),
+        ],
+      ),
+    ) ?? false;
+  }
+
+  Future<void> _handleAccept(bool isArabic) async {
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(isArabic ? 'تأكيد قبول الطلب' : 'Confirm Order Acceptance'),
+        content: Text(isArabic ? 'هل أنت متأكد من قبول هذا الطلب؟' : 'Are you sure you want to accept this order?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(isArabic ? 'إلغاء' : 'Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.success),
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(isArabic ? 'تأكيد القبول' : 'Confirm Accept'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      setState(() => _isLoading = true);
+      await Future.delayed(const Duration(seconds: 1)); // Simulate network
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _currentStatus = OrderStatus.received;
+        _hasChanges = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(isArabic ? 'تم قبول الطلب بنجاح' : 'Order accepted successfully'),
+        backgroundColor: AppColors.success,
+      ));
+      context.pop(_currentStatus);
+    }
+  }
+
+  Future<void> _handleReject(bool isArabic) async {
+    _rejectReasonController.clear();
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(isArabic ? 'تأكيد رفض الطلب' : 'Confirm Order Rejection'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(isArabic ? 'يرجى كتابة سبب واضح للرفض:' : 'Please provide a clear reason for rejection:'),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _rejectReasonController,
+              decoration: InputDecoration(
+                hintText: isArabic ? 'سبب الرفض...' : 'Reason for rejection...',
+                border: const OutlineInputBorder(),
+              ),
+              maxLines: 3,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(isArabic ? 'إلغاء' : 'Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () {
+              if (_rejectReasonController.text.trim().isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: Text(isArabic ? 'يجب إدخال سبب الرفض' : 'Rejection reason is required'),
+                  backgroundColor: Colors.red,
+                ));
+              } else {
+                Navigator.pop(context, true);
+              }
+            },
+            child: Text(isArabic ? 'تأكيد الرفض' : 'Confirm Reject'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      setState(() => _isLoading = true);
+      await Future.delayed(const Duration(seconds: 1)); // Simulate network
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(isArabic ? 'تم رفض الطلب بنجاح' : 'Order rejected successfully'),
+        backgroundColor: Colors.red,
+      ));
+      context.pop(OrderStatus.rejected);
+    }
+  }
+
+  Future<void> _handleSaveChanges(bool isArabic) async {
+    if (!_hasChanges) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(isArabic ? 'لا توجد تغييرات لحفظها' : 'No changes to save'),
+      ));
+      return;
+    }
+
+    // Guard: if the new status is rejected, route to the explicit rejection handler
+    if (_currentStatus == OrderStatus.rejected) {
+      await _handleReject(isArabic);
+      return;
+    }
+
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(isArabic ? 'تأكيد الحفظ' : 'Confirm Save'),
+        content: Text(isArabic ? 'هل تريد حفظ الحالة الجديدة للطلب؟' : 'Do you want to save the new order status?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(isArabic ? 'إلغاء' : 'Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(isArabic ? 'تأكيد' : 'Confirm'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      setState(() => _isLoading = true);
+      await Future.delayed(const Duration(seconds: 1)); // Simulate network
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _hasChanges = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(isArabic ? 'تم تحديث حالة الطلب بنجاح' : 'Order status updated successfully'),
+        backgroundColor: AppColors.success,
+      ));
+      context.pop(_currentStatus);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -77,205 +240,249 @@ class _AgentOrderManagementScreenState extends State<AgentOrderManagementScreen>
       valueListenable: langController.locale,
       builder: (context, locale, _) {
         final isArabic = locale.languageCode == 'ar';
+        final isReadOnly = widget.isReadOnly || widget.initialStatus == OrderStatus.completed;
 
-        return Scaffold(
-          backgroundColor: isDark ? const Color(0xFF121212) : AppColors.background,
-          appBar: AppBar(
-            title: Text(isArabic ? 'إدارة الطلب #${widget.orderId}' : 'Manage Order #${widget.orderId}'),
-            elevation: 0,
-            actions: const [
-              AgentAppBarActions(),
-            ],
-          ),
-          body: Column(
-            children: [
-              // Premium Header / Status Banner
-              if (widget.isReadOnly)
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [AppColors.success.withValues(alpha: 0.8), AppColors.success],
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.check_circle_outline, color: Colors.white, size: 20),
-                      const SizedBox(width: 10),
-                      Text(
-                        isArabic ? 'هذا الطلب مكتمل ولا يمكن تعديله' : 'This order is finalized and cannot be modified',
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
-                      ),
-                    ],
-                  ),
-                ),
-              
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(24.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _buildSectionHeader(isArabic ? 'تفاصيل الطلب' : 'Order Details', theme),
-                      const SizedBox(height: 16),
-                      
-                      // Modern Order Card
+        return PopScope(
+          canPop: !_hasChanges,
+          onPopInvokedWithResult: (didPop, result) async {
+            if (didPop) return;
+            final bool shouldPop = await _showUnsavedChangesDialog(context, isArabic);
+            if (shouldPop && context.mounted) {
+              context.pop();
+            }
+          },
+          child: Scaffold(
+            backgroundColor: isDark ? const Color(0xFF121212) : AppColors.background,
+            appBar: AppBar(
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () {
+                  if (!_hasChanges) {
+                    context.pop(_currentStatus);
+                  } else {
+                    Navigator.maybePop(context);
+                  }
+                },
+              ),
+              title: Text(isArabic ? 'إدارة الطلب #${widget.orderId}' : 'Manage Order #${widget.orderId}'),
+              elevation: 0,
+              actions: const [
+                AgentAppBarActions(),
+              ],
+            ),
+            body: Stack(
+              children: [
+                Column(
+                  children: [
+                    if (isReadOnly)
                       Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
                         decoration: BoxDecoration(
-                          color: theme.cardTheme.color,
-                          borderRadius: BorderRadius.circular(24),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: isDark ? 0.4 : 0.06),
-                              blurRadius: 20,
-                              offset: const Offset(0, 10),
+                          gradient: LinearGradient(
+                            colors: [AppColors.success.withValues(alpha: 0.8), AppColors.success],
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.check_circle_outline, color: Colors.white, size: 20),
+                            const SizedBox(width: 10),
+                            Text(
+                              isArabic ? 'هذا الطلب مكتمل ولا يمكن تعديله' : 'This order is finalized and cannot be modified',
+                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
                             ),
                           ],
-                          border: Border.all(color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05)),
                         ),
+                      ),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.all(24.0),
                         child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            // Card Header with Gradient
+                            _buildSectionHeader(isArabic ? 'تفاصيل الطلب' : 'Order Details', theme),
+                            const SizedBox(height: 16),
+                            // Order Card showing simplified operational data
                             Container(
-                              padding: const EdgeInsets.all(20),
                               decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: isDark 
-                                      ? [Colors.white.withValues(alpha: 0.05), Colors.white.withValues(alpha: 0.01)]
-                                      : [AppColors.primary.withValues(alpha: 0.05), Colors.transparent],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                              ),
-                              child: Row(
-                                children: [
-                                  CircleAvatar(
-                                    radius: 24, 
-                                    backgroundColor: isDark ? AppColors.lightBlue.withValues(alpha: 0.2) : AppColors.primary.withValues(alpha: 0.1), 
-                                    child: Icon(Icons.person_rounded, size: 24, color: isDark ? AppColors.lightBlue : AppColors.primary)
+                                color: theme.cardTheme.color,
+                                borderRadius: BorderRadius.circular(24),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: isDark ? 0.4 : 0.06),
+                                    blurRadius: 20,
+                                    offset: const Offset(0, 10),
                                   ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                ],
+                                border: Border.all(color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05)),
+                              ),
+                              child: Column(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(20),
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        colors: isDark 
+                                            ? [Colors.white.withValues(alpha: 0.05), Colors.white.withValues(alpha: 0.01)]
+                                            : [AppColors.primary.withValues(alpha: 0.05), Colors.transparent],
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                      ),
+                                      borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                                    ),
+                                    child: Row(
                                       children: [
-                                        Text(isArabic ? 'أحمد محمد' : 'Ahmed Mohamed', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                                        Text(isArabic ? 'عميل بريميوم' : 'Premium Customer', style: TextStyle(fontSize: 12, color: isDark ? Colors.white54 : Colors.grey.shade600, letterSpacing: 0.5)),
+                                        CircleAvatar(
+                                          radius: 24, 
+                                          backgroundColor: isDark ? AppColors.lightBlue.withValues(alpha: 0.2) : AppColors.primary.withValues(alpha: 0.1), 
+                                          child: Icon(Icons.person_rounded, size: 24, color: isDark ? AppColors.lightBlue : AppColors.primary)
+                                        ),
+                                        const SizedBox(width: 16),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(widget.order.customerName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                                              Text(isArabic ? 'الطلب #${widget.orderId}' : 'Order #${widget.orderId}', style: TextStyle(fontSize: 12, color: isDark ? Colors.white54 : Colors.grey.shade600, letterSpacing: 0.5)),
+                                            ],
+                                          ),
+                                        ),
+                                        _buildStatusBadge(_currentStatus, isArabic),
                                       ],
                                     ),
                                   ),
-                                  _buildStatusBadge(_currentStatus, isArabic),
+                                  Padding(
+                                    padding: const EdgeInsets.all(20.0),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Icon(Icons.inventory_2_outlined, size: 16, color: isDark ? AppColors.lightBlue : AppColors.primary),
+                                            const SizedBox(width: 8),
+                                            Text(isArabic ? 'محتويات الطلب' : 'Order Contents', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 16),
+                                        ...widget.order.items.map((item) => _buildItemRow(item, isArabic, isDark)),
+                                        _buildNotesRow(isArabic, isDark, widget.order.notes),
+                                      ],
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
                             
-                            Padding(
-                              padding: const EdgeInsets.all(20.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Icon(Icons.inventory_2_outlined, size: 16, color: isDark ? AppColors.lightBlue : AppColors.primary),
-                                      const SizedBox(width: 8),
-                                      Text(isArabic ? 'محتويات الطلب' : 'Order Contents', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 16),
-                                  ..._items.map((item) => _buildItemRow(item, isArabic, isDark)),
-                                  
-                                  const Padding(
-                                    padding: EdgeInsets.symmetric(vertical: 16),
-                                    child: Divider(height: 1, thickness: 1),
-                                  ),
-                                  
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(isArabic ? 'الإجمالي المتوقع' : 'Estimated Total', style: TextStyle(color: isDark ? Colors.white70 : Colors.grey.shade700, fontWeight: FontWeight.w500)),
-                                      Text(
-                                        isArabic ? '100 درهم' : '100 AED', 
-                                        style: TextStyle(
-                                          color: isDark ? AppColors.lightBlue : AppColors.primary, 
-                                          fontWeight: FontWeight.w900, 
-                                          fontSize: 22,
-                                          letterSpacing: -0.5,
-                                        )
-                                      ),
-                                    ],
-                                  ),
-                                ],
+                            const SizedBox(height: 32),
+                            
+                            if (!isReadOnly && widget.initialStatus != OrderStatus.pending) ...[
+                              _buildSectionHeader(isArabic ? 'تحديث حالة الغسيل' : 'Update Laundry Status', theme),
+                              const SizedBox(height: 16),
+                              DropdownButtonFormField<OrderStatus>(
+                                initialValue: _currentStatus,
+                                decoration: InputDecoration(
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                                  filled: true,
+                                  fillColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
+                                ),
+                                items: OrderStatus.values
+                                    .where((s) => s != OrderStatus.pending && s != OrderStatus.rejected) // Exclude pending and rejected from dropdown
+                                    .map((status) => DropdownMenuItem(
+                                          value: status,
+                                          child: Text(isArabic ? status.title : status.englishTitle),
+                                        ))
+                                    .toList(),
+                                onChanged: (OrderStatus? newStatus) {
+                                  if (newStatus != null && newStatus != _currentStatus) {
+                                    setState(() {
+                                      _currentStatus = newStatus;
+                                      _hasChanges = true;
+                                    });
+                                  }
+                                },
                               ),
-                            ),
+                            ],
                           ],
                         ),
                       ),
-                      
-                      const SizedBox(height: 32),
-                      
-                      if (!widget.isReadOnly) ...[
-                        _buildSectionHeader(isArabic ? 'تحديث حالة الطلب' : 'Update Order Status', theme),
-                        const SizedBox(height: 16),
-                        Wrap(
-                          spacing: 10,
-                          runSpacing: 10,
-                          children: OrderStatus.values.map((status) {
-                            final isSelected = _currentStatus == status;
-                            return _buildStatusChip(status, isSelected, isArabic, isDark);
-                          }).toList(),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-              
-              // Bottom Action Area
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: theme.scaffoldBackgroundColor,
-                  boxShadow: [
-                    BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, -5)),
+                    ),
+                    
+                    // Bottom Action Area
+                    Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: theme.scaffoldBackgroundColor,
+                        boxShadow: [
+                          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, -5)),
+                        ],
+                      ),
+                      child: isReadOnly 
+                        ? OutlinedButton(
+                            onPressed: _isLoading ? null : () => context.pop(_currentStatus),
+                            style: OutlinedButton.styleFrom(
+                              side: BorderSide(color: isDark ? Colors.white24 : Colors.grey.shade300),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              minimumSize: const Size(double.infinity, 50),
+                            ),
+                            child: Text(isArabic ? 'العودة للخلف' : 'Go Back', style: TextStyle(color: isDark ? Colors.white : Colors.black87, fontWeight: FontWeight.bold)),
+                          )
+                        : (widget.initialStatus == OrderStatus.pending)
+                          ? Row(
+                              children: [
+                                Expanded(
+                                  child: OutlinedButton(
+                                    onPressed: _isLoading ? null : () => _handleReject(isArabic),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: Colors.red,
+                                      side: const BorderSide(color: Colors.red),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                      padding: const EdgeInsets.symmetric(vertical: 16),
+                                    ),
+                                    child: Text(isArabic ? 'رفض' : 'Reject', style: const TextStyle(fontWeight: FontWeight.bold)),
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: ElevatedButton(
+                                    onPressed: _isLoading ? null : () => _handleAccept(isArabic),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppColors.success,
+                                      foregroundColor: Colors.white,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                      padding: const EdgeInsets.symmetric(vertical: 16),
+                                    ),
+                                    child: Text(isArabic ? 'قبول الطلب' : 'Accept Order', style: const TextStyle(fontWeight: FontWeight.bold)),
+                                  ),
+                                ),
+                              ],
+                            )
+                          : ElevatedButton(
+                              onPressed: _isLoading ? null : () => _handleSaveChanges(isArabic),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                minimumSize: const Size(double.infinity, 50),
+                                elevation: 4,
+                                shadowColor: AppColors.primary.withValues(alpha: 0.4),
+                              ),
+                              child: Text(isArabic ? 'تأكيد وحفظ التغييرات' : 'Confirm & Save Changes', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                            ),
+                    ),
                   ],
                 ),
-                child: widget.isReadOnly 
-                  ? OutlinedButton(
-                      onPressed: () => context.pop(),
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: isDark ? Colors.white24 : Colors.grey.shade300),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                      ),
-                      child: Text(isArabic ? 'العودة للخلف' : 'Go Back', style: TextStyle(color: isDark ? Colors.white : Colors.black87, fontWeight: FontWeight.bold)),
-                    )
-                  : ElevatedButton(
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(isArabic ? 'تم تحديث حالة الطلب بنجاح' : 'Order status updated successfully'), 
-                            backgroundColor: AppColors.success, 
-                            behavior: SnackBarBehavior.floating,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          ),
-                        );
-                        context.pop(_currentStatus);
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        elevation: 4,
-                        shadowColor: AppColors.primary.withValues(alpha: 0.4),
-                      ),
-                      child: Text(isArabic ? 'تأكيد وحفظ التغييرات' : 'Confirm & Save Changes', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                if (_isLoading)
+                  Container(
+                    color: Colors.black.withValues(alpha: 0.3),
+                    child: const Center(
+                      child: CircularProgressIndicator(),
                     ),
-              ),
-            ],
+                  ),
+              ],
+            ),
           ),
         );
       }
@@ -348,33 +555,27 @@ class _AgentOrderManagementScreenState extends State<AgentOrderManagementScreen>
     );
   }
 
-  Widget _buildStatusChip(OrderStatus status, bool isSelected, bool isArabic, bool isDark) {
-    return InkWell(
-      onTap: () => setState(() => _currentStatus = status),
-      borderRadius: BorderRadius.circular(16),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOutCubic,
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-        decoration: BoxDecoration(
-          color: isSelected ? status.color : (isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isSelected ? Colors.transparent : (isDark ? Colors.white10 : Colors.grey.shade200),
-            width: 1.5,
+  Widget _buildNotesRow(bool isArabic, bool isDark, String note) {
+    return Container(
+      margin: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.orange.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.info_outline, color: Colors.orange, size: 18),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              note,
+              style: TextStyle(fontSize: 13, color: isDark ? Colors.orange.shade200 : Colors.orange.shade800),
+            ),
           ),
-          boxShadow: isSelected 
-              ? [BoxShadow(color: status.color.withValues(alpha: 0.4), blurRadius: 10, offset: const Offset(0, 4))]
-              : [],
-        ),
-        child: Text(
-          isArabic ? status.title : status.englishTitle,
-          style: TextStyle(
-            color: isSelected ? Colors.white : (isDark ? Colors.white70 : Colors.grey.shade700),
-            fontWeight: FontWeight.bold,
-            fontSize: 14,
-          ),
-        ),
+        ],
       ),
     );
   }
