@@ -85,7 +85,7 @@ class AppTheme {
         error: AppColors.error,
       ),
       textTheme: GoogleFonts.cairoTextTheme(ThemeData.dark().textTheme).apply(
-        bodyColor: Colors.white70,
+        bodyColor: Colors.white,
         displayColor: Colors.white,
       ),
       appBarTheme: const AppBarTheme(
