@@ -22,11 +22,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _isEditMode = false;
 
   // Mock data (should ideally come from State Management)
-  final UserProfile _currentUser = const UserProfile(
+  UserProfile _currentUser = const UserProfile(
     name: 'أحمد محمد',
     phone: '+971 50 123 4567',
     walletBalance: '150 درهم',
   );
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserFromPrefs();
+  }
+
+  Future<void> _loadUserFromPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    final name = prefs.getString('user_name') ?? 'أحمد محمد';
+    final phone = prefs.getString('user_phone') ?? '+971 50 123 4567';
+    final walletBalance = prefs.getString('wallet_balance') ?? '150 درهم';
+
+    if (mounted) {
+      setState(() {
+        _currentUser = UserProfile(
+          name: name,
+          phone: phone,
+          walletBalance: walletBalance,
+        );
+      });
+    }
+  }
 
   void _toggleEditMode() {
     setState(() {
@@ -34,13 +57,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     });
   }
 
-  void _handleEditAvatar() {
+  Future<void> _handleEditAvatar() async {
     // Navigate to edit account screen or open image picker
-    Navigator.of(context).push(
+    await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => const EditAccountScreen(),
       ),
     );
+    await _loadUserFromPrefs();
   }
 
   // 4. Clear user session and persisted data on logout
@@ -48,6 +72,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       // 1. Clear Local Storage (Tokens & User Data)
       final prefs = await SharedPreferences.getInstance();
+
+      // Read userId before removing it
+      final userId = prefs.getString('user_id') ?? 'default_user';
 
       // Remove specific auth and user-scoped keys
       await prefs.remove('auth_token');
@@ -57,8 +84,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       await prefs.remove('user_phone');
       await prefs.remove('user_email');
 
-      // Remove user-scoped data (addresses)
-      final userId = prefs.getString('user_id') ?? 'default_user';
+      // Remove user-scoped data (addresses) using the stored userId
       await prefs.remove('user_saved_addresses_$userId');
 
       // 2. Clear API Headers (if using Dio or http client)
@@ -79,7 +105,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       debugPrint('User session completely cleared');
     } catch (e) {
       debugPrint('Error clearing session: $e');
-      rethrow; // Propagate error for handling
     }
   }
 
@@ -108,11 +133,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     if (confirm == true && mounted) {
       // Step 1: Actually completely clear the session data and token!
-      await _clearUserSession();
+      try {
+        await _clearUserSession();
+      } catch (e) {
+        debugPrint('Error during logout: $e');
+        // Continue with logout even if clearing session fails
+      }
 
       if (!mounted) return;
 
-      // Step 2: Use GoRouter's go() instead of Navigator to completely destroy routing stack 
+      // Step 2: Use GoRouter's go() instead of Navigator to completely destroy routing stack
       // Because your app uses GoRouter, using pushAndRemoveUntil causes routing state issues.
       context.go('/login');
     }
@@ -157,12 +187,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
           CustomProfileTile(
             icon: Icons.person_outline,
             title: 'تعديل الحساب',
-            onTap: () {
-              Navigator.of(context).push(
+            onTap: () async {
+              await Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (context) => const EditAccountScreen(),
                 ),
               );
+              await _loadUserFromPrefs();
             },
           ),
           const Divider(height: 1),

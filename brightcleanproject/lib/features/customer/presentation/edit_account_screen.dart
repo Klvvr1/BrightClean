@@ -32,11 +32,15 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
     final prefs = await SharedPreferences.getInstance();
     final name = prefs.getString('user_name') ?? '';
     final phone = prefs.getString('user_phone') ?? '';
+    final imagePath = prefs.getString('profile_image_path');
 
     if (mounted) {
       setState(() {
         _nameController.text = name;
         _phoneController.text = phone;
+        if (imagePath != null && imagePath.isNotEmpty) {
+          _selectedImage = File(imagePath);
+        }
       });
     }
   }
@@ -99,6 +103,9 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('user_name', name);
       await prefs.setString('user_phone', phone);
+      if (_selectedImage != null) {
+        await prefs.setString('profile_image_path', _selectedImage!.path);
+      }
       if (!mounted) return;
 
       setState(() {

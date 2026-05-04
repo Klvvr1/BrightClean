@@ -5,25 +5,23 @@ import '../../../../../core/theme/app_colors.dart';
 class HelpCenterBottomSheet extends StatelessWidget {
   const HelpCenterBottomSheet({super.key});
 
-  Future<void> _launchEmail(BuildContext context) async {
+  Future<void> _launchEmail(ScaffoldMessengerState messenger) async {
     final Uri emailLaunchUri = Uri(
       scheme: 'mailto',
       path: 'support@brightclean.com',
-      query: 'subject=طلب مساعدة عبر التطبيق',
+      queryParameters: {'subject': 'طلب مساعدة عبر التطبيق'},
     );
 
     if (await canLaunchUrl(emailLaunchUri)) {
       await launchUrl(emailLaunchUri);
     } else {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('لا يمكن فتح تطبيق البريد الإلكتروني')),
-        );
-      }
+      messenger.showSnackBar(
+        const SnackBar(content: Text('لا يمكن فتح تطبيق البريد الإلكتروني')),
+      );
     }
   }
 
-  Future<void> _launchWhatsApp(BuildContext context) async {
+  Future<void> _launchWhatsApp(ScaffoldMessengerState messenger) async {
     const String phoneNumber = '971501234567'; // Removed '+' prefix
     const String message = 'مرحباً، أحتاج إلى مساعدة.';
     final Uri whatsappUri = Uri.parse('https://wa.me/$phoneNumber?text=${Uri.encodeComponent(message)}');
@@ -31,11 +29,9 @@ class HelpCenterBottomSheet extends StatelessWidget {
     if (await canLaunchUrl(whatsappUri)) {
       await launchUrl(whatsappUri, mode: LaunchMode.externalApplication);
     } else {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تطبيق واتساب غير مثبت على جهازك')),
-        );
-      }
+      messenger.showSnackBar(
+        const SnackBar(content: Text('تطبيق واتساب غير مثبت على جهازك')),
+      );
     }
   }
 
@@ -86,8 +82,9 @@ class HelpCenterBottomSheet extends StatelessWidget {
             subtitle: const Text('support@brightclean.com'),
             trailing: const Icon(Icons.arrow_forward_ios, size: 16),
             onTap: () {
+              final messenger = ScaffoldMessenger.of(context);
               Navigator.pop(context);
-              _launchEmail(context);
+              _launchEmail(messenger);
             },
           ),
           const SizedBox(height: 16),
@@ -104,8 +101,9 @@ class HelpCenterBottomSheet extends StatelessWidget {
             subtitle: const Text('محادثة فورية مع الدعم'),
             trailing: const Icon(Icons.arrow_forward_ios, size: 16),
             onTap: () {
+              final messenger = ScaffoldMessenger.of(context);
               Navigator.pop(context);
-              _launchWhatsApp(context);
+              _launchWhatsApp(messenger);
             },
           ),
           const SizedBox(height: 16),
