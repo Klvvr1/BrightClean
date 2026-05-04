@@ -5,11 +5,13 @@ import '../models/user_profile.dart';
 class ProfileHeaderSection extends StatelessWidget {
   final UserProfile user;
   final bool isEditMode;
+  final VoidCallback? onEditAvatarPressed;
 
   const ProfileHeaderSection({
     super.key,
     required this.user,
     required this.isEditMode,
+    this.onEditAvatarPressed,
   });
 
   @override
@@ -33,9 +35,7 @@ class ProfileHeaderSection extends StatelessWidget {
                 child: IconButton(
                   icon: const Icon(Icons.camera_alt,
                       size: 18, color: AppColors.white),
-                  onPressed: () {
-                    // منطق تغيير الصورة
-                  },
+                  onPressed: onEditAvatarPressed,
                 ),
               ),
           ],

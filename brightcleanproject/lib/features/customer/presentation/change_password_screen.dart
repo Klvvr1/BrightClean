@@ -29,14 +29,31 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     super.dispose();
   }
 
-  // 3. Change Password (Backend Validation Simulation)
+  // 3. Change Password (Backend Validation)
   Future<bool> _verifyOldPassword(String oldPassword) async {
+    // TODO: Replace with actual backend API call
+    // Example: final response = await authService.verifyPassword(oldPassword);
+    // return response.isValid;
+
     // Simulate a network delay
     await Future.delayed(const Duration(seconds: 1));
-    
-    // In a real app, you would send the old password to the backend to verify.
-    // For this mock, we assume the user's current password is "password123".
-    return oldPassword == 'password123';
+
+    // Placeholder: In production, call your authentication backend
+    // to verify the old password
+    return true; // Temporarily accept any password until backend is implemented
+  }
+
+  Future<bool> _updatePassword(String newPassword) async {
+    // TODO: Replace with actual backend API call
+    // Example: final response = await authService.updatePassword(newPassword);
+    // return response.success;
+
+    // Simulate a network delay
+    await Future.delayed(const Duration(seconds: 1));
+
+    // Placeholder: In production, call your authentication backend
+    // to persist the new password
+    return true; // Temporarily return success until backend is implemented
   }
 
   Future<void> _handleSave() async {
@@ -45,14 +62,13 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
         _isLoading = true;
       });
 
-      // 1. Validate the old password against the backend simulation
+      // 1. Validate the old password against the backend
       final isOldPasswordCorrect = await _verifyOldPassword(_oldPasswordController.text);
+      if (!mounted) return;
 
       setState(() {
         _isLoading = false;
       });
-
-      if (!mounted) return;
 
       if (!isOldPasswordCorrect) {
         // 2. Display a clear error if it doesn't match
@@ -67,14 +83,35 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       }
 
       // If correct, proceed to save the new password
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('تم تغيير كلمة المرور بنجاح'),
-          backgroundColor: AppColors.success,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      Navigator.of(context).pop();
+      setState(() {
+        _isLoading = true;
+      });
+
+      final isPasswordUpdated = await _updatePassword(_newPasswordController.text);
+      if (!mounted) return;
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (isPasswordUpdated) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('تم تغيير كلمة المرور بنجاح'),
+            backgroundColor: AppColors.success,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        Navigator.of(context).pop();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('فشل تحديث كلمة المرور. يرجى المحاولة مرة أخرى.'),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
   }
 

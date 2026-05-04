@@ -56,18 +56,29 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
        ScaffoldMessenger.of(context).showSnackBar(
          const SnackBar(content: Text('جاري تحديد موقعك...'), duration: Duration(seconds: 1)));
     }
-    
-    final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high);
-    
-    final newLoc = LatLng(position.latitude, position.longitude);
-    
-    setState(() {
-      _selectedLocation = newLoc;
-    });
 
-    // Animate map camera to center on current location
-    _mapController.move(newLoc, 15.0);
+    try {
+      final position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high);
+      if (!mounted) return;
+
+      final newLoc = LatLng(position.latitude, position.longitude);
+
+      setState(() {
+        _selectedLocation = newLoc;
+      });
+
+      // Animate map camera to center on current location
+      _mapController.move(newLoc, 15.0);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('فشل الحصول على الموقع: ${e.toString()}'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
   }
 
   void _onSaveLocation() {

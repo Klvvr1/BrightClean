@@ -9,9 +9,9 @@ class HelpCenterBottomSheet extends StatelessWidget {
     final Uri emailLaunchUri = Uri(
       scheme: 'mailto',
       path: 'support@brightclean.com',
-      query: 'subject=طلب مساعدة عبر التطبيق', 
+      query: 'subject=طلب مساعدة عبر التطبيق',
     );
-    
+
     if (await canLaunchUrl(emailLaunchUri)) {
       await launchUrl(emailLaunchUri);
     } else {
@@ -24,10 +24,10 @@ class HelpCenterBottomSheet extends StatelessWidget {
   }
 
   Future<void> _launchWhatsApp(BuildContext context) async {
-    const String phoneNumber = '+971501234567'; // Preset support number
+    const String phoneNumber = '971501234567'; // Removed '+' prefix
     const String message = 'مرحباً، أحتاج إلى مساعدة.';
     final Uri whatsappUri = Uri.parse('https://wa.me/$phoneNumber?text=${Uri.encodeComponent(message)}');
-    
+
     if (await canLaunchUrl(whatsappUri)) {
       await launchUrl(whatsappUri, mode: LaunchMode.externalApplication);
     } else {

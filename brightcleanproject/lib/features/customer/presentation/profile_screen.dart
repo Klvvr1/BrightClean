@@ -1,5 +1,6 @@
 import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../auth/presentation/login_screen.dart';
 import 'addresses_screen.dart';
 import 'change_password_screen.dart';
@@ -33,29 +34,52 @@ class _ProfileScreenState extends State<ProfileScreen> {
     });
   }
 
-  // 4. Fix the "Login After Logout" Bug (CRITICAL)
+  void _handleEditAvatar() {
+    // Navigate to edit account screen or open image picker
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const EditAccountScreen(),
+      ),
+    );
+  }
+
+  // 4. Clear user session and persisted data on logout
   Future<void> _clearUserSession() async {
     try {
-      /*
       // 1. Clear Local Storage (Tokens & User Data)
       final prefs = await SharedPreferences.getInstance();
-      await prefs.clear(); // Clears everything (or use prefs.remove('token'))
 
-      // 2. Clear API Headers (Dio Example)
+      // Remove specific auth and user-scoped keys
+      await prefs.remove('auth_token');
+      await prefs.remove('refresh_token');
+      await prefs.remove('user_id');
+      await prefs.remove('user_name');
+      await prefs.remove('user_phone');
+      await prefs.remove('user_email');
+
+      // Remove user-scoped data (addresses)
+      final userId = prefs.getString('user_id') ?? 'default_user';
+      await prefs.remove('user_saved_addresses_$userId');
+
+      // 2. Clear API Headers (if using Dio or http client)
+      // TODO: Add when API client is implemented
+      // Example for Dio:
       // DioClient.instance.options.headers.remove('Authorization');
-      
+      // Example for http:
+      // HttpClient.instance.clearAuthHeader();
+
       // 3. Reset State Management (if you add GetX / Provider / Bloc later)
       // For Provider:
-      // Provider.of<AuthProvider>(context, listen: false).clearAuth();
+      // if (mounted) Provider.of<AuthProvider>(context, listen: false).clearAuth();
       // For GetX:
       // Get.find<AuthController>().clearAuth();
       // For Bloc:
-      // context.read<AuthBloc>().add(LoggedOutEvent());
-      */
-      
+      // if (mounted) context.read<AuthBloc>().add(LoggedOutEvent());
+
       debugPrint('User session completely cleared');
     } catch (e) {
       debugPrint('Error clearing session: $e');
+      rethrow; // Propagate error for handling
     }
   }
 
@@ -113,6 +137,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ProfileHeaderSection(
             user: _currentUser,
             isEditMode: _isEditMode,
+            onEditAvatarPressed: _isEditMode ? _handleEditAvatar : null,
           ),
           const SizedBox(height: 32),
           WalletSection(balance: _currentUser.walletBalance),

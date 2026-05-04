@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/custom_text_field.dart';
 
@@ -14,11 +15,31 @@ class EditAccountScreen extends StatefulWidget {
 
 class _EditAccountScreenState extends State<EditAccountScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController(text: 'أحمد محمد'); // Mock initial data
-  final _phoneController = TextEditingController(text: '0501234567');
-  
+  final _nameController = TextEditingController();
+  final _phoneController = TextEditingController();
+
   File? _selectedImage;
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    // Load initial data from SharedPreferences
+    final prefs = await SharedPreferences.getInstance();
+    final name = prefs.getString('user_name') ?? '';
+    final phone = prefs.getString('user_phone') ?? '';
+
+    if (mounted) {
+      setState(() {
+        _nameController.text = name;
+        _phoneController.text = phone;
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -30,6 +51,7 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
   Future<void> _pickImage() async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    if (!mounted) return;
 
     if (pickedFile != null) {
       setState(() {
@@ -40,26 +62,56 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
 
   Future<void> _saveChanges() async {
     if (_formKey.currentState!.validate()) {
+      // Validate input
+      final name = _nameController.text.trim();
+      final phone = _phoneController.text.trim();
+
+      if (name.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('الرجاء إدخال الاسم'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+        return;
+      }
+
+      if (phone.isEmpty || phone.length < 9) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('الرجاء إدخال رقم هاتف صالح'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+        return;
+      }
+
       setState(() {
         _isLoading = true;
       });
 
-      // Mock API Call
+      // TODO: Replace with actual API call
+      // Example: await accountService.updateAccount(name, phone, _selectedImage);
       await Future.delayed(const Duration(seconds: 2));
+      if (!mounted) return;
+
+      // Save to SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('user_name', name);
+      await prefs.setString('user_phone', phone);
+      if (!mounted) return;
 
       setState(() {
         _isLoading = false;
       });
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('تم تحديث البيانات بنجاح!'),
-            backgroundColor: AppColors.success,
-          ),
-        );
-        Navigator.pop(context);
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('تم تحديث البيانات بنجاح!'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+      Navigator.pop(context, {'name': name, 'phone': phone});
     }
   }
 
