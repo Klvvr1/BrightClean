@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../../core/theme/app_colors.dart';
-import '../models/user_profile.dart';
+import '../../data/models/user_profile.dart';
 
 class ProfileHeaderSection extends StatelessWidget {
   final UserProfile user;

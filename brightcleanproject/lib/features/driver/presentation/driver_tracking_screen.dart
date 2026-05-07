@@ -6,8 +6,8 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../controllers/language_controller.dart';
-import '../../../../controllers/theme_controller.dart';
+import '../../../../core/controllers/language_controller.dart';
+import '../../../../core/controllers/theme_controller.dart';
 
 enum TrackingWorkflow { pickup, delivery }
 

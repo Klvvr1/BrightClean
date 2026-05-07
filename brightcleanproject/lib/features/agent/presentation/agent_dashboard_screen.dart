@@ -3,7 +3,7 @@ import 'package:brightcleanprojet/core/theme/app_colors.dart';
 import 'package:go_router/go_router.dart';
 import 'package:brightcleanprojet/core/enums/laundry_type.dart';
 import 'package:brightcleanprojet/core/enums/order_status.dart';
-import 'package:brightcleanprojet/controllers/language_controller.dart';
+import 'package:brightcleanprojet/core/controllers/language_controller.dart';
 import 'package:brightcleanprojet/features/agent/presentation/widgets/agent_app_bar_actions.dart';
 
 // --- (Mock) نموذج بيانات الطلب ---

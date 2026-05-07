@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'addresses_screen.dart';
 import 'change_password_screen.dart';
 import 'edit_account_screen.dart';
-import 'models/user_profile.dart';
+import '../data/models/user_profile.dart';
 import 'widgets/custom_profile_tile.dart';
 import 'widgets/profile_header_section.dart';
 import 'widgets/wallet_section.dart';

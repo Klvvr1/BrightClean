@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../../../controllers/theme_controller.dart';
-import '../../../../controllers/language_controller.dart';
+import '../../../../core/controllers/theme_controller.dart';
+import '../../../../core/controllers/language_controller.dart';
 
 class DriverDashboardScreen extends StatefulWidget {
   const DriverDashboardScreen({super.key});
