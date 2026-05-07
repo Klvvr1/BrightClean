@@ -29,6 +29,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
   Future<void> _loadUserData() async {
     final isAr = LanguageController().isArabic;
     final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
     setState(() {
       final savedName = prefs.getString('user_name');
       final isDefaultName = prefs.getBool('user_name_is_default') ?? true;
@@ -259,6 +260,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
       return RefreshIndicator(
         onRefresh: _refreshOrders,
         child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           children: [
             _buildEarningsCard(),
@@ -292,6 +294,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
     return RefreshIndicator(
       onRefresh: _refreshOrders,
       child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         children: [
           _buildEarningsCard(),
@@ -509,6 +512,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
               children: [
                 // Current Orders
                 ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.all(16),
                   children: [
                     _buildOrderCard(
@@ -521,6 +525,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                 ),
                 // Previous Orders
                 ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.all(16),
                   children: [
                     _buildOrderCard(
