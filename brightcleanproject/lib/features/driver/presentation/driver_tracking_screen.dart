@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:go_router/go_router.dart';
@@ -12,8 +13,13 @@ enum TrackingWorkflow { pickup, delivery }
 
 class DriverTrackingScreen extends StatefulWidget {
   final String taskId;
+  final TrackingWorkflow workflow;
 
-  const DriverTrackingScreen({super.key, required this.taskId});
+  const DriverTrackingScreen({
+    super.key,
+    required this.taskId,
+    required this.workflow,
+  });
 
   @override
   State<DriverTrackingScreen> createState() => _DriverTrackingScreenState();
@@ -41,16 +47,81 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
   @override
   void initState() {
     super.initState();
-    // Simulate picking workflow based on ID (odd for pickup, even for delivery)
-    _workflow = int.tryParse(widget.taskId)?.isOdd == true 
-        ? TrackingWorkflow.pickup 
-        : TrackingWorkflow.delivery;
+    // Initialize workflow from the parameter passed by the caller
+    _workflow = widget.workflow;
   }
 
   Future<void> _makePhoneCall(String phoneNumber) async {
     final Uri launchUri = Uri(scheme: 'tel', path: phoneNumber);
-    if (await canLaunchUrl(launchUri)) {
-      await launchUrl(launchUri);
+    try {
+      if (await canLaunchUrl(launchUri)) {
+        await launchUrl(launchUri);
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(LanguageController().isArabic
+                ? 'تعذر إجراء المكالمة. تم نسخ الرقم إلى الحافظة.'
+                : 'Could not make the call. Number copied to clipboard.'),
+            action: SnackBarAction(
+              label: LanguageController().isArabic ? 'حسناً' : 'OK',
+              onPressed: () {},
+            ),
+          ),
+        );
+        await Clipboard.setData(ClipboardData(text: phoneNumber));
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(LanguageController().isArabic
+              ? 'حدث خطأ. تم نسخ الرقم إلى الحافظة.'
+              : 'An error occurred. Number copied to clipboard.'),
+          action: SnackBarAction(
+            label: LanguageController().isArabic ? 'حسناً' : 'OK',
+            onPressed: () {},
+          ),
+        ),
+      );
+      await Clipboard.setData(ClipboardData(text: phoneNumber));
+    }
+  }
+
+  Future<void> _sendMessage(String phoneNumber) async {
+    final Uri launchUri = Uri(scheme: 'sms', path: phoneNumber);
+    try {
+      if (await canLaunchUrl(launchUri)) {
+        await launchUrl(launchUri);
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(LanguageController().isArabic
+                ? 'تعذر فتح تطبيق الرسائل. تم نسخ الرقم إلى الحافظة.'
+                : 'Could not open messaging app. Number copied to clipboard.'),
+            action: SnackBarAction(
+              label: LanguageController().isArabic ? 'حسناً' : 'OK',
+              onPressed: () {},
+            ),
+          ),
+        );
+        await Clipboard.setData(ClipboardData(text: phoneNumber));
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(LanguageController().isArabic
+              ? 'حدث خطأ. تم نسخ الرقم إلى الحافظة.'
+              : 'An error occurred. Number copied to clipboard.'),
+          action: SnackBarAction(
+            label: LanguageController().isArabic ? 'حسناً' : 'OK',
+            onPressed: () {},
+          ),
+        ),
+      );
+      await Clipboard.setData(ClipboardData(text: phoneNumber));
     }
   }
 
@@ -192,23 +263,26 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
           ),
           
           // Details Panel
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: theme.cardColor,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, -5),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
+          Expanded(
+            flex: 3,
+            child: Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: theme.cardColor,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, -5),
+                  ),
+                ],
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
                 // Header: Customer Info
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -219,7 +293,7 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
                         Text(
                           _customerName,
                           style: TextStyle(
-                            fontSize: 20, 
+                            fontSize: 20,
                             fontWeight: FontWeight.bold,
                             color: isDark ? Colors.white : Colors.black87,
                           ),
@@ -230,10 +304,20 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
                         ),
                       ],
                     ),
-                    IconButton.filled(
-                      onPressed: () => _makePhoneCall(_customerPhone),
-                      icon: const Icon(Icons.call),
-                      style: IconButton.styleFrom(backgroundColor: AppColors.success),
+                    Row(
+                      children: [
+                        IconButton.filled(
+                          onPressed: () => _sendMessage(_customerPhone),
+                          icon: const Icon(Icons.message),
+                          style: IconButton.styleFrom(backgroundColor: AppColors.primary),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton.filled(
+                          onPressed: () => _makePhoneCall(_customerPhone),
+                          icon: const Icon(Icons.call),
+                          style: IconButton.styleFrom(backgroundColor: AppColors.success),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -365,8 +449,10 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
                       ),
                     ),
                   ),
-              ],
+                ],
+              ),
             ),
+          ),
           ),
         ],
       ),

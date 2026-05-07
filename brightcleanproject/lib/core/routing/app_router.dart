@@ -16,6 +16,12 @@ import '../../features/driver/presentation/driver_dashboard_screen.dart';
 import '../../features/driver/presentation/driver_tracking_screen.dart';
 import '../../features/admin/presentation/admin_dashboard_screen.dart';
 
+// Import AgentOrderModel for type checking in routes
+// (AgentOrderModel is defined in agent_dashboard_screen.dart)
+
+// Import TrackingWorkflow enum for driver tracking routes
+// (TrackingWorkflow is defined in driver_tracking_screen.dart)
+
 class AppRouter {
   static final router = GoRouter(
     initialLocation: '/',
@@ -101,7 +107,16 @@ class AppRouter {
         path: '/driver_tracking/:id',
         builder: (context, state) {
           final id = state.pathParameters['id'] ?? 'unknown';
-          return DriverTrackingScreen(taskId: id);
+          final extra = state.extra as Map<String, dynamic>?;
+
+          // Extract workflow from extra data (default to pickup if not provided)
+          final workflowValue = extra?['workflow'] as int? ?? 1;
+          final workflow = workflowValue == 2 ? TrackingWorkflow.delivery : TrackingWorkflow.pickup;
+
+          return DriverTrackingScreen(
+            taskId: id,
+            workflow: workflow,
+          );
         },
       ),
       GoRoute(

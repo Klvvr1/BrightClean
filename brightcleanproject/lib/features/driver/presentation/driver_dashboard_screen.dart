@@ -479,11 +479,14 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () async {
-                    await context.push('/driver_tracking/$orderId');
+                    await context.push(
+                      '/driver_tracking/$orderId',
+                      extra: {'workflow': workflow},
+                    );
                     _loadUserData(); // Refresh when coming back
                   },
-                  child: Text(isNew 
-                    ? (isAr ? 'قبول الطلب' : 'Accept Order') 
+                  child: Text(isNew
+                    ? (isAr ? 'قبول الطلب' : 'Accept Order')
                     : (isAr ? 'متابعة الطلب' : 'Track Order')),
                 ),
               ),
