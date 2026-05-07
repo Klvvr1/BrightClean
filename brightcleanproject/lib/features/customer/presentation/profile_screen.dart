@@ -1,7 +1,6 @@
 import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../auth/presentation/login_screen.dart';
 import 'addresses_screen.dart';
 import 'change_password_screen.dart';
 import 'edit_account_screen.dart';
@@ -113,9 +112,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('تسجيل الخروج', style: TextStyle(color: Colors.red)),
+          title:
+              const Text('تسجيل الخروج', style: TextStyle(color: Colors.red)),
           content: const Text('هل أنت متأكد أنك تريد تسجيل الخروج من التطبيق؟'),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
