@@ -107,11 +107,34 @@ class AppRouter {
         path: '/driver_tracking/:id',
         builder: (context, state) {
           final id = state.pathParameters['id'] ?? 'unknown';
-          final extra = state.extra as Map<String, dynamic>?;
 
-          // Extract workflow from extra data (default to pickup if not provided)
-          final workflowValue = extra?['workflow'] as int? ?? 1;
-          final workflow = workflowValue == 2 ? TrackingWorkflow.delivery : TrackingWorkflow.pickup;
+          // Safely extract and normalize workflow from extra data
+          TrackingWorkflow workflow = TrackingWorkflow.pickup; // default fallback
+
+          if (state.extra != null && state.extra is Map<String, dynamic>) {
+            final extra = state.extra as Map<String, dynamic>;
+            final workflowValue = extra['workflow'];
+
+            if (workflowValue is TrackingWorkflow) {
+              // Direct enum instance
+              workflow = workflowValue;
+            } else if (workflowValue is int) {
+              // Integer: compare against enum indices
+              if (workflowValue == TrackingWorkflow.delivery.index) {
+                workflow = TrackingWorkflow.delivery;
+              } else {
+                workflow = TrackingWorkflow.pickup;
+              }
+            } else if (workflowValue is String) {
+              // String: parse enum name
+              if (workflowValue.toLowerCase() == 'delivery') {
+                workflow = TrackingWorkflow.delivery;
+              } else {
+                workflow = TrackingWorkflow.pickup;
+              }
+            }
+            // For any other type or null, use default (pickup)
+          }
 
           return DriverTrackingScreen(
             taskId: id,

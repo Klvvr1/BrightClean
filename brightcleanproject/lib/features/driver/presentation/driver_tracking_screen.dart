@@ -258,6 +258,14 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
                     ),
                   ],
                 ),
+                RichAttributionWidget(
+                  attributions: [
+                    TextSourceAttribution(
+                      'OpenStreetMap contributors',
+                      onTap: () => launchUrl(Uri.parse('https://www.openstreetmap.org/copyright')),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
