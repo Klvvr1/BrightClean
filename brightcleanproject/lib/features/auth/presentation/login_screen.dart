@@ -55,12 +55,12 @@ class _LoginScreenState extends State<LoginScreen> {
         // After async gaps, check if the widget is still mounted
         if (mounted) {
           if (user != null) {
-            final String role = user['role'] as String? ?? 'Customer';
-            if (role == 'Admin') {
+            final String role = (user['role'] as String? ?? 'customer').toLowerCase();
+            if (role == 'admin') {
               context.go('/admin');
-            } else if (role == 'Manager' || role == 'Agent') {
+            } else if (role == 'manager' || role == 'agent') {
               context.go('/agent_dashboard');
-            } else if (role == 'Driver') {
+            } else if (role == 'driver') {
               context.go('/driver_dashboard');
             } else {
               context.go('/customer_home');

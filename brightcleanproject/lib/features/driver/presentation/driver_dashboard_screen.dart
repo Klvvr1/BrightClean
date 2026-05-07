@@ -31,6 +31,8 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
     final isAr = LanguageController().isArabic;
     final prefs = await SharedPreferences.getInstance();
     
+    if (!mounted) return;
+
     // Load completed tasks
     final keys = prefs.getKeys();
     final completed = <String, bool>{};
@@ -42,8 +44,13 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
 
     setState(() {
       final savedName = prefs.getString('user_name');
-      if (savedName == null || savedName == 'سائق برايت كلين' || savedName == 'Bright Clean Driver') {
+      final isDefaultName = prefs.getBool('user_name_is_default') ?? true;
+
+      // Only localize if explicitly marked as default
+      if (savedName == null || isDefaultName || savedName == 'سائق برايت كلين' || savedName == 'Bright Clean Driver') {
         _userName = isAr ? 'سائق برايت كلين' : 'Bright Clean Driver';
+        // Keep the flag set to true since we're using a default name
+        prefs.setBool('user_name_is_default', true);
       } else {
         _userName = savedName;
       }
@@ -215,42 +222,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
         ),
         Expanded(
           child: _isOnline
-              ? ListView(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                  children: [
-                    _buildEarningsCard(),
-                    const SizedBox(height: 24),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: Text(
-                        isAr ? 'الطلبات المتاحة' : 'Available Requests',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    // Only show task if not completed
-                    if (_completedTasks['1026'] != true)
-                      _buildOrderCard(
-                        orderId: '1026',
-                        time: isAr ? 'منذ 5 دقائق' : '5 mins ago',
-                        from: isAr ? 'المغسلة الذهبية' : 'Golden Laundry',
-                        to: isAr ? 'منزل العميل - برج السلام' : 'Customer House - Salam Tower',
-                        type: isAr ? 'ملابس' : 'Clothes',
-                        isNew: true,
-                        workflow: 1, // Pickup
-                      ),
-                    if (_completedTasks['1027'] != true)
-                      _buildOrderCard(
-                        orderId: '1027',
-                        time: isAr ? 'منذ 15 دقيقة' : '15 mins ago',
-                        from: isAr ? 'مغسلة النور' : 'Al Noor Laundry',
-                        to: isAr ? 'فلل النخيل' : 'Palm Villas',
-                        type: isAr ? 'سجاد' : 'Carpets',
-                        isNew: true,
-                        workflow: 2, // Delivery
-                      ),
-                  ],
-                )
+              ? _buildOnlineContent(isAr, isDark)
               : Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -267,6 +239,104 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                 ),
         ),
       ],
+    );
+  }
+
+  Future<void> _refreshOrders() async {
+    // Simulate API call
+    await Future.delayed(const Duration(seconds: 1));
+    if (mounted) {
+      _loadUserData();
+    }
+  }
+
+  Widget _buildOnlineContent(bool isAr, bool isDark) {
+    List<Widget> availableOrdersWidgets = [];
+
+    // Only show task if not completed
+    if (_completedTasks['1026'] != true) {
+      availableOrdersWidgets.add(
+        _buildOrderCard(
+          orderId: '1026',
+          time: isAr ? 'منذ 5 دقائق' : '5 mins ago',
+          from: isAr ? 'المغسلة الذهبية' : 'Golden Laundry',
+          to: isAr ? 'منزل العميل - برج السلام' : 'Customer House - Salam Tower',
+          type: isAr ? 'ملابس' : 'Clothes',
+          isNew: true,
+          workflow: 1, // Pickup
+        ),
+      );
+    }
+    
+    if (_completedTasks['1027'] != true) {
+      availableOrdersWidgets.add(
+        _buildOrderCard(
+          orderId: '1027',
+          time: isAr ? 'منذ 15 دقيقة' : '15 mins ago',
+          from: isAr ? 'مغسلة النور' : 'Al Noor Laundry',
+          to: isAr ? 'فلل النخيل' : 'Palm Villas',
+          type: isAr ? 'سجاد' : 'Carpets',
+          isNew: true,
+          workflow: 2, // Delivery
+        ),
+      );
+    }
+
+    if (availableOrdersWidgets.isEmpty) {
+      // Empty state when online but no orders
+      return RefreshIndicator(
+        onRefresh: _refreshOrders,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          children: [
+            _buildEarningsCard(),
+            const SizedBox(height: 40),
+            Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.inbox_outlined, size: 80, color: isDark ? Colors.white : Colors.grey.withValues(alpha: 0.2)),
+                  const SizedBox(height: 16),
+                  Text(
+                    isAr ? 'لا توجد طلبات متاحة حالياً' : 'No Available Orders Yet',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 18, color: isDark ? Colors.white : Colors.grey, fontWeight: FontWeight.w500),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    isAr ? 'اسحب للأسفل للتحديث' : 'Pull down to refresh',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 14, color: isDark ? Colors.white : Colors.grey),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Has orders - show list with refresh
+    return RefreshIndicator(
+      onRefresh: _refreshOrders,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        children: [
+          _buildEarningsCard(),
+          const SizedBox(height: 24),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Text(
+              isAr ? 'الطلبات المتاحة' : 'Available Requests',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87),
+            ),
+          ),
+          const SizedBox(height: 16),
+          ...availableOrdersWidgets,
+        ],
+      ),
     );
   }
 
@@ -387,7 +457,6 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                 Text(time, style: TextStyle(color: isDark ? Colors.white : Colors.grey, fontSize: 12)),
               ],
             ),
-
             const Divider(height: 24),
             Row(
               children: [
@@ -447,6 +516,34 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     
+    // Evaluate Current Orders logic
+    List<Widget> currentOrdersWidgets = [];
+    if (_completedTasks['1020'] != true) {
+      currentOrdersWidgets.add(
+        _buildOrderCard(
+          orderId: '1020',
+          time: isAr ? 'قيد التوصيل' : 'In Transit',
+          from: isAr ? 'مغسلة النور' : 'Al Noor Laundry',
+          to: isAr ? 'منطقة المارينا' : 'Marina Area',
+          type: isAr ? 'ملابس' : 'Clothes',
+          workflow: 2,
+        ),
+      );
+    }
+    if (currentOrdersWidgets.isEmpty) {
+      currentOrdersWidgets.add(
+        Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32.0),
+            child: Text(
+              isAr ? 'لا توجد طلبات جارية' : 'No current orders', 
+              style: TextStyle(color: isDark ? Colors.white : Colors.grey)
+            ),
+          )
+        )
+      );
+    }
+
     return DefaultTabController(
       length: 2,
       child: Column(
@@ -468,26 +565,13 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
               children: [
                 // Current Orders (Not completed)
                 ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.all(16),
-                  children: [
-                    if (_completedTasks['1020'] != true)
-                      _buildOrderCard(
-                        orderId: '1020',
-                        time: isAr ? 'قيد التوصيل' : 'In Transit',
-                        from: isAr ? 'مغسلة النور' : 'Al Noor Laundry',
-                        to: isAr ? 'منطقة المارينا' : 'Marina Area',
-                        type: isAr ? 'ملابس' : 'Clothes',
-                        workflow: 2,
-                      ),
-                    if (_completedTasks.values.every((v) => v == false))
-                       Center(child: Padding(
-                         padding: const EdgeInsets.all(32.0),
-                         child: Text(isAr ? 'لا توجد طلبات جارية' : 'No current orders', style: TextStyle(color: isDark ? Colors.white : Colors.grey)),
-                       ))
-                  ],
+                  children: currentOrdersWidgets,
                 ),
                 // Previous Orders (Completed)
                 ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.all(16),
                   children: [
                     if (_completedTasks['1026'] == true)
@@ -642,7 +726,14 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () async {
               final prefs = await SharedPreferences.getInstance();
-              await prefs.clear();
+              // Only clear authentication-related keys, preserve theme/locale settings
+              await prefs.remove('auth_token');
+              await prefs.remove('refresh_token');
+              await prefs.remove('user_id');
+              await prefs.remove('user_name');
+              await prefs.remove('user_phone');
+              await prefs.remove('user_name_is_default');
+              
               if (mounted) {
                 context.go('/login');
               }
@@ -666,7 +757,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
         flexibleSpace: SafeArea(
           child: Stack(
             children: [
-              // Left-aligned icons
+              // Icons forced to the left using Directionality(LTR)
               Positioned(
                 left: 16,
                 top: 0,
@@ -696,7 +787,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                           );
                         },
                       ),
-                      const SizedBox(width: 10),
+                      const SizedBox(width: 8),
                       ValueListenableBuilder<ThemeMode>(
                         valueListenable: ThemeController().themeMode,
                         builder: (context, themeMode, _) {
@@ -720,7 +811,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                   ),
                 ),
               ),
-              // Center Title
+              // Centered Title
               Center(
                 child: Text(
                   isAr ? 'برايت كلين' : 'Bright Clean',
