@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:brightcleanprojet/core/theme/app_colors.dart';
-import 'package:brightcleanprojet/controllers/language_controller.dart';
+import 'package:brightcleanprojet/core/controllers/language_controller.dart';
 
-import 'package:brightcleanprojet/controllers/theme_controller.dart';
+import 'package:brightcleanprojet/core/controllers/theme_controller.dart';
 
 class AgentAppBarActions extends StatelessWidget {
   final bool? isLaundryOpen;

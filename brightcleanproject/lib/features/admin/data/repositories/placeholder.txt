@@ -1,0 +1,37 @@
+# data/repositories/ — Repository Implementations
+# ===================================================
+# This folder contains the CONCRETE implementations of the
+# Repository interfaces defined in domain/repositories/.
+#
+# The Repository pattern bridges the Domain and Data layers:
+#   - Domain defines the interface (what methods are available)
+#   - Data implements them (how data is actually fetched/stored)
+#
+# Repositories decide whether to fetch from remote API, local cache,
+# or a combination of both (offline-first strategy).
+#
+# --- Dart Pseudo-Code Example: AdminRepositoryImpl ---
+#
+# import '../../domain/repositories/admin_repository.dart';
+# import '../datasources/admin_remote_datasource.dart';
+# import '../datasources/admin_local_datasource.dart';
+#
+# class AdminRepositoryImpl implements AdminRepository {
+#   final AdminRemoteDataSource remoteDataSource;
+#   // final AdminLocalDataSource localDataSource; // optional
+#
+#   const AdminRepositoryImpl({required this.remoteDataSource});
+#
+#   @override
+#   Future<void> performAction(/* params */) async {
+#     try {
+#       final result = await remoteDataSource.fetchData();
+#       // Optionally cache locally:
+#       // await localDataSource.cache(result);
+#       return result;
+#     } catch (e) {
+#       // Fallback to local cache or rethrow
+#       rethrow;
+#     }
+#   }
+# }

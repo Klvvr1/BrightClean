@@ -1,0 +1,25 @@
+# lib/features/driver/domain/usecases/ — Use Cases (Business Logic)
+# =====================================================================
+# Use Cases contain PURE business logic. They:
+#   - Receive input from the Presentation layer (UI/BLoC/Controller)
+#   - Call Repository interfaces (defined in domain/repositories/)
+#   - Return results to the Presentation layer
+#   - Have NO dependency on Flutter, databases, or APIs
+#
+# This is the heart of Clean Architecture. A UseCase represents
+# a single, well-defined action the application can perform.
+#
+# --- Dart Pseudo-Code Example: UpdateDeliveryStatusUseCase ---
+#
+# import '../repositories/driver_repository.dart';
+#
+# class UpdateDeliveryStatusUseCase {
+#   final DriverRepository repository;
+#
+#   const UpdateDeliveryStatusUseCase({required this.repository});
+#
+#   /// Returns a result (or throws a domain-level Failure).
+#   Future<void> call(/* params */) async {
+#     return await repository./* relevant method */();
+#   }
+# }

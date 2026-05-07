@@ -6,9 +6,9 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'core/routing/app_router.dart';
 import 'core/theme/app_theme.dart';
-import 'controllers/language_controller.dart'; // غيّر المسار إذا كان مختلف عندك
+import 'core/controllers/language_controller.dart';
 
-import 'controllers/theme_controller.dart';
+import 'core/controllers/theme_controller.dart';
 
 void main() {
   // Initialize FFI database factory for desktop platforms (Windows, macOS, Linux)

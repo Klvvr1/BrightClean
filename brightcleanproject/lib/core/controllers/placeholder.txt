@@ -1,0 +1,21 @@
+# lib/core/controllers/ — Global State Controllers
+# =====================================================
+# This folder holds application-wide state controllers that are not
+# tied to a single feature. Examples include:
+#   - LanguageController  (manages app locale)
+#   - ThemeController     (manages light/dark theme)
+#
+# These are registered in lib/injection_container.dart via GetIt
+# so they can be accessed from anywhere in the app.
+#
+# --- Dart Pseudo-Code Example ---
+#
+# class LanguageController {
+#   final ValueNotifier<Locale> locale = ValueNotifier(const Locale('ar'));
+#
+#   bool get isArabic => locale.value.languageCode == 'ar';
+#
+#   void toggleLanguage() {
+#     locale.value = isArabic ? const Locale('en') : const Locale('ar');
+#   }
+# }

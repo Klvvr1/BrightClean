@@ -31,7 +31,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
 
   // 3. Change Password (Backend Validation)
   Future<bool> _verifyOldPassword(String oldPassword) async {
-    // TODO: Replace with actual backend API call
+    // Pending: Inject VerifyPasswordUseCase and call it here
     // Example: final response = await authService.verifyPassword(oldPassword);
     // return response.isValid;
 
@@ -44,7 +44,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   }
 
   Future<bool> _updatePassword(String newPassword) async {
-    // TODO: Replace with actual backend API call
+    // Pending: Inject UpdatePasswordUseCase and call it here
     // Example: final response = await authService.updatePassword(newPassword);
     // return response.success;
 
