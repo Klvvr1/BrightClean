@@ -94,7 +94,7 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
         _isLoading = true;
       });
 
-      // TODO: Replace with actual API call
+      // Pending: Inject UpdateAccountUseCase and call it here
       // Example: await accountService.updateAccount(name, phone, _selectedImage);
       await Future.delayed(const Duration(seconds: 2));
       if (!mounted) return;

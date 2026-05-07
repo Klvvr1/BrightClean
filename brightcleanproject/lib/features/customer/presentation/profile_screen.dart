@@ -1,7 +1,7 @@
 import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../auth/presentation/login_screen.dart';
+
 import 'addresses_screen.dart';
 import 'change_password_screen.dart';
 import 'edit_account_screen.dart';
@@ -88,7 +88,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       await prefs.remove('user_saved_addresses_$userId');
 
       // 2. Clear API Headers (if using Dio or http client)
-      // TODO: Add when API client is implemented
+      // Pending: Add when API client is implemented
       // Example for Dio:
       // DioClient.instance.options.headers.remove('Authorization');
       // Example for http:

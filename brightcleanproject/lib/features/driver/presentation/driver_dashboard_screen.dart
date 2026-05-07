@@ -213,7 +213,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                 ),
                 Switch.adaptive(
                   value: _isOnline,
-                  activeColor: AppColors.success,
+                  activeTrackColor: AppColors.success,
                   onChanged: (v) => setState(() => _isOnline = v),
                 ),
               ],
@@ -737,7 +737,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
               await prefs.remove('user_phone');
               await prefs.remove('user_name_is_default');
               
-              if (mounted) {
+              if (context.mounted) {
                 context.go('/login');
               }
             },
