@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import '../../../../core/theme/app_colors.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../../../core/controllers/theme_controller.dart';
-import '../../../../core/controllers/language_controller.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/controllers/theme_controller.dart';
+import '../../../core/controllers/language_controller.dart';
 
 class DriverDashboardScreen extends StatefulWidget {
   const DriverDashboardScreen({super.key});
@@ -30,7 +30,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
   Future<void> _loadUserData() async {
     final isAr = LanguageController().isArabic;
     final prefs = await SharedPreferences.getInstance();
-    
+
     if (!mounted) return;
 
     // Load completed tasks
@@ -38,7 +38,8 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
     final completed = <String, bool>{};
     for (var key in keys) {
       if (key.startsWith('task_completed_')) {
-        completed[key.replaceFirst('task_completed_', '')] = prefs.getBool(key) ?? false;
+        completed[key.replaceFirst('task_completed_', '')] =
+            prefs.getBool(key) ?? false;
       }
     }
 
@@ -47,7 +48,10 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
       final isDefaultName = prefs.getBool('user_name_is_default') ?? true;
 
       // Only localize if explicitly marked as default
-      if (savedName == null || isDefaultName || savedName == 'سائق برايت كلين' || savedName == 'Bright Clean Driver') {
+      if (savedName == null ||
+          isDefaultName ||
+          savedName == 'سائق برايت كلين' ||
+          savedName == 'Bright Clean Driver') {
         _userName = isAr ? 'سائق برايت كلين' : 'Bright Clean Driver';
         // Keep the flag set to true since we're using a default name
         prefs.setBool('user_name_is_default', true);
@@ -73,7 +77,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
     final isAr = LanguageController().isArabic;
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    
+
     return Column(
       children: [
         // Welcome Section
@@ -103,12 +107,14 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                     _showLogoutDialog();
                   }
                 },
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(15)),
                 itemBuilder: (context) => [
                   PopupMenuItem(
                     value: 1,
                     child: ListTile(
-                      leading: Icon(Icons.person_outline, color: theme.colorScheme.primary),
+                      leading: Icon(Icons.person_outline,
+                          color: theme.colorScheme.primary),
                       title: Text(isAr ? 'الملف الشخصي' : 'Profile'),
                       contentPadding: EdgeInsets.zero,
                     ),
@@ -117,8 +123,10 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                   PopupMenuItem(
                     value: 2,
                     child: ListTile(
-                      leading: const Icon(Icons.logout, color: Colors.redAccent),
-                      title: Text(isAr ? 'تسجيل الخروج' : 'Logout', style: const TextStyle(color: Colors.redAccent)),
+                      leading:
+                          const Icon(Icons.logout, color: Colors.redAccent),
+                      title: Text(isAr ? 'تسجيل الخروج' : 'Logout',
+                          style: const TextStyle(color: Colors.redAccent)),
                       contentPadding: EdgeInsets.zero,
                     ),
                   ),
@@ -126,12 +134,18 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                 child: Container(
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.2), width: 3),
+                    border: Border.all(
+                        color: theme.colorScheme.primary.withValues(alpha: 0.2),
+                        width: 3),
                   ),
                   child: CircleAvatar(
                     radius: 30,
-                    backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
-                    child: Icon(Icons.person, color: isDark ? Colors.white : theme.colorScheme.primary, size: 35),
+                    backgroundColor:
+                        theme.colorScheme.primary.withValues(alpha: 0.1),
+                    child: Icon(Icons.person,
+                        color:
+                            isDark ? Colors.white : theme.colorScheme.primary,
+                        size: 35),
                   ),
                 ),
               ),
@@ -142,7 +156,9 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                   children: [
                     Text(
                       isAr ? 'مرحباً بك،' : 'Welcome back,',
-                      style: TextStyle(color: isDark ? Colors.white : Colors.grey, fontSize: 14),
+                      style: TextStyle(
+                          color: isDark ? Colors.white : Colors.grey,
+                          fontSize: 14),
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -150,7 +166,8 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : theme.colorScheme.primary,
+                        color:
+                            isDark ? Colors.white : theme.colorScheme.primary,
                       ),
                     ),
                   ],
@@ -158,12 +175,21 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
               ),
               // Status Badge
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 decoration: BoxDecoration(
-                  color: _isOnline ? AppColors.success.withValues(alpha: 0.1) : (isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.withValues(alpha: 0.1)),
+                  color: _isOnline
+                      ? AppColors.success.withValues(alpha: 0.1)
+                      : (isDark
+                          ? Colors.white.withValues(alpha: 0.05)
+                          : Colors.grey.withValues(alpha: 0.1)),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: _isOnline ? AppColors.success.withValues(alpha: 0.2) : (isDark ? Colors.white.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.2)),
+                    color: _isOnline
+                        ? AppColors.success.withValues(alpha: 0.2)
+                        : (isDark
+                            ? Colors.white.withValues(alpha: 0.1)
+                            : Colors.grey.withValues(alpha: 0.2)),
                   ),
                 ),
                 child: Row(
@@ -173,20 +199,29 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                       width: 10,
                       height: 10,
                       decoration: BoxDecoration(
-                        color: _isOnline ? AppColors.success : (isDark ? Colors.white : Colors.grey),
+                        color: _isOnline
+                            ? AppColors.success
+                            : (isDark ? Colors.white : Colors.grey),
                         shape: BoxShape.circle,
                         boxShadow: [
-                          if (_isOnline) BoxShadow(color: AppColors.success.withValues(alpha: 0.5), blurRadius: 4),
+                          if (_isOnline)
+                            BoxShadow(
+                                color: AppColors.success.withValues(alpha: 0.5),
+                                blurRadius: 4),
                         ],
                       ),
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      isAr ? (_isOnline ? 'نشط' : 'غير نشط') : (_isOnline ? 'Active' : 'Offline'),
+                      isAr
+                          ? (_isOnline ? 'نشط' : 'غير نشط')
+                          : (_isOnline ? 'Active' : 'Offline'),
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
-                        color: _isOnline ? AppColors.success : (isDark ? Colors.white : Colors.grey),
+                        color: _isOnline
+                            ? AppColors.success
+                            : (isDark ? Colors.white : Colors.grey),
                       ),
                     ),
                   ],
@@ -208,8 +243,12 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  isAr ? 'وضعية العمل (استقبال الطلبات)' : 'Work Mode (Accepting Orders)',
-                  style: TextStyle(fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black87),
+                  isAr
+                      ? 'وضعية العمل (استقبال الطلبات)'
+                      : 'Work Mode (Accepting Orders)',
+                  style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? Colors.white : Colors.black87),
                 ),
                 Switch.adaptive(
                   value: _isOnline,
@@ -227,12 +266,21 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.work_off_outlined, size: 80, color: isDark ? Colors.white12 : Colors.grey.withValues(alpha: 0.2)),
+                      Icon(Icons.work_off_outlined,
+                          size: 80,
+                          color: isDark
+                              ? Colors.white12
+                              : Colors.grey.withValues(alpha: 0.2)),
                       const SizedBox(height: 16),
                       Text(
-                        isAr ? 'قم بتفعيل وضع العمل للبدء' : 'Enable Work Mode to Start',
+                        isAr
+                            ? 'قم بتفعيل وضع العمل للبدء'
+                            : 'Enable Work Mode to Start',
                         textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 18, color: isDark ? Colors.white : Colors.grey, fontWeight: FontWeight.w500),
+                        style: TextStyle(
+                            fontSize: 18,
+                            color: isDark ? Colors.white : Colors.grey,
+                            fontWeight: FontWeight.w500),
                       ),
                     ],
                   ),
@@ -260,14 +308,16 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
           orderId: '1026',
           time: isAr ? 'منذ 5 دقائق' : '5 mins ago',
           from: isAr ? 'المغسلة الذهبية' : 'Golden Laundry',
-          to: isAr ? 'منزل العميل - برج السلام' : 'Customer House - Salam Tower',
+          to: isAr
+              ? 'منزل العميل - برج السلام'
+              : 'Customer House - Salam Tower',
           type: isAr ? 'ملابس' : 'Clothes',
           isNew: true,
           workflow: 1, // Pickup
         ),
       );
     }
-    
+
     if (_completedTasks['1027'] != true) {
       availableOrdersWidgets.add(
         _buildOrderCard(
@@ -296,18 +346,29 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.inbox_outlined, size: 80, color: isDark ? Colors.white : Colors.grey.withValues(alpha: 0.2)),
+                  Icon(Icons.inbox_outlined,
+                      size: 80,
+                      color: isDark
+                          ? Colors.white
+                          : Colors.grey.withValues(alpha: 0.2)),
                   const SizedBox(height: 16),
                   Text(
-                    isAr ? 'لا توجد طلبات متاحة حالياً' : 'No Available Orders Yet',
+                    isAr
+                        ? 'لا توجد طلبات متاحة حالياً'
+                        : 'No Available Orders Yet',
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 18, color: isDark ? Colors.white : Colors.grey, fontWeight: FontWeight.w500),
+                    style: TextStyle(
+                        fontSize: 18,
+                        color: isDark ? Colors.white : Colors.grey,
+                        fontWeight: FontWeight.w500),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     isAr ? 'اسحب للأسفل للتحديث' : 'Pull down to refresh',
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 14, color: isDark ? Colors.white : Colors.grey),
+                    style: TextStyle(
+                        fontSize: 14,
+                        color: isDark ? Colors.white : Colors.grey),
                   ),
                 ],
               ),
@@ -330,7 +391,10 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 4),
             child: Text(
               isAr ? 'الطلبات المتاحة' : 'Available Requests',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87),
+              style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : Colors.black87),
             ),
           ),
           const SizedBox(height: 16),
@@ -368,12 +432,18 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
               children: [
                 Text(
                   isAr ? 'أرباحك اليوم' : 'Today\'s Earnings',
-                  style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500),
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   isAr ? '120.50 درهم' : '120.50 AED',
-                  style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -383,7 +453,8 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                 color: Colors.white.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(15),
               ),
-              child: const Icon(Icons.payments_outlined, color: Colors.white, size: 35),
+              child: const Icon(Icons.payments_outlined,
+                  color: Colors.white, size: 35),
             ),
           ],
         ),
@@ -404,7 +475,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
     final isAr = LanguageController().isArabic;
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    
+
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -419,15 +490,23 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: (workflow == 1 ? AppColors.primary : AppColors.secondary).withValues(alpha: 0.1),
+                        color: (workflow == 1
+                                ? AppColors.primary
+                                : AppColors.secondary)
+                            .withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        workflow == 1 ? (isAr ? 'استلام' : 'Pickup') : (isAr ? 'توصيل' : 'Delivery'),
+                        workflow == 1
+                            ? (isAr ? 'استلام' : 'Pickup')
+                            : (isAr ? 'توصيل' : 'Delivery'),
                         style: TextStyle(
-                          color: workflow == 1 ? AppColors.primary : AppColors.secondary,
+                          color: workflow == 1
+                              ? AppColors.primary
+                              : AppColors.secondary,
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
                         ),
@@ -436,7 +515,8 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                     const SizedBox(width: 8),
                     // Order Type Badge
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: AppColors.tertiary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(6),
@@ -451,26 +531,45 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Text('${isAr ? 'طلب' : 'Order'} #$orderId', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: isDark ? Colors.white : Colors.black87)),
+                    Text('${isAr ? 'طلب' : 'Order'} #$orderId',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: isDark ? Colors.white : Colors.black87)),
                   ],
                 ),
-                Text(time, style: TextStyle(color: isDark ? Colors.white : Colors.grey, fontSize: 12)),
+                Text(time,
+                    style: TextStyle(
+                        color: isDark ? Colors.white : Colors.grey,
+                        fontSize: 12)),
               ],
             ),
             const Divider(height: 24),
             Row(
               children: [
-                Icon(Icons.trip_origin, size: 16, color: isDark ? Colors.white : theme.colorScheme.primary),
+                Icon(Icons.trip_origin,
+                    size: 16,
+                    color: isDark ? Colors.white : theme.colorScheme.primary),
                 const SizedBox(width: 12),
-                Expanded(child: Text('${isAr ? 'من:' : 'From:'} $from', style: TextStyle(fontSize: 14, color: isDark ? Colors.white : Colors.black87))),
+                Expanded(
+                    child: Text('${isAr ? 'من:' : 'From:'} $from',
+                        style: TextStyle(
+                            fontSize: 14,
+                            color: isDark ? Colors.white : Colors.black87))),
               ],
             ),
             const SizedBox(height: 8),
             Row(
               children: [
-                Icon(Icons.location_on, size: 16, color: isDark ? Colors.white : AppColors.secondary),
+                Icon(Icons.location_on,
+                    size: 16,
+                    color: isDark ? Colors.white : AppColors.secondary),
                 const SizedBox(width: 12),
-                Expanded(child: Text('${isAr ? 'إلى:' : 'To:'} $to', style: TextStyle(fontSize: 14, color: isDark ? Colors.white : Colors.black87))),
+                Expanded(
+                    child: Text('${isAr ? 'إلى:' : 'To:'} $to',
+                        style: TextStyle(
+                            fontSize: 14,
+                            color: isDark ? Colors.white : Colors.black87))),
               ],
             ),
             if (!isCompleted) ...[
@@ -486,8 +585,8 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                     _loadUserData(); // Refresh when coming back
                   },
                   child: Text(isNew
-                    ? (isAr ? 'قبول الطلب' : 'Accept Order')
-                    : (isAr ? 'متابعة الطلب' : 'Track Order')),
+                      ? (isAr ? 'قبول الطلب' : 'Accept Order')
+                      : (isAr ? 'متابعة الطلب' : 'Track Order')),
                 ),
               ),
             ],
@@ -503,7 +602,8 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                 child: Text(
                   isAr ? 'تم بنجاح' : 'Completed Successfully',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: AppColors.success, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                      color: AppColors.success, fontWeight: FontWeight.bold),
                 ),
               ),
             ],
@@ -518,7 +618,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
     final isAr = LanguageController().isArabic;
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    
+
     // Evaluate Current Orders logic
     List<Widget> currentOrdersWidgets = [];
     if (_completedTasks['1020'] != true) {
@@ -534,17 +634,12 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
       );
     }
     if (currentOrdersWidgets.isEmpty) {
-      currentOrdersWidgets.add(
-        Center(
+      currentOrdersWidgets.add(Center(
           child: Padding(
-            padding: const EdgeInsets.all(32.0),
-            child: Text(
-              isAr ? 'لا توجد طلبات جارية' : 'No current orders', 
-              style: TextStyle(color: isDark ? Colors.white : Colors.grey)
-            ),
-          )
-        )
-      );
+        padding: const EdgeInsets.all(32.0),
+        child: Text(isAr ? 'لا توجد طلبات جارية' : 'No current orders',
+            style: TextStyle(color: isDark ? Colors.white : Colors.grey)),
+      )));
     }
 
     return DefaultTabController(
@@ -621,7 +716,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
     final isAr = LanguageController().isArabic;
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    
+
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
@@ -635,14 +730,20 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                 decoration: BoxDecoration(
                   color: theme.colorScheme.primary.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
-                  border: Border.all(color: theme.colorScheme.primary, width: 2),
+                  border:
+                      Border.all(color: theme.colorScheme.primary, width: 2),
                 ),
-                child: Icon(Icons.person, size: 60, color: isDark ? Colors.white : theme.colorScheme.primary),
+                child: Icon(Icons.person,
+                    size: 60,
+                    color: isDark ? Colors.white : theme.colorScheme.primary),
               ),
               const SizedBox(height: 16),
               Text(
                 _userName,
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87),
+                style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : Colors.black87),
               ),
               Text(
                 isAr ? 'شريك توصيل معتمد' : 'Certified Delivery Partner',
@@ -654,24 +755,34 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
         const SizedBox(height: 40),
 
         // Info Cards
-        _buildProfileItem(Icons.phone_outlined, isAr ? 'رقم الهاتف' : 'Phone Number', _userPhone),
-        _buildProfileItem(Icons.email_outlined, isAr ? 'البريد الإلكتروني' : 'Email Address', 'driver@brightclean.com'),
-        _buildProfileItem(Icons.drive_eta_outlined, isAr ? 'نوع المركبة' : 'Vehicle Type', isAr ? 'سيارة صالون' : 'Sedan Car'),
-        _buildProfileItem(Icons.confirmation_number_outlined, isAr ? 'رقم اللوحة' : 'Plate Number', 'A 12345'),
-        
+        _buildProfileItem(Icons.phone_outlined,
+            isAr ? 'رقم الهاتف' : 'Phone Number', _userPhone),
+        _buildProfileItem(
+            Icons.email_outlined,
+            isAr ? 'البريد الإلكتروني' : 'Email Address',
+            'driver@brightclean.com'),
+        _buildProfileItem(
+            Icons.drive_eta_outlined,
+            isAr ? 'نوع المركبة' : 'Vehicle Type',
+            isAr ? 'سيارة صالون' : 'Sedan Car'),
+        _buildProfileItem(Icons.confirmation_number_outlined,
+            isAr ? 'رقم اللوحة' : 'Plate Number', 'A 12345'),
+
         const SizedBox(height: 32),
-        
+
         // Logout Button
         SizedBox(
           width: double.infinity,
           child: OutlinedButton.icon(
             onPressed: _showLogoutDialog,
             icon: const Icon(Icons.logout, color: Colors.red),
-            label: Text(isAr ? 'تسجيل الخروج' : 'Logout', style: const TextStyle(color: Colors.red)),
+            label: Text(isAr ? 'تسجيل الخروج' : 'Logout',
+                style: const TextStyle(color: Colors.red)),
             style: OutlinedButton.styleFrom(
               side: const BorderSide(color: Colors.red),
               padding: const EdgeInsets.symmetric(vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
             ),
           ),
         ),
@@ -682,7 +793,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
   Widget _buildProfileItem(IconData icon, String title, String value) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
@@ -704,8 +815,15 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: TextStyle(color: isDark ? Colors.white : Colors.grey, fontSize: 12)),
-              Text(value, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: isDark ? Colors.white : Colors.black87)),
+              Text(title,
+                  style: TextStyle(
+                      color: isDark ? Colors.white : Colors.grey,
+                      fontSize: 12)),
+              Text(value,
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: isDark ? Colors.white : Colors.black87)),
             ],
           ),
         ],
@@ -719,7 +837,9 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(isAr ? 'تسجيل الخروج' : 'Logout'),
-        content: Text(isAr ? 'هل أنت متأكد أنك تريد تسجيل الخروج؟' : 'Are you sure you want to logout?'),
+        content: Text(isAr
+            ? 'هل أنت متأكد أنك تريد تسجيل الخروج؟'
+            : 'Are you sure you want to logout?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -736,7 +856,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
               await prefs.remove('user_name');
               await prefs.remove('user_phone');
               await prefs.remove('user_name_is_default');
-              
+
               if (context.mounted) {
                 context.go('/login');
               }
@@ -753,7 +873,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
     final isAr = LanguageController().isArabic;
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    
+
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
@@ -778,14 +898,20 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                               _loadUserData();
                             },
                             style: TextButton.styleFrom(
-                              minimumSize: Size.zero, 
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              backgroundColor: Colors.white.withValues(alpha: 0.15),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              minimumSize: Size.zero,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 6),
+                              backgroundColor:
+                                  Colors.white.withValues(alpha: 0.15),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10)),
                             ),
                             child: Text(
                               locale.languageCode == 'ar' ? 'EN' : 'عربي',
-                              style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 13),
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                  fontSize: 13),
                             ),
                           );
                         },
@@ -796,16 +922,17 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                         builder: (context, themeMode, _) {
                           return IconButton(
                             icon: Icon(
-                              isDark ? Icons.light_mode : Icons.dark_mode, 
-                              color: Colors.white, 
-                              size: 22
-                            ),
+                                isDark ? Icons.light_mode : Icons.dark_mode,
+                                color: Colors.white,
+                                size: 22),
                             onPressed: () => ThemeController().toggleTheme(),
                             constraints: const BoxConstraints(),
                             padding: const EdgeInsets.all(10),
                             style: IconButton.styleFrom(
-                              backgroundColor: Colors.white.withValues(alpha: 0.15),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              backgroundColor:
+                                  Colors.white.withValues(alpha: 0.15),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10)),
                             ),
                           );
                         },
@@ -819,8 +946,8 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                 child: Text(
                   isAr ? 'برايت كلين' : 'Bright Clean',
                   style: const TextStyle(
-                    fontWeight: FontWeight.w900, 
-                    color: Colors.white, 
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
                     letterSpacing: 1.2,
                     fontSize: 20,
                   ),
@@ -860,7 +987,8 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
           type: BottomNavigationBarType.fixed,
           backgroundColor: theme.cardColor,
           elevation: 0,
-          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+          selectedLabelStyle:
+              const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
           unselectedLabelStyle: const TextStyle(fontSize: 12),
           items: [
             BottomNavigationBarItem(
