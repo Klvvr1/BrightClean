@@ -16,6 +16,12 @@ import '../../features/driver/presentation/driver_dashboard_screen.dart';
 import '../../features/driver/presentation/driver_tracking_screen.dart';
 import '../../features/admin/presentation/admin_dashboard_screen.dart';
 
+// Import AgentOrderModel for type checking in routes
+// (AgentOrderModel is defined in agent_dashboard_screen.dart)
+
+// Import TrackingWorkflow enum for driver tracking routes
+// (TrackingWorkflow is defined in driver_tracking_screen.dart)
+
 class AppRouter {
   static final router = GoRouter(
     initialLocation: '/',
@@ -101,7 +107,39 @@ class AppRouter {
         path: '/driver_tracking/:id',
         builder: (context, state) {
           final id = state.pathParameters['id'] ?? 'unknown';
-          return DriverTrackingScreen(taskId: id);
+
+          // Safely extract and normalize workflow from extra data
+          TrackingWorkflow workflow = TrackingWorkflow.pickup; // default fallback
+
+          if (state.extra != null && state.extra is Map<String, dynamic>) {
+            final extra = state.extra as Map<String, dynamic>;
+            final workflowValue = extra['workflow'];
+
+            if (workflowValue is TrackingWorkflow) {
+              // Direct enum instance
+              workflow = workflowValue;
+            } else if (workflowValue is int) {
+              // Integer: compare against enum indices
+              if (workflowValue == TrackingWorkflow.delivery.index) {
+                workflow = TrackingWorkflow.delivery;
+              } else {
+                workflow = TrackingWorkflow.pickup;
+              }
+            } else if (workflowValue is String) {
+              // String: parse enum name
+              if (workflowValue.toLowerCase() == 'delivery') {
+                workflow = TrackingWorkflow.delivery;
+              } else {
+                workflow = TrackingWorkflow.pickup;
+              }
+            }
+            // For any other type or null, use default (pickup)
+          }
+
+          return DriverTrackingScreen(
+            taskId: id,
+            workflow: workflow,
+          );
         },
       ),
       GoRoute(

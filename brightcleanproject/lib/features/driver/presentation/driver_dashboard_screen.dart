@@ -15,6 +15,7 @@ class DriverDashboardScreen extends StatefulWidget {
 class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
   int _selectedIndex = 0;
   bool _isOnline = false;
+  Map<String, bool> _completedTasks = {};
 
   // Mock data for user profile
   String _userName = 'سائق برايت كلين';
@@ -29,13 +30,24 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
   Future<void> _loadUserData() async {
     final isAr = LanguageController().isArabic;
     final prefs = await SharedPreferences.getInstance();
+    
     if (!mounted) return;
+
+    // Load completed tasks
+    final keys = prefs.getKeys();
+    final completed = <String, bool>{};
+    for (var key in keys) {
+      if (key.startsWith('task_completed_')) {
+        completed[key.replaceFirst('task_completed_', '')] = prefs.getBool(key) ?? false;
+      }
+    }
+
     setState(() {
       final savedName = prefs.getString('user_name');
       final isDefaultName = prefs.getBool('user_name_is_default') ?? true;
 
       // Only localize if explicitly marked as default
-      if (savedName == null || isDefaultName) {
+      if (savedName == null || isDefaultName || savedName == 'سائق برايت كلين' || savedName == 'Bright Clean Driver') {
         _userName = isAr ? 'سائق برايت كلين' : 'Bright Clean Driver';
         // Keep the flag set to true since we're using a default name
         prefs.setBool('user_name_is_default', true);
@@ -43,6 +55,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
         _userName = savedName;
       }
       _userPhone = prefs.getString('user_phone') ?? '0533333333';
+      _completedTasks = completed;
     });
   }
 
@@ -50,6 +63,9 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
     setState(() {
       _selectedIndex = index;
     });
+    if (index != 0) {
+      _loadUserData(); // Refresh data when switching tabs
+    }
   }
 
   // --- Home Tab (Incoming Orders) ---
@@ -193,7 +209,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
               children: [
                 Text(
                   isAr ? 'وضعية العمل (استقبال الطلبات)' : 'Work Mode (Accepting Orders)',
-                  style: const TextStyle(fontWeight: FontWeight.w600),
+                  style: TextStyle(fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black87),
                 ),
                 Switch.adaptive(
                   value: _isOnline,
@@ -211,7 +227,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.work_off_outlined, size: 80, color: isDark ? Colors.white : Colors.grey.withValues(alpha: 0.2)),
+                      Icon(Icons.work_off_outlined, size: 80, color: isDark ? Colors.white12 : Colors.grey.withValues(alpha: 0.2)),
                       const SizedBox(height: 16),
                       Text(
                         isAr ? 'قم بتفعيل وضع العمل للبدء' : 'Enable Work Mode to Start',
@@ -226,36 +242,47 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
     );
   }
 
-  // Mock orders list - in production would come from state management
-  final List<Map<String, dynamic>> _availableOrders = [
-    {
-      'orderId': '1026',
-      'time': '5 mins ago',
-      'timeAr': 'منذ 5 دقائق',
-      'from': 'Golden Laundry',
-      'fromAr': 'المغسلة الذهبية',
-      'to': 'Customer House - Salam Tower',
-      'toAr': 'منزل العميل - برج السلام',
-      'taskType': 'pickup',
-      'isNew': true,
-    },
-  ];
-
   Future<void> _refreshOrders() async {
     // Simulate API call
     await Future.delayed(const Duration(seconds: 1));
-    // In production, fetch new orders from backend
     if (mounted) {
-      setState(() {
-        // Update orders
-      });
+      _loadUserData();
     }
   }
 
   Widget _buildOnlineContent(bool isAr, bool isDark) {
-    final hasOrders = _availableOrders.isNotEmpty;
+    List<Widget> availableOrdersWidgets = [];
 
-    if (!hasOrders) {
+    // Only show task if not completed
+    if (_completedTasks['1026'] != true) {
+      availableOrdersWidgets.add(
+        _buildOrderCard(
+          orderId: '1026',
+          time: isAr ? 'منذ 5 دقائق' : '5 mins ago',
+          from: isAr ? 'المغسلة الذهبية' : 'Golden Laundry',
+          to: isAr ? 'منزل العميل - برج السلام' : 'Customer House - Salam Tower',
+          type: isAr ? 'ملابس' : 'Clothes',
+          isNew: true,
+          workflow: 1, // Pickup
+        ),
+      );
+    }
+    
+    if (_completedTasks['1027'] != true) {
+      availableOrdersWidgets.add(
+        _buildOrderCard(
+          orderId: '1027',
+          time: isAr ? 'منذ 15 دقيقة' : '15 mins ago',
+          from: isAr ? 'مغسلة النور' : 'Al Noor Laundry',
+          to: isAr ? 'فلل النخيل' : 'Palm Villas',
+          type: isAr ? 'سجاد' : 'Carpets',
+          isNew: true,
+          workflow: 2, // Delivery
+        ),
+      );
+    }
+
+    if (availableOrdersWidgets.isEmpty) {
       // Empty state when online but no orders
       return RefreshIndicator(
         onRefresh: _refreshOrders,
@@ -303,18 +330,11 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 4),
             child: Text(
               isAr ? 'الطلبات المتاحة' : 'Available Requests',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87),
             ),
           ),
           const SizedBox(height: 16),
-          ..._availableOrders.map((order) => _buildOrderCard(
-            orderId: order['orderId'],
-            time: isAr ? order['timeAr'] : order['time'],
-            from: isAr ? order['fromAr'] : order['from'],
-            to: isAr ? order['toAr'] : order['to'],
-            taskType: order['taskType'],
-            isNew: order['isNew'] ?? false,
-          )),
+          ...availableOrdersWidgets,
         ],
       ),
     );
@@ -376,22 +396,15 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
     required String time,
     required String from,
     required String to,
-    String? taskType,
+    required String type,
     bool isNew = false,
     bool isCompleted = false,
+    required int workflow,
   }) {
     final isAr = LanguageController().isArabic;
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-
-    // Task type indicator configuration
-    final isPickup = taskType == 'pickup';
-    final taskColor = isPickup ? Colors.orange : Colors.blue;
-    final taskIcon = isPickup ? Icons.arrow_upward : Icons.arrow_downward;
-    final taskLabel = isPickup
-        ? (isAr ? 'استلام' : 'Pickup')
-        : (isAr ? 'توصيل' : 'Delivery');
-
+    
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -403,38 +416,45 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('${isAr ? 'طلب' : 'Order'} #$orderId', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                 Row(
                   children: [
-                    if (taskType != null) ...[
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: taskColor.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: taskColor.withValues(alpha: 0.3)),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(taskIcon, size: 12, color: taskColor),
-                            const SizedBox(width: 4),
-                            Text(
-                              taskLabel,
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: taskColor,
-                              ),
-                            ),
-                          ],
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: (workflow == 1 ? AppColors.primary : AppColors.secondary).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        workflow == 1 ? (isAr ? 'استلام' : 'Pickup') : (isAr ? 'توصيل' : 'Delivery'),
+                        style: TextStyle(
+                          color: workflow == 1 ? AppColors.primary : AppColors.secondary,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const SizedBox(width: 8),
-                    ],
-                    Text(time, style: TextStyle(color: isDark ? Colors.white : Colors.grey, fontSize: 12)),
+                    ),
+                    const SizedBox(width: 8),
+                    // Order Type Badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.tertiary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        type,
+                        style: const TextStyle(
+                          color: AppColors.tertiary,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text('${isAr ? 'طلب' : 'Order'} #$orderId', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: isDark ? Colors.white : Colors.black87)),
                   ],
                 ),
+                Text(time, style: TextStyle(color: isDark ? Colors.white : Colors.grey, fontSize: 12)),
               ],
             ),
             const Divider(height: 24),
@@ -442,7 +462,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
               children: [
                 Icon(Icons.trip_origin, size: 16, color: isDark ? Colors.white : theme.colorScheme.primary),
                 const SizedBox(width: 12),
-                Expanded(child: Text('${isAr ? 'من:' : 'From:'} $from', style: const TextStyle(fontSize: 14))),
+                Expanded(child: Text('${isAr ? 'من:' : 'From:'} $from', style: TextStyle(fontSize: 14, color: isDark ? Colors.white : Colors.black87))),
               ],
             ),
             const SizedBox(height: 8),
@@ -450,7 +470,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
               children: [
                 Icon(Icons.location_on, size: 16, color: isDark ? Colors.white : AppColors.secondary),
                 const SizedBox(width: 12),
-                Expanded(child: Text('${isAr ? 'إلى:' : 'To:'} $to', style: const TextStyle(fontSize: 14))),
+                Expanded(child: Text('${isAr ? 'إلى:' : 'To:'} $to', style: TextStyle(fontSize: 14, color: isDark ? Colors.white : Colors.black87))),
               ],
             ),
             if (!isCompleted) ...[
@@ -458,9 +478,15 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () => context.push('/driver_tracking/$orderId'),
-                  child: Text(isNew 
-                    ? (isAr ? 'قبول الطلب' : 'Accept Order') 
+                  onPressed: () async {
+                    await context.push(
+                      '/driver_tracking/$orderId',
+                      extra: {'workflow': workflow},
+                    );
+                    _loadUserData(); // Refresh when coming back
+                  },
+                  child: Text(isNew
+                    ? (isAr ? 'قبول الطلب' : 'Accept Order')
                     : (isAr ? 'متابعة الطلب' : 'Track Order')),
                 ),
               ),
@@ -475,7 +501,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  isAr ? 'تم التوصيل بنجاح' : 'Delivered Successfully',
+                  isAr ? 'تم بنجاح' : 'Completed Successfully',
                   textAlign: TextAlign.center,
                   style: const TextStyle(color: AppColors.success, fontWeight: FontWeight.bold),
                 ),
@@ -490,17 +516,47 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
   // --- My Orders Tab (Current/Previous Toggle) ---
   Widget _buildMyOrdersTab() {
     final isAr = LanguageController().isArabic;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
+    // Evaluate Current Orders logic
+    List<Widget> currentOrdersWidgets = [];
+    if (_completedTasks['1020'] != true) {
+      currentOrdersWidgets.add(
+        _buildOrderCard(
+          orderId: '1020',
+          time: isAr ? 'قيد التوصيل' : 'In Transit',
+          from: isAr ? 'مغسلة النور' : 'Al Noor Laundry',
+          to: isAr ? 'منطقة المارينا' : 'Marina Area',
+          type: isAr ? 'ملابس' : 'Clothes',
+          workflow: 2,
+        ),
+      );
+    }
+    if (currentOrdersWidgets.isEmpty) {
+      currentOrdersWidgets.add(
+        Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32.0),
+            child: Text(
+              isAr ? 'لا توجد طلبات جارية' : 'No current orders', 
+              style: TextStyle(color: isDark ? Colors.white : Colors.grey)
+            ),
+          )
+        )
+      );
+    }
+
     return DefaultTabController(
       length: 2,
       child: Column(
         children: [
           Container(
-            color: Theme.of(context).cardColor,
+            color: theme.cardColor,
             child: TabBar(
-              labelColor: Theme.of(context).colorScheme.primary,
+              labelColor: theme.colorScheme.primary,
               unselectedLabelColor: isDark ? Colors.white : Colors.grey,
-              indicatorColor: Theme.of(context).colorScheme.primary,
+              indicatorColor: theme.colorScheme.primary,
               tabs: [
                 Tab(text: isAr ? 'الطلبات الحالية' : 'Current Orders'),
                 Tab(text: isAr ? 'الطلبات السابقة' : 'Previous Orders'),
@@ -510,37 +566,45 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
           Expanded(
             child: TabBarView(
               children: [
-                // Current Orders
+                // Current Orders (Not completed)
                 ListView(
                   physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.all(16),
-                  children: [
-                    _buildOrderCard(
-                      orderId: '1020',
-                      time: isAr ? 'قيد التوصيل' : 'In Transit',
-                      from: isAr ? 'مغسلة النور' : 'Al Noor Laundry',
-                      to: isAr ? 'منطقة المارينا' : 'Marina Area',
-                    ),
-                  ],
+                  children: currentOrdersWidgets,
                 ),
-                // Previous Orders
+                // Previous Orders (Completed)
                 ListView(
                   physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.all(16),
                   children: [
+                    if (_completedTasks['1026'] == true)
+                      _buildOrderCard(
+                        orderId: '1026',
+                        time: isAr ? 'اليوم' : 'Today',
+                        from: isAr ? 'المغسلة الذهبية' : 'Golden Laundry',
+                        to: isAr ? 'منزل العميل' : 'Customer House',
+                        type: isAr ? 'ملابس' : 'Clothes',
+                        isCompleted: true,
+                        workflow: 1,
+                      ),
+                    if (_completedTasks['1027'] == true)
+                      _buildOrderCard(
+                        orderId: '1027',
+                        time: isAr ? 'اليوم' : 'Today',
+                        from: isAr ? 'مغسلة النور' : 'Al Noor Laundry',
+                        to: isAr ? 'فلل النخيل' : 'Palm Villas',
+                        type: isAr ? 'سجاد' : 'Carpets',
+                        isCompleted: true,
+                        workflow: 2,
+                      ),
                     _buildOrderCard(
                       orderId: '985',
                       time: isAr ? 'أمس 04:30 م' : 'Yesterday 04:30 PM',
                       from: isAr ? 'مغسلة الرمال' : 'Al Rimal Laundry',
                       to: isAr ? 'جميرا' : 'Jumeirah',
+                      type: isAr ? 'ملابس' : 'Clothes',
                       isCompleted: true,
-                    ),
-                    _buildOrderCard(
-                      orderId: '972',
-                      time: '2026-05-01',
-                      from: isAr ? 'المغسلة الذهبية' : 'Golden Laundry',
-                      to: isAr ? 'الشارقة' : 'Sharjah',
-                      isCompleted: true,
+                      workflow: 2,
                     ),
                   ],
                 ),
@@ -557,6 +621,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
     final isAr = LanguageController().isArabic;
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
@@ -577,7 +642,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
               const SizedBox(height: 16),
               Text(
                 _userName,
-                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87),
               ),
               Text(
                 isAr ? 'شريك توصيل معتمد' : 'Certified Delivery Partner',
@@ -615,12 +680,14 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
   }
 
   Widget _buildProfileItem(IconData icon, String title, String value) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
+        color: theme.cardColor,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
@@ -632,13 +699,13 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
       ),
       child: Row(
         children: [
-          Icon(icon, color: Theme.of(context).colorScheme.primary),
+          Icon(icon, color: isDark ? Colors.white : theme.colorScheme.primary),
           const SizedBox(width: 16),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(title, style: TextStyle(color: isDark ? Colors.white : Colors.grey, fontSize: 12)),
-              Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              Text(value, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: isDark ? Colors.white : Colors.black87)),
             ],
           ),
         ],
@@ -669,6 +736,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
               await prefs.remove('user_name');
               await prefs.remove('user_phone');
               await prefs.remove('user_name_is_default');
+              
               if (mounted) {
                 context.go('/login');
               }
@@ -816,5 +884,3 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
     );
   }
 }
-
-

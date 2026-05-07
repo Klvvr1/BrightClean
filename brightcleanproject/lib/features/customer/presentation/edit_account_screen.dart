@@ -143,7 +143,7 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
                   children: [
                     CircleAvatar(
                       radius: 60,
-                      backgroundColor: AppColors.primary.withOpacity(0.1),
+                      backgroundColor: AppColors.primary.withValues(alpha: 0.1),
                       backgroundImage: _selectedImage != null ? FileImage(_selectedImage!) : null,
                       child: _selectedImage == null
                           ? const Icon(Icons.person, size: 60, color: AppColors.primary)
