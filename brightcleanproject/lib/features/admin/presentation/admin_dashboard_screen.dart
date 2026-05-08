@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/custom_text_field.dart';
 
@@ -101,9 +102,35 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
           TextButton(
-            onPressed: () {
-              Navigator.pop(context); // Close dialog
-              context.go('/login'); // Redirect to login using go_router
+            onPressed: () async {
+              try {
+                // Clear authentication state from SharedPreferences
+                final prefs = await SharedPreferences.getInstance();
+                await prefs.remove('authToken');
+                await prefs.remove('refreshToken');
+                await prefs.remove('user_id');
+                await prefs.remove('user_name');
+                await prefs.remove('user_phone');
+                await prefs.remove('user_role');
+                await prefs.remove('wallet_balance');
+
+                // Close dialog and navigate to login
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  context.go('/login');
+                }
+              } catch (e) {
+                // Handle errors in clearing auth state
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('حدث خطأ أثناء تسجيل الخروج: $e'),
+                      backgroundColor: AppColors.error,
+                    ),
+                  );
+                }
+              }
             },
             child: const Text('خروج', style: TextStyle(color: AppColors.error)),
           ),
@@ -113,21 +140,31 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   void _showWarningDialog(String name) {
+    final reasonController = TextEditingController();
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: Text('إرسال تحذير لـ $name'),
-        content: const CustomTextField(
+        content: CustomTextField(
           hintText: 'اكتب سبب التحذير هنا...',
           maxLines: 3,
+          controller: reasonController,
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
+          TextButton(
+            onPressed: () {
+              reasonController.dispose();
+              Navigator.pop(context);
+            },
+            child: const Text('إلغاء'),
+          ),
           ElevatedButton(
             onPressed: () {
+              final reason = reasonController.text;
+              reasonController.dispose();
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('تم إرسال التحذير لـ $name')),
+                SnackBar(content: Text('تم إرسال التحذير لـ $name${reason.isNotEmpty ? ": $reason" : ""}')),
               );
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.warning),
@@ -140,8 +177,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   void _acceptStaff(Map<String, dynamic> request) {
     setState(() {
-      _customersCount++;
-      
       // Move from pending to approved
       _pendingRequests.removeWhere((r) => r['name'] == request['name']);
       _staffMembers.add({
@@ -169,7 +204,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   void _dismissStaff(String name, String type) {
     setState(() {
-      _customersCount--;
       _staffMembers.removeWhere((m) => m['name'] == name);
     });
     ScaffoldMessenger.of(context).showSnackBar(
@@ -186,7 +220,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: Colors.black.withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -211,7 +245,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     barWidth: 4,
                     belowBarData: BarAreaData(
                       show: true,
-                      color: AppColors.success.withValues(alpha: 0.1),
+                      color: AppColors.success.withOpacity(0.1),
                     ),
                     dotData: const FlDotData(show: false),
                   ),
@@ -244,7 +278,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 decoration: BoxDecoration(
                   color: AppColors.white,
                   borderRadius: BorderRadius.circular(15),
-                  border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
+                  border: Border.all(color: AppColors.primary.withOpacity(0.1)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -255,7 +289,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         Text('طلب #${order['id']}', style: const TextStyle(fontWeight: FontWeight.bold)),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(color: AppColors.secondary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
+                          decoration: BoxDecoration(color: AppColors.secondary.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
                           child: Text(order['status'], style: const TextStyle(fontSize: 10, color: AppColors.secondary, fontWeight: FontWeight.bold)),
                         ),
                       ],
@@ -276,8 +310,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   Widget _buildStatCard(String title, String value, IconData icon, Color color, {String? subValue, int delay = 0}) {
     return TweenAnimationBuilder(
-      duration: Duration(milliseconds: 500 + delay),
+      duration: const Duration(milliseconds: 800),
       tween: Tween<double>(begin: 0, end: 1),
+      curve: Interval(delay / 800.0, (delay + 500) / 800.0, curve: Curves.easeOut),
       builder: (context, double opacity, child) {
         return Opacity(
           opacity: opacity,
@@ -294,12 +329,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: color.withValues(alpha: 0.1),
+              color: color.withOpacity(0.1),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
           ],
-          border: Border.all(color: color.withValues(alpha: 0.1), width: 1),
+          border: Border.all(color: color.withOpacity(0.1), width: 1),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -307,7 +342,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
+                color: color.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(icon, color: color, size: 28),
@@ -415,7 +450,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               child: Row(
                 children: [
                   CircleAvatar(
-                    backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                    backgroundColor: AppColors.primary.withOpacity(0.1),
                     child: const Icon(Icons.receipt_long, color: AppColors.primary),
                   ),
                   const SizedBox(width: 16),
@@ -515,7 +550,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               children: [
                 CircleAvatar(
                   radius: 35,
-                  backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                  backgroundColor: AppColors.primary.withOpacity(0.1),
                   child: Icon(
                     staff['type'] == 'مغسلة' ? Icons.local_laundry_service : Icons.drive_eta,
                     size: 40,
@@ -535,7 +570,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: AppColors.warning.withValues(alpha: 0.1),
+                    color: AppColors.warning.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Row(
@@ -688,7 +723,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: AppColors.tertiary.withValues(alpha: 0.1),
+          backgroundColor: AppColors.tertiary.withOpacity(0.1),
           child: Icon(
             request['type'] == 'مغسلة' ? Icons.local_laundry_service : Icons.drive_eta,
             color: AppColors.tertiary,
@@ -720,7 +755,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       child: ListTile(
         onTap: staffData != null ? () => _showStaffDetails(staffData) : null,
         leading: CircleAvatar(
-          backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+          backgroundColor: AppColors.primary.withOpacity(0.1),
           child: Icon(type == 'مغسلة' ? Icons.local_laundry_service : Icons.drive_eta, color: AppColors.primary),
         ),
         title: Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
@@ -842,6 +877,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   void _showNotificationDialog() {
+    final titleController = TextEditingController();
+    final bodyController = TextEditingController();
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -849,15 +886,38 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const CustomTextField(hintText: 'عنوان الإشعار'),
+            CustomTextField(
+              hintText: 'عنوان الإشعار',
+              controller: titleController,
+            ),
             const SizedBox(height: 12),
-            const CustomTextField(hintText: 'نص الإشعار...', maxLines: 3),
+            CustomTextField(
+              hintText: 'نص الإشعار...',
+              maxLines: 3,
+              controller: bodyController,
+            ),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
+          TextButton(
+            onPressed: () {
+              titleController.dispose();
+              bodyController.dispose();
+              Navigator.pop(context);
+            },
+            child: const Text('إلغاء'),
+          ),
           ElevatedButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () {
+              final title = titleController.text;
+              final body = bodyController.text;
+              titleController.dispose();
+              bodyController.dispose();
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('تم إرسال الإشعار${title.isNotEmpty ? ": $title" : ""}')),
+              );
+            },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
             child: const Text('إرسال الآن', style: TextStyle(color: Colors.white)),
           ),
@@ -870,9 +930,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.05),
+        color: color.withOpacity(0.05),
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
+        border: Border.all(color: color.withOpacity(0.2)),
       ),
       child: ListTile(
         contentPadding: EdgeInsets.zero,
@@ -893,7 +953,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         trailing: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: AppColors.success.withValues(alpha: 0.1),
+            color: AppColors.success.withOpacity(0.1),
             borderRadius: BorderRadius.circular(20),
           ),
           child: Text(
@@ -1060,7 +1120,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   children: [
                     CircleAvatar(
                       radius: 20,
-                      backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                      backgroundColor: AppColors.primary.withOpacity(0.1),
                       child: const Icon(Icons.admin_panel_settings, color: AppColors.primary),
                     ),
                     const SizedBox(width: 12),
@@ -1108,7 +1168,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         decoration: BoxDecoration(
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
+              color: Colors.black.withOpacity(0.1),
               blurRadius: 20,
               offset: const Offset(0, -5),
             ),

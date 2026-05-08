@@ -21,7 +21,8 @@ class CustomTextField extends StatefulWidget {
     this.controller,
     this.inputFormatters,
     this.maxLines = 1,
-  });
+  }) : assert(!(isPassword && (maxLines == null || maxLines != 1)),
+          'Password fields must have maxLines set to 1');
 
   @override
   State<CustomTextField> createState() => _CustomTextFieldState();
