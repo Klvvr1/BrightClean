@@ -54,6 +54,7 @@ dependencies:
   sqflite_common_ffi: ^2.4.0+3
   shared_preferences: ^2.5.5
   url_launcher: ^6.2.5
+  fl_chart: ^0.66.0
 
 dev_dependencies:
   flutter_test:
