@@ -33,6 +33,11 @@ migrate_working_dir/
 /build/
 /coverage/
 
+# Flutter ephemeral files
+**/linux/flutter/ephemeral/
+**/windows/flutter/ephemeral/
+**/macos/Flutter/ephemeral/
+
 # Symbolication related
 app.*.symbols
 
