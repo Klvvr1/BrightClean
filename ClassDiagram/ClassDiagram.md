@@ -720,6 +720,8 @@ Records the single full payment for a booking. The `UNIQUE` constraint on `Booki
 | `Status`         | PaymentStatus | NOT NULL, DEFAULT Pending      | Payment outcome state                        |
 | `TransactionRef` | string        | NULLABLE                       | Gateway reference — mandatory for CreditCard |
 | `PaidAt`         | datetime      | NULLABLE                       | Stamped on Status = Success                  |
+| `AttemptCount`   | int           | NOT NULL, DEFAULT 1            | Number of payment attempts                   |
+| `LastAttemptAt`  | datetime      | NOT NULL, DEFAULT NOW()        | Timestamp of most recent attempt             |
 
 **Business Rules:**
 
@@ -727,7 +729,8 @@ Records the single full payment for a booking. The `UNIQUE` constraint on `Booki
 - `Amount` validated against `Booking.FinalTotal` before record creation
 - `Wallet` payment requires `Client.WalletBalance >= Amount`
 - `Refunded` is a terminal state — no further transitions permitted
-- A `Failed` payment allows retry — a new `Payment` record is created only if no `Success` record exists
+- Payment retries update the existing Payment record (no new Payment rows created)
+- `AttemptCount` is incremented and `LastAttemptAt` is updated on each retry attempt
 
 ---
 
@@ -793,6 +796,7 @@ Immutable record of every privileged admin action. Append-only — no UPDATE or 
 - Full payment only — no installments or partial amounts
 - `Amount` must equal `Booking.FinalTotal` before payment record is created
 - Wallet payment requires sufficient `Client.WalletBalance`
+- Payment retries update the existing Payment record with incremented `AttemptCount` and refreshed `LastAttemptAt`
 
 ### Delivery Rules
 

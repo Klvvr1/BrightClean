@@ -20,7 +20,7 @@ version: 1.0.0+1
 
 environment:
   sdk: ^3.2.3
-  flutter: ">=3.16.0"
+  flutter: ">=3.27.0 <4.0.0"
 
 # Why? Flutter 3.16.0 (which shipped with Dart 3.2.3) was a massive release because it made Material 3 
 # the default design system. Since your app seems to use modern UI elements, setting your minimum to 

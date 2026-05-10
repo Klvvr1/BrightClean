@@ -264,7 +264,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         date: DateFormat('dd MMMM yyyy', 'ar').format(DateTime.now()),
                         details: '${widget.serviceName} (${widget.selectedType}) - ${widget.quantity} قطع',
                         status: 'قيد الانتظار',
-                        statusColor: AppColors.warning,
                         activeStepIndex: 0,
                       );
                       Provider.of<OrderProvider>(context, listen: false).addOrder(newOrder);

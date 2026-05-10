@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:go_router/go_router.dart';
@@ -386,11 +387,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   Widget _buildStatCard(String title, String value, IconData icon, Color color,
       {String? subValue, int delay = 0}) {
+    final start = max(0.0, delay / 800.0);
+    final end = min(1.0, (delay + 500) / 800.0);
     return TweenAnimationBuilder(
       duration: const Duration(milliseconds: 800),
       tween: Tween<double>(begin: 0, end: 1),
       curve:
-          Interval(delay / 800.0, (delay + 500) / 800.0, curve: Curves.easeOut),
+          Interval(start, end, curve: Curves.easeOut),
       builder: (context, double opacity, child) {
         return Opacity(
           opacity: opacity,

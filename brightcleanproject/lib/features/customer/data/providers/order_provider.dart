@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../domain/models/order.dart';
-import '../../../../core/theme/app_colors.dart';
 
 class OrderProvider extends ChangeNotifier {
   final List<Order> _orders = [
@@ -9,7 +8,6 @@ class OrderProvider extends ChangeNotifier {
       date: '16 أبريل 2026',
       details: 'تنظيف سجاد - 2 قطعة',
       status: 'قيد الانتظار',
-      statusColor: AppColors.warning,
       activeStepIndex: 0,
     ),
     Order(
@@ -17,12 +15,11 @@ class OrderProvider extends ChangeNotifier {
       date: '15 أبريل 2026',
       details: 'غسيل ملابس - 5 قطع',
       status: 'في الطريق',
-      statusColor: AppColors.warning,
       activeStepIndex: 1,
     ),
   ];
 
-  List<Order> get orders => _orders;
+  List<Order> get orders => List.unmodifiable(_orders);
 
   void addOrder(Order order) {
     _orders.insert(0, order);

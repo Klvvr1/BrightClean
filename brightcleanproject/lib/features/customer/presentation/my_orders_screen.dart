@@ -15,6 +15,25 @@ class MyOrdersScreen extends StatefulWidget {
 }
 
 class _MyOrdersScreenState extends State<MyOrdersScreen> {
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'قيد الانتظار':
+        return AppColors.warning;
+      case 'في الطريق':
+        return AppColors.warning;
+      case 'قيد المعالجة':
+        return AppColors.secondary;
+      case 'جاهز':
+        return AppColors.success;
+      case 'تم التوصيل':
+        return AppColors.success;
+      case 'ملغي':
+        return AppColors.error;
+      default:
+        return AppColors.textLight;
+    }
+  }
+
   Widget _buildStep(String title, bool isActive, {Color activeColor = AppColors.success}) {
     return Column(
       children: [
@@ -198,12 +217,15 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                       itemCount: currentOrders.length,
                       itemBuilder: (context, index) {
                         final Order order = currentOrders[index];
+                        final displayOrderId = order.orderId.length > 8
+                            ? order.orderId.substring(0, 8)
+                            : order.orderId;
                         return _buildOrderCard(
-                          orderId: order.orderId,
+                          orderId: displayOrderId,
                           date: order.date,
                           details: order.details,
                           status: order.status,
-                          statusColor: order.statusColor,
+                          statusColor: _getStatusColor(order.status),
                           activeStepIndex: order.activeStepIndex,
                           showTracker: true,
                         );
