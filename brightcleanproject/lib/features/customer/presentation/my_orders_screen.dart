@@ -2,9 +2,35 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 
-class MyOrdersScreen extends StatelessWidget {
+class OrderData {
+  static List<Map<String, dynamic>> currentOrders = [
+    {
+      'orderId': '1025',
+      'date': '16 أبريل 2026',
+      'details': 'تنظيف سجاد - 2 قطعة',
+      'status': 'قيد الانتظار',
+      'statusColor': AppColors.warning,
+      'activeStepIndex': 0,
+    },
+    {
+      'orderId': '1024',
+      'date': '15 أبريل 2026',
+      'details': 'غسيل ملابس - 5 قطع',
+      'status': 'في الطريق',
+      'statusColor': AppColors.warning,
+      'activeStepIndex': 1,
+    },
+  ];
+}
+
+class MyOrdersScreen extends StatefulWidget {
   const MyOrdersScreen({super.key});
 
+  @override
+  State<MyOrdersScreen> createState() => _MyOrdersScreenState();
+}
+
+class _MyOrdersScreenState extends State<MyOrdersScreen> {
   Widget _buildStep(String title, bool isActive, {Color activeColor = AppColors.success}) {
     return Column(
       children: [
@@ -173,29 +199,29 @@ class MyOrdersScreen extends StatelessWidget {
         body: TabBarView(
           children: [
             // Current Orders
-            ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                _buildOrderCard(
-                  orderId: '1024',
-                  date: '15 أبريل 2026',
-                  details: 'غسيل ملابس - 5 قطع',
-                  status: 'في الطريق',
-                  statusColor: AppColors.warning,
-                  activeStepIndex: 1,
-                  showTracker: true,
+            OrderData.currentOrders.isEmpty 
+              ? _buildEmptyState(
+                  context,
+                  title: 'لا توجد طلبات حالية',
+                  subtitle: 'قم بطلب خدمة جديدة لتبدأ التجربة.',
+                  icon: Icons.receipt_rounded,
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: OrderData.currentOrders.length,
+                  itemBuilder: (context, index) {
+                    final order = OrderData.currentOrders[index];
+                    return _buildOrderCard(
+                      orderId: order['orderId'],
+                      date: order['date'],
+                      details: order['details'],
+                      status: order['status'],
+                      statusColor: order['statusColor'],
+                      activeStepIndex: order['activeStepIndex'],
+                      showTracker: true,
+                    );
+                  },
                 ),
-                _buildOrderCard(
-                  orderId: '1025',
-                  date: '16 أبريل 2026',
-                  details: 'تنظيف سجاد - 2 قطعة',
-                  status: 'قيد الانتظار',
-                  statusColor: AppColors.warning,
-                  activeStepIndex: 0,
-                  showTracker: true,
-                ),
-              ],
-            ),
             // Past Orders (Empty State Example)
             _buildEmptyState(
               context,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
+import 'checkout_screen.dart';
 
 class ServiceDetailsScreen extends StatefulWidget {
   final String serviceType;
@@ -13,91 +14,165 @@ class ServiceDetailsScreen extends StatefulWidget {
 class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
   int quantity = 1;
   final double basePrice = 10.0;
+  String selectedType = '';
 
-  double get totalPrice => basePrice * quantity;
-
-  Widget _buildClothesForm() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('نوع القطعة'),
-        DropdownButtonFormField<String>(
-          items: const [
-            DropdownMenuItem(value: 'shirt', child: Text('قميص')),
-            DropdownMenuItem(value: 'pants', child: Text('بنطلون')),
-            DropdownMenuItem(value: 'dress', child: Text('فستان')),
-          ],
-          onChanged: (v) {},
-        ),
-        const SizedBox(height: 16),
-        const Text('نوع الغسيل'),
-        DropdownButtonFormField<String>(
-          items: const [
-            DropdownMenuItem(value: 'wash_iron', child: Text('غسيل وكي')),
-            DropdownMenuItem(value: 'wash_only', child: Text('غسيل فقط')),
-            DropdownMenuItem(value: 'iron_only', child: Text('كي فقط')),
-          ],
-          onChanged: (v) {},
-        ),
-      ],
-    );
+  List<String> get _serviceOptions {
+    switch (widget.serviceType) {
+      case 'الملابس':
+        return ['غسيل وكي', 'غسيل فقط', 'كي فقط'];
+      case 'السجاد والمفروشات':
+        return ['غسيل سجاد عادي', 'غسيل سجاد عميق', 'تنظيف مجالس'];
+      case 'السيارات':
+        return ['غسيل خارجي', 'غسيل داخلي وخارجي', 'تلميع شامل'];
+      case 'تنظيف المكيفات':
+        return ['تنظيف وحدة داخلية', 'تنظيف شامل (داخلي وخارجي)', 'تعبئة فريون'];
+      case 'عاملات النظافة':
+        return ['زيارة (4 ساعات)', 'زيارة (8 ساعات)', 'باقة يوم كامل'];
+      case 'تنظيف الخزانات':
+        return ['تنظيف خزان علوي', 'تنظيف خزان أرضي', 'تعقيم شامل'];
+      default:
+        return ['خدمة قياسية', 'خدمة مميزة', 'خدمة شاملة'];
+    }
   }
 
-  Widget _buildDynamicForm() {
-    // Scaffold other forms based on serviceType matching
-    if (widget.serviceType == 'shoes') return const Text('فورم غسيل الأحذية');
-    if (widget.serviceType == 'carpets') return const Text('فورم غسيل السجاد (متر مربع)');
-    if (widget.serviceType == 'cars') return const Text('فورم غسيل السيارات (داخلي/خارجي)');
-    if (widget.serviceType == 'ac') return const Text('فورم تنظيف المكيفات (نوع المكيف)');
-    if (widget.serviceType == 'maids') return const Text('فورم عاملات النظافة (بالساعة/توفير أدوات)');
-    if (widget.serviceType == 'tanks') return const Text('فورم تنظيف الخزانات (علوي/أرضي)');
+  @override
+  void initState() {
+    super.initState();
+    selectedType = _serviceOptions.first;
+  }
 
-    return _buildClothesForm(); // default
+  double get totalPrice {
+    double multiplier = 1.0;
+    if (selectedType.contains('فقط') || selectedType.contains('خارجي') || selectedType.contains('علوي') || selectedType.contains('عادي')) {
+      multiplier = 1.0;
+    } else if (selectedType.contains('شامل') || selectedType.contains('عميق') || selectedType.contains('8 ساعات') || selectedType.contains('يوم كامل') || selectedType.contains('داخلي وخارجي')) {
+      multiplier = 2.5;
+    } else {
+      multiplier = 1.5;
+    }
+    return basePrice * multiplier * quantity;
+  }
+
+  Widget _buildCheckboxOption(String title) {
+    bool isSelected = selectedType == title;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: isSelected ? AppColors.primary.withValues(alpha: 0.05) : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isSelected ? AppColors.primary : Colors.grey.shade300,
+          width: isSelected ? 2 : 1,
+        ),
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(
+          unselectedWidgetColor: Colors.grey.shade400,
+        ),
+        child: CheckboxListTile(
+          title: Text(
+            title, 
+            style: TextStyle(
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              color: isSelected ? AppColors.primary : Colors.black87,
+            )
+          ),
+          value: isSelected,
+          activeColor: AppColors.primary,
+          checkColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          onChanged: (bool? value) {
+            if (value == true) {
+              setState(() {
+                selectedType = title;
+              });
+            }
+          },
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('تفاصيل خدمة: ${widget.serviceType}')),
+      backgroundColor: Colors.grey.shade50,
+      appBar: AppBar(
+        title: Text(widget.serviceType, style: const TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.white,
+        foregroundColor: AppColors.primary,
+        elevation: 0,
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildDynamicForm(),
-            const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('الكمية:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                Row(
-                  children: [
-                    IconButton(
-                      icon: Icon(Icons.remove_circle, color: quantity > 0 ? AppColors.primary : Colors.grey),
-                      onPressed: () {
-                        if (quantity > 0) setState(() => quantity--);
-                      },
-                    ),
-                    Text('$quantity', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                    IconButton(
-                      icon: const Icon(Icons.add_circle, color: AppColors.primary),
-                      onPressed: () {
-                        setState(() => quantity++);
-                      },
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            const Divider(),
+            const Text('اختر نوع الخدمة', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('السعر الإجمالي:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                Text('${totalPrice.toStringAsFixed(2)} درهم', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.primary)),
-              ],
+            ..._serviceOptions.map((option) => _buildCheckboxOption(option)),
+            const SizedBox(height: 32),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('الكمية / عدد القطع', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.remove),
+                              color: quantity > 1 ? AppColors.primary : Colors.grey,
+                              onPressed: () {
+                                if (quantity > 1) setState(() => quantity--);
+                              },
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              child: Text('$quantity', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.add),
+                              color: AppColors.primary,
+                              onPressed: () {
+                                setState(() => quantity++);
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          const Text('السعر الإجمالي', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                          const SizedBox(height: 4),
+                          Text('${totalPrice.toStringAsFixed(2)} درهم', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.primary)),
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -106,22 +181,25 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: ElevatedButton(
-            onPressed: quantity > 0 ? () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('تم إضافة $quantity عنصر إلى السلة بنجاح!'),
-                  backgroundColor: AppColors.success,
-                  behavior: SnackBarBehavior.floating,
-                ),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => CheckoutScreen(
+                  serviceName: widget.serviceType,
+                  selectedType: selectedType,
+                  quantity: quantity,
+                  totalPrice: totalPrice,
+                )),
               );
-            } : null,
+            },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              elevation: 4,
             ),
-            child: const Text('إضافة إلى السلة / متابعة للإكمال', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            child: const Text('إكمال الطلب', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           ),
         ),
       ),

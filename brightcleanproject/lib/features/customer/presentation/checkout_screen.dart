@@ -1,9 +1,22 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import 'package:intl/intl.dart';
+import 'order_success_screen.dart';
+import 'my_orders_screen.dart';
 
 class CheckoutScreen extends StatefulWidget {
-  const CheckoutScreen({super.key});
+  final String serviceName;
+  final String selectedType;
+  final int quantity;
+  final double totalPrice;
+
+  const CheckoutScreen({
+    super.key, 
+    this.serviceName = 'غسيل ملابس', 
+    this.selectedType = 'غسيل وكي', 
+    this.quantity = 5, 
+    this.totalPrice = 50.0,
+  });
 
   @override
   State<CheckoutScreen> createState() => _CheckoutScreenState();
@@ -87,10 +100,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             Card(
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               elevation: 2,
-              child: const ListTile(
-                title: Text('غسيل ملابس (غسيل وكي)', style: TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: Text('الكمية: 5 قطع'),
-                trailing: Text('50 درهم', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              child: ListTile(
+                title: Text('${widget.serviceName} (${widget.selectedType})', style: const TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: Text('الكمية / عدد القطع: ${widget.quantity}'),
+                trailing: Text('${widget.totalPrice.toStringAsFixed(2)} درهم', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
               ),
             ),
             const SizedBox(height: 24),
@@ -196,17 +209,16 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             // Payment Method
             const Text('طريقة الدفع', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            _buildPaymentOption('دفع عند الاستلام', 'cash', Icons.money),
-            _buildPaymentOption('بطاقة ائتمان', 'card', Icons.credit_card),
-            _buildPaymentOption('المحفظة (150 درهم متوفر)', 'wallet', Icons.account_balance_wallet),
+            _buildPaymentOption('الدفع كاش', 'cash', Icons.money),
+            _buildPaymentOption('تحويل لحساب بنكي', 'bank_transfer', Icons.account_balance),
             const SizedBox(height: 16),
             const Divider(),
             const SizedBox(height: 8),
-            const Row(
+            Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('المجموع الكلي:', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                Text('50 درهم', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.primary)),
+                const Text('المجموع الكلي:', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                Text('${widget.totalPrice.toStringAsFixed(2)} درهم', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.primary)),
               ],
             ),
             const SizedBox(height: 100), // padding for bottom bar
@@ -231,8 +243,19 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             child: ElevatedButton(
               onPressed: canCompleteOrder
                   ? () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('تم تأكيد الطلب بنجاح!')),
+                      // Add order to list
+                      OrderData.currentOrders.insert(0, {
+                        'orderId': '${1026 + OrderData.currentOrders.length}',
+                        'date': DateFormat('dd MMMM yyyy').format(DateTime.now()),
+                        'details': '${widget.serviceName} (${widget.selectedType}) - ${widget.quantity} قطع',
+                        'status': 'قيد الانتظار',
+                        'statusColor': AppColors.warning,
+                        'activeStepIndex': 0,
+                      });
+
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (context) => const OrderSuccessScreen()),
                       );
                     }
                   : () {
