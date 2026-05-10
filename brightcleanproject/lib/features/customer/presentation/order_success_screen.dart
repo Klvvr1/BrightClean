@@ -47,7 +47,7 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> with SingleTick
                 child: Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: AppColors.success.withValues(alpha: 0.1),
+                    color: AppColors.success.withOpacity(0.1),
                     shape: BoxShape.circle,
                   ),
                   child: Container(

@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import 'package:intl/intl.dart';
+import 'package:intl/date_symbol_data_local.dart';
+import 'package:uuid/uuid.dart';
+import 'package:provider/provider.dart';
 import 'order_success_screen.dart';
-import 'my_orders_screen.dart';
+import '../../domain/models/order.dart';
+import '../../data/providers/order_provider.dart';
 
 class CheckoutScreen extends StatefulWidget {
   final String serviceName;
@@ -27,6 +31,20 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   String? _selectedTimeSlot;
   String _selectedPaymentMethod = 'cash';
   bool _isLocationVerified = false;
+  bool _dateFormattingInitialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeDateFormatting();
+  }
+
+  Future<void> _initializeDateFormatting() async {
+    await initializeDateFormatting('ar');
+    setState(() {
+      _dateFormattingInitialized = true;
+    });
+  }
 
   void _pickDate() async {
     final DateTime? picked = await showDatePicker(
@@ -244,13 +262,21 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               onPressed: canCompleteOrder
                   ? () {
                       // Add order to list
+                      final newOrder = Order(
+                        orderId: const Uuid().v4(),
+                        date: DateFormat('dd MMMM yyyy', 'ar').format(DateTime.now()),
+                        details: '${widget.serviceName} (${widget.selectedType}) - ${widget.quantity} قطع',
+                        status: 'قيد الانتظار',
+                        statusColor: AppColors.warning,
+                        activeStepIndex: 0,
+                      );
                       OrderData.currentOrders.insert(0, {
-                        'orderId': '${1026 + OrderData.currentOrders.length}',
-                        'date': DateFormat('dd MMMM yyyy').format(DateTime.now()),
-                        'details': '${widget.serviceName} (${widget.selectedType}) - ${widget.quantity} قطع',
-                        'status': 'قيد الانتظار',
-                        'statusColor': AppColors.warning,
-                        'activeStepIndex': 0,
+                        'orderId': newOrder.orderId,
+                        'date': newOrder.date,
+                        'details': newOrder.details,
+                        'status': newOrder.status,
+                        'statusColor': newOrder.statusColor,
+                        'activeStepIndex': newOrder.activeStepIndex,
                       });
 
                       Navigator.pushReplacement(

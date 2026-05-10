@@ -212,12 +212,12 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                   itemBuilder: (context, index) {
                     final order = OrderData.currentOrders[index];
                     return _buildOrderCard(
-                      orderId: order['orderId'],
-                      date: order['date'],
-                      details: order['details'],
-                      status: order['status'],
-                      statusColor: order['statusColor'],
-                      activeStepIndex: order['activeStepIndex'],
+                      orderId: order['orderId'] as String,
+                      date: order['date'] as String,
+                      details: order['details'] as String,
+                      status: order['status'] as String,
+                      statusColor: order['statusColor'] as Color,
+                      activeStepIndex: order['activeStepIndex'] as int,
                       showTracker: true,
                     );
                   },

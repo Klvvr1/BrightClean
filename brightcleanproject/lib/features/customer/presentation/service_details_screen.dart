@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import 'checkout_screen.dart';
+import '../../domain/models/service_option.dart';
 
 class ServiceDetailsScreen extends StatefulWidget {
   final String serviceType;
@@ -14,47 +15,67 @@ class ServiceDetailsScreen extends StatefulWidget {
 class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
   int quantity = 1;
   final double basePrice = 10.0;
-  String selectedType = '';
+  late ServiceOption selectedOption;
 
-  List<String> get _serviceOptions {
+  List<ServiceOption> get _serviceOptions {
     switch (widget.serviceType) {
       case 'الملابس':
-        return ['غسيل وكي', 'غسيل فقط', 'كي فقط'];
+        return [
+          const ServiceOption(id: 'wash_iron', displayName: 'غسيل وكي', priceMultiplier: 1.5),
+          const ServiceOption(id: 'wash_only', displayName: 'غسيل فقط', priceMultiplier: 1.0),
+          const ServiceOption(id: 'iron_only', displayName: 'كي فقط', priceMultiplier: 1.0),
+        ];
       case 'السجاد والمفروشات':
-        return ['غسيل سجاد عادي', 'غسيل سجاد عميق', 'تنظيف مجالس'];
+        return [
+          const ServiceOption(id: 'carpet_regular', displayName: 'غسيل سجاد عادي', priceMultiplier: 1.0),
+          const ServiceOption(id: 'carpet_deep', displayName: 'غسيل سجاد عميق', priceMultiplier: 2.5),
+          const ServiceOption(id: 'majlis_clean', displayName: 'تنظيف مجالس', priceMultiplier: 1.5),
+        ];
       case 'السيارات':
-        return ['غسيل خارجي', 'غسيل داخلي وخارجي', 'تلميع شامل'];
+        return [
+          const ServiceOption(id: 'car_exterior', displayName: 'غسيل خارجي', priceMultiplier: 1.0),
+          const ServiceOption(id: 'car_full', displayName: 'غسيل داخلي وخارجي', priceMultiplier: 2.5),
+          const ServiceOption(id: 'car_polish', displayName: 'تلميع شامل', priceMultiplier: 1.5),
+        ];
       case 'تنظيف المكيفات':
-        return ['تنظيف وحدة داخلية', 'تنظيف شامل (داخلي وخارجي)', 'تعبئة فريون'];
+        return [
+          const ServiceOption(id: 'ac_indoor', displayName: 'تنظيف وحدة داخلية', priceMultiplier: 1.5),
+          const ServiceOption(id: 'ac_full', displayName: 'تنظيف شامل (داخلي وخارجي)', priceMultiplier: 2.5),
+          const ServiceOption(id: 'ac_freon', displayName: 'تعبئة فريون', priceMultiplier: 1.5),
+        ];
       case 'عاملات النظافة':
-        return ['زيارة (4 ساعات)', 'زيارة (8 ساعات)', 'باقة يوم كامل'];
+        return [
+          const ServiceOption(id: 'clean_4h', displayName: 'زيارة (4 ساعات)', priceMultiplier: 1.5),
+          const ServiceOption(id: 'clean_8h', displayName: 'زيارة (8 ساعات)', priceMultiplier: 2.5),
+          const ServiceOption(id: 'clean_full', displayName: 'باقة يوم كامل', priceMultiplier: 2.5),
+        ];
       case 'تنظيف الخزانات':
-        return ['تنظيف خزان علوي', 'تنظيف خزان أرضي', 'تعقيم شامل'];
+        return [
+          const ServiceOption(id: 'tank_upper', displayName: 'تنظيف خزان علوي', priceMultiplier: 1.0),
+          const ServiceOption(id: 'tank_ground', displayName: 'تنظيف خزان أرضي', priceMultiplier: 1.5),
+          const ServiceOption(id: 'tank_sterilize', displayName: 'تعقيم شامل', priceMultiplier: 2.5),
+        ];
       default:
-        return ['خدمة قياسية', 'خدمة مميزة', 'خدمة شاملة'];
+        return [
+          const ServiceOption(id: 'standard', displayName: 'خدمة قياسية', priceMultiplier: 1.0),
+          const ServiceOption(id: 'premium', displayName: 'خدمة مميزة', priceMultiplier: 1.5),
+          const ServiceOption(id: 'comprehensive', displayName: 'خدمة شاملة', priceMultiplier: 2.5),
+        ];
     }
   }
 
   @override
   void initState() {
     super.initState();
-    selectedType = _serviceOptions.first;
+    selectedOption = _serviceOptions.first;
   }
 
   double get totalPrice {
-    double multiplier = 1.0;
-    if (selectedType.contains('فقط') || selectedType.contains('خارجي') || selectedType.contains('علوي') || selectedType.contains('عادي')) {
-      multiplier = 1.0;
-    } else if (selectedType.contains('شامل') || selectedType.contains('عميق') || selectedType.contains('8 ساعات') || selectedType.contains('يوم كامل') || selectedType.contains('داخلي وخارجي')) {
-      multiplier = 2.5;
-    } else {
-      multiplier = 1.5;
-    }
-    return basePrice * multiplier * quantity;
+    return basePrice * selectedOption.priceMultiplier * quantity;
   }
 
-  Widget _buildCheckboxOption(String title) {
-    bool isSelected = selectedType == title;
+  Widget _buildCheckboxOption(ServiceOption option) {
+    bool isSelected = selectedOption.id == option.id;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -71,7 +92,7 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
         ),
         child: CheckboxListTile(
           title: Text(
-            title, 
+            option.displayName,
             style: TextStyle(
               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               color: isSelected ? AppColors.primary : Colors.black87,
@@ -84,7 +105,7 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
           onChanged: (bool? value) {
             if (value == true) {
               setState(() {
-                selectedType = title;
+                selectedOption = option;
               });
             }
           },
@@ -186,7 +207,7 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
                 context,
                 MaterialPageRoute(builder: (context) => CheckoutScreen(
                   serviceName: widget.serviceType,
-                  selectedType: selectedType,
+                  selectedType: selectedOption.displayName,
                   quantity: quantity,
                   totalPrice: totalPrice,
                 )),
