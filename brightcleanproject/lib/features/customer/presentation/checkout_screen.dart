@@ -5,8 +5,8 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:uuid/uuid.dart';
 import 'package:provider/provider.dart';
 import 'order_success_screen.dart';
-import '../../domain/models/order.dart';
-import '../../data/providers/order_provider.dart';
+import 'package:brightcleanprojet/features/customer/domain/models/order.dart';
+import 'package:brightcleanprojet/features/customer/data/providers/order_provider.dart';
 
 class CheckoutScreen extends StatefulWidget {
   final String serviceName;
@@ -31,7 +31,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   String? _selectedTimeSlot;
   String _selectedPaymentMethod = 'cash';
   bool _isLocationVerified = false;
-  bool _dateFormattingInitialized = false;
+
 
   @override
   void initState() {
@@ -41,9 +41,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
   Future<void> _initializeDateFormatting() async {
     await initializeDateFormatting('ar');
-    setState(() {
-      _dateFormattingInitialized = true;
-    });
   }
 
   void _pickDate() async {
@@ -270,14 +267,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         statusColor: AppColors.warning,
                         activeStepIndex: 0,
                       );
-                      OrderData.currentOrders.insert(0, {
-                        'orderId': newOrder.orderId,
-                        'date': newOrder.date,
-                        'details': newOrder.details,
-                        'status': newOrder.status,
-                        'statusColor': newOrder.statusColor,
-                        'activeStepIndex': newOrder.activeStepIndex,
-                      });
+                      Provider.of<OrderProvider>(context, listen: false).addOrder(newOrder);
 
                       Navigator.pushReplacement(
                         context,
