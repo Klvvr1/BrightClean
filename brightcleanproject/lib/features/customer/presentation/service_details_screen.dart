@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import 'checkout_screen.dart';
-import '../../domain/models/service_option.dart';
+import 'package:brightcleanprojet/features/customer/domain/models/service_option.dart';
 
 class ServiceDetailsScreen extends StatefulWidget {
   final String serviceType;
@@ -79,7 +79,7 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: isSelected ? AppColors.primary.withOpacity(0.05) : Colors.white,
+        color: isSelected ? AppColors.primary.withValues(alpha: 0.05) : Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isSelected ? AppColors.primary : Colors.grey.shade300,
@@ -140,7 +140,7 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withValues(alpha: 0.05),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   ),
