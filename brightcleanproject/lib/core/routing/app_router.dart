@@ -16,12 +16,6 @@ import '../../features/driver/presentation/driver_dashboard_screen.dart';
 import '../../features/driver/presentation/driver_tracking_screen.dart';
 import '../../features/admin/presentation/admin_dashboard_screen.dart';
 
-// Import AgentOrderModel for type checking in routes
-// (AgentOrderModel is defined in agent_dashboard_screen.dart)
-
-// Import TrackingWorkflow enum for driver tracking routes
-// (TrackingWorkflow is defined in driver_tracking_screen.dart)
-
 class AppRouter {
   static final router = GoRouter(
     initialLocation: '/',

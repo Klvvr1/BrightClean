@@ -176,24 +176,26 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('اختر نوع القطعة', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 16),
-            // Clothing items selection (radio buttons)
-            Column(
-              children: _clothingItems.map((item) {
-                return RadioListTile<String>(
-                  title: Text(item, style: const TextStyle(fontSize: 16)),
-                  value: item,
-                  groupValue: selectedClothingItem,
-                  onChanged: (value) {
-                    setState(() {
-                      selectedClothingItem = value!;
-                    });
-                  },
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 24),
+            // Clothing items selection (radio buttons) - only for الملابس service
+            if (widget.serviceType == 'الملابس') ...[
+              const Text('اختر نوع القطعة', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              Column(
+                children: _clothingItems.map((item) {
+                  return RadioListTile<String>(
+                    title: Text(item, style: const TextStyle(fontSize: 16)),
+                    value: item,
+                    groupValue: selectedClothingItem,
+                    onChanged: (value) {
+                      setState(() {
+                        selectedClothingItem = value!;
+                      });
+                    },
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 24),
+            ],
             const Text('اختر نوع الخدمة', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
             ..._serviceOptions.map((option) => _buildCheckboxOption(option)),
