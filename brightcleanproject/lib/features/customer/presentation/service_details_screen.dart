@@ -13,9 +13,55 @@ class ServiceDetailsScreen extends StatefulWidget {
 }
 
 class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
-  int quantity = 1;
   final double basePrice = 10.0;
+  int quantity = 1;
   late ServiceOption selectedOption;
+
+  // List of clothing items for the 'الملابس' service
+  final List<String> _clothingItems = [
+    'ثوب أبيض',
+    'ثوب ملون',
+    'ثوب صوف',
+    'غترة',
+    'شماغ',
+    'فليئة داخلية',
+    'سروال قصير',
+    'سروال طويل',
+    'طاقية',
+    'قميص نوم',
+    'جوارب',
+    'منشفة صغيرة',
+    'منشفة كبيرة',
+    'بدلة عسكرية',
+    'بدلة رياضية',
+    'بدلة باكستاني',
+    'بدلة صوف',
+    'بالطو',
+    'بنطلون',
+    'قميص',
+    'ربطة عنق',
+    'فستان',
+    'بلوزة',
+    'تنورة',
+    'قميص حرير',
+    'عباية',
+    'طرحة',
+    'شرشف مزدوج',
+    'شرشف مفرد',
+    'كيس مخدة',
+    'مخدة',
+    'روب حمام',
+    'بجامة',
+    'جاكيت',
+    'جاكيت سبور',
+    'بطانية',
+    'مفرش',
+    'ستائر',
+    'سجاد',
+    'فروة',
+    'بشت',
+  ];
+  late String selectedClothingItem;
 
   List<ServiceOption> get _serviceOptions {
     switch (widget.serviceType) {
@@ -67,6 +113,7 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
   @override
   void initState() {
     super.initState();
+    selectedClothingItem = _clothingItems.first;
     selectedOption = _serviceOptions.first;
   }
 
@@ -129,6 +176,26 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Clothing items selection (radio buttons) - only for الملابس service
+            if (widget.serviceType == 'الملابس') ...[
+              const Text('اختر نوع القطعة', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              Column(
+                children: _clothingItems.map((item) {
+                  return RadioListTile<String>(
+                    title: Text(item, style: const TextStyle(fontSize: 16)),
+                    value: item,
+                    groupValue: selectedClothingItem,
+                    onChanged: (value) {
+                      setState(() {
+                        selectedClothingItem = value!;
+                      });
+                    },
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 24),
+            ],
             const Text('اختر نوع الخدمة', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
             ..._serviceOptions.map((option) => _buildCheckboxOption(option)),

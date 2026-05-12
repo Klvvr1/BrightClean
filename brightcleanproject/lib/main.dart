@@ -60,7 +60,8 @@ class BrightCleanApp extends StatelessWidget {
             );
           },
         );
-      }
+      },
     );
   }
 }
+
