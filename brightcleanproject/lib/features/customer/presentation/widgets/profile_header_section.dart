@@ -1,6 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../../../../core/theme/app_colors.dart';
-import '../../data/models/user_profile.dart';
+import '../models/user_profile.dart';
 
 class ProfileHeaderSection extends StatelessWidget {
   final UserProfile user;
@@ -21,10 +22,16 @@ class ProfileHeaderSection extends StatelessWidget {
         Stack(
           alignment: Alignment.bottomRight,
           children: [
-            const CircleAvatar(
+            CircleAvatar(
               radius: 50,
               backgroundColor: AppColors.lightBlue,
-              child: Icon(Icons.person, size: 50, color: AppColors.white),
+              backgroundImage:
+                  (user.imagePath != null && user.imagePath!.isNotEmpty)
+                      ? FileImage(File(user.imagePath!))
+                      : null,
+              child: (user.imagePath == null || user.imagePath!.isEmpty)
+                  ? const Icon(Icons.person, size: 50, color: AppColors.white)
+                  : null,
             ),
             if (isEditMode)
               Container(
@@ -48,7 +55,12 @@ class ProfileHeaderSection extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           user.phone,
-          style: const TextStyle(color: AppColors.textLight, fontSize: 16),
+          style: TextStyle(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white70
+                : AppColors.textLight,
+            fontSize: 16,
+          ),
         ),
       ],
     );
