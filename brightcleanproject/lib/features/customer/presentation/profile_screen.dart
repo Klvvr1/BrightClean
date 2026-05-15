@@ -85,9 +85,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
       await prefs.remove('user_name');
       await prefs.remove('user_phone');
       await prefs.remove('user_email');
+      await prefs.remove('wallet_balance');
+      await prefs.remove('profile_image_path');
 
       // Remove user-scoped data (addresses) using the stored userId
       await prefs.remove('user_saved_addresses_$userId');
+
+      // Reset in-memory state to defaults
+      if (mounted) {
+        setState(() {
+          _currentUser = const UserProfile(
+            name: 'أحمد محمد',
+            phone: '+971 50 123 4567',
+            walletBalance: '0 ريال يمني',
+          );
+        });
+      }
 
       // 2. Clear API Headers (if using Dio or http client)
       // TODO: Add when API client is implemented
