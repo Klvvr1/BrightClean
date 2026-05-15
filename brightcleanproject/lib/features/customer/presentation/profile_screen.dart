@@ -1,15 +1,15 @@
 import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 import 'addresses_screen.dart';
 import 'change_password_screen.dart';
 import 'edit_account_screen.dart';
-import '../data/models/user_profile.dart';
+import 'models/user_profile.dart';
 import 'widgets/custom_profile_tile.dart';
 import 'widgets/profile_header_section.dart';
 import 'widgets/wallet_section.dart';
 import 'widgets/help_center_bottom_sheet.dart';
+import 'package:brightcleanprojet/core/controllers/theme_controller.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -25,7 +25,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   UserProfile _currentUser = const UserProfile(
     name: 'أحمد محمد',
     phone: '+971 50 123 4567',
-    walletBalance: '150 درهم',
+    walletBalance: '0 ريال يمني',
   );
 
   @override
@@ -38,7 +38,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final prefs = await SharedPreferences.getInstance();
     final name = prefs.getString('user_name') ?? 'أحمد محمد';
     final phone = prefs.getString('user_phone') ?? '+971 50 123 4567';
-    final walletBalance = prefs.getString('wallet_balance') ?? '150 درهم';
+    final walletBalance = prefs.getString('wallet_balance') ?? '0 ريال يمني';
+    final imagePath = prefs.getString('profile_image_path');
 
     if (mounted) {
       setState(() {
@@ -46,6 +47,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           name: name,
           phone: phone,
           walletBalance: walletBalance,
+          imagePath: imagePath,
         );
       });
     }
@@ -83,12 +85,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
       await prefs.remove('user_name');
       await prefs.remove('user_phone');
       await prefs.remove('user_email');
+      await prefs.remove('wallet_balance');
+      await prefs.remove('profile_image_path');
 
       // Remove user-scoped data (addresses) using the stored userId
       await prefs.remove('user_saved_addresses_$userId');
 
+      // Reset in-memory state to defaults
+      if (mounted) {
+        setState(() {
+          _currentUser = const UserProfile(
+            name: 'أحمد محمد',
+            phone: '+971 50 123 4567',
+            walletBalance: '0 ريال يمني',
+          );
+        });
+      }
+
       // 2. Clear API Headers (if using Dio or http client)
-      // Pending: Add when API client is implemented
+      // TODO: Add when API client is implemented
       // Example for Dio:
       // DioClient.instance.options.headers.remove('Authorization');
       // Example for http:
@@ -113,9 +128,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('تسجيل الخروج', style: TextStyle(color: Colors.red)),
+          title:
+              const Text('تسجيل الخروج', style: TextStyle(color: Colors.red)),
           content: const Text('هل أنت متأكد أنك تريد تسجيل الخروج من التطبيق؟'),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
@@ -230,6 +247,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 isScrollControlled: true,
                 backgroundColor: Colors.transparent,
                 builder: (context) => const HelpCenterBottomSheet(),
+              );
+            },
+          ),
+          const Divider(height: 1),
+          ValueListenableBuilder<ThemeMode>(
+            valueListenable: ThemeController().themeMode,
+            builder: (context, themeMode, child) {
+              // Note: themeMode might be ThemeMode.system, we assume dark mode is active
+              // if it's explicitly ThemeMode.dark. Alternatively, you can use MediaQuery for system check.
+              final isDarkMode = themeMode == ThemeMode.dark ||
+                  (themeMode == ThemeMode.system &&
+                      MediaQuery.of(context).platformBrightness ==
+                          Brightness.dark);
+
+              return CustomProfileTile(
+                icon: isDarkMode ? Icons.dark_mode : Icons.light_mode,
+                title: 'الوضع الليلي',
+                trailing: Switch(
+                  value: isDarkMode,
+                  onChanged: (value) {
+                    ThemeController().toggleTheme();
+                  },
+                ),
               );
             },
           ),
