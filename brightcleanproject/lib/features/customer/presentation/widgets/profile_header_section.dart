@@ -15,6 +15,40 @@ class ProfileHeaderSection extends StatelessWidget {
     this.onEditAvatarPressed,
   });
 
+  Widget _buildAvatarContent() {
+    if (user.imagePath == null || user.imagePath!.isEmpty) {
+      return Container(
+        color: AppColors.lightBlue,
+        child: const Center(
+          child: Icon(Icons.person, size: 50, color: AppColors.white),
+        ),
+      );
+    }
+
+    final file = File(user.imagePath!);
+    if (!file.existsSync()) {
+      return Container(
+        color: AppColors.lightBlue,
+        child: const Center(
+          child: Icon(Icons.person, size: 50, color: AppColors.white),
+        ),
+      );
+    }
+
+    return Image.file(
+      file,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) {
+        return Container(
+          color: AppColors.lightBlue,
+          child: const Center(
+            child: Icon(Icons.person, size: 50, color: AppColors.white),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -22,16 +56,12 @@ class ProfileHeaderSection extends StatelessWidget {
         Stack(
           alignment: Alignment.bottomRight,
           children: [
-            CircleAvatar(
-              radius: 50,
-              backgroundColor: AppColors.lightBlue,
-              backgroundImage:
-                  (user.imagePath != null && user.imagePath!.isNotEmpty)
-                      ? FileImage(File(user.imagePath!))
-                      : null,
-              child: (user.imagePath == null || user.imagePath!.isEmpty)
-                  ? const Icon(Icons.person, size: 50, color: AppColors.white)
-                  : null,
+            ClipOval(
+              child: SizedBox(
+                width: 100,
+                height: 100,
+                child: _buildAvatarContent(),
+              ),
             ),
             if (isEditMode)
               Container(

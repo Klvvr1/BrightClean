@@ -1,7 +1,6 @@
 import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../auth/presentation/login_screen.dart';
 import 'addresses_screen.dart';
 import 'change_password_screen.dart';
 import 'edit_account_screen.dart';
@@ -258,9 +257,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ThemeController().toggleTheme();
                   },
                 ),
-                onTap: () {
-                  ThemeController().toggleTheme();
-                },
               );
             },
           ),

@@ -126,7 +126,10 @@ class WalletDetailsScreen extends StatelessWidget {
 
   void _showDepositDialog(BuildContext context, String method) {
     String? selectedFileName;
+    String? selectedFilePath;
+    List<int>? selectedFileBytes;
     bool isPicking = false;
+    final operationNumberController = TextEditingController();
 
     showDialog(
       context: context,
@@ -168,8 +171,15 @@ class WalletDetailsScreen extends StatelessWidget {
                             if (['jpg', 'jpeg', 'png', 'pdf', 'doc', 'docx'].contains(ext)) {
                               setState(() {
                                 selectedFileName = file.name;
+                                selectedFilePath = file.path;
+                                selectedFileBytes = file.bytes;
                               });
                             } else {
+                              setState(() {
+                                selectedFileName = null;
+                                selectedFilePath = null;
+                                selectedFileBytes = null;
+                              });
                               if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
@@ -208,6 +218,7 @@ class WalletDetailsScreen extends StatelessWidget {
                     ],
                     const SizedBox(height: 16),
                     TextField(
+                      controller: operationNumberController,
                       decoration: InputDecoration(
                         hintText: 'رقم العملية (اختياري)',
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
@@ -219,12 +230,16 @@ class WalletDetailsScreen extends StatelessWidget {
               ),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.pop(context),
+                  onPressed: () {
+                    operationNumberController.dispose();
+                    Navigator.pop(context);
+                  },
                   child: const Text('إلغاء'),
                 ),
                 ElevatedButton(
                   onPressed: () {
                     if (selectedFileName == null) {
+                      if (!context.mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           content: Text('يجب إرفاق صورة السند أو ملف PDF/DOC أولاً.'),
@@ -234,6 +249,10 @@ class WalletDetailsScreen extends StatelessWidget {
                       return;
                     }
                     // Implement submission logic
+                    final operationNumber = operationNumberController.text.trim();
+                    // TODO: Use selectedFilePath, selectedFileBytes, and operationNumber for actual upload
+                    operationNumberController.dispose();
+                    if (!context.mounted) return;
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('تم إرسال طلب الإيداع بنجاح، سيتم التأكد قريباً.')),
