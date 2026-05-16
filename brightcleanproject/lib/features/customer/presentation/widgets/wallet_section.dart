@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../../core/theme/app_colors.dart';
+import '../wallet_details_screen.dart';
 
 class WalletSection extends StatelessWidget {
   final String balance;
@@ -23,7 +24,11 @@ class WalletSection extends StatelessWidget {
           ),
         ),
         onTap: () {
-          // Navigate to wallet
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => WalletDetailsScreen(balance: balance),
+            ),
+          );
         },
       ),
     );

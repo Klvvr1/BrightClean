@@ -6,6 +6,7 @@ class CustomProfileTile extends StatelessWidget {
   final String title;
   final VoidCallback onTap;
   final bool isDestructive;
+  final Widget? trailing;
 
   const CustomProfileTile({
     super.key,
@@ -13,11 +14,14 @@ class CustomProfileTile extends StatelessWidget {
     required this.title,
     required this.onTap,
     this.isDestructive = false,
+    this.trailing,
   });
 
   @override
   Widget build(BuildContext context) {
-    final Color itemColor = isDestructive ? AppColors.error : AppColors.textMain;
+    final Color itemColor = isDestructive
+        ? AppColors.error
+        : (Theme.of(context).textTheme.bodyLarge?.color ?? AppColors.textMain);
 
     return ListTile(
       leading: Icon(
@@ -28,9 +32,11 @@ class CustomProfileTile extends StatelessWidget {
         title,
         style: TextStyle(color: itemColor, fontWeight: FontWeight.w500),
       ),
-      trailing: isDestructive
-          ? null
-          : const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+      trailing: trailing ??
+          (isDestructive
+              ? null
+              : const Icon(Icons.arrow_forward_ios,
+                  size: 16, color: Colors.grey)),
       onTap: onTap,
     );
   }
