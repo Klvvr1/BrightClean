@@ -274,7 +274,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   ? () {
                       // Create details string for the order
                       String orderDetails = cart.items.map((i) => '${i.serviceName} (${i.selectedType})').join(', ');
-                      
+
                       // Add order to list
                       final newOrder = Order(
                         orderId: const Uuid().v4(),
@@ -284,6 +284,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         activeStepIndex: 0,
                         locationDescription: _locationDescriptionController.text,
                         paymentMethod: _selectedPaymentMethod,
+                        pickupDate: _selectedDate,
+                        pickupTimeSlot: _selectedTimeSlot,
                       );
                       Provider.of<OrderProvider>(context, listen: false).addOrder(newOrder);
 

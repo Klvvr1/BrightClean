@@ -23,6 +23,17 @@ class CartProvider with ChangeNotifier {
     required double pricePerUnit,
     required double totalPrice,
   }) {
+    // Validate inputs
+    if (quantity <= 0) {
+      throw ArgumentError('Quantity must be greater than 0');
+    }
+    if (pricePerUnit < 0) {
+      throw ArgumentError('Price per unit must be non-negative');
+    }
+
+    // Compute expected total internally (do not trust caller-supplied totalPrice)
+    final expectedTotal = quantity * pricePerUnit;
+
     // Check if same service and type already in cart
     final existingIndex = _items.indexWhere(
       (item) => item.serviceName == serviceName && item.selectedType == selectedType
@@ -31,13 +42,15 @@ class CartProvider with ChangeNotifier {
     if (existingIndex >= 0) {
       // Update existing item
       final oldItem = _items[existingIndex];
+      final newQuantity = oldItem.quantity + quantity;
+      final newTotal = oldItem.totalPrice + expectedTotal;
       _items[existingIndex] = CartItem(
         id: oldItem.id,
         serviceName: serviceName,
         selectedType: selectedType,
-        quantity: oldItem.quantity + quantity,
+        quantity: newQuantity,
         pricePerUnit: pricePerUnit,
-        totalPrice: oldItem.totalPrice + totalPrice,
+        totalPrice: newTotal,
       );
     } else {
       // Add new item
@@ -48,7 +61,7 @@ class CartProvider with ChangeNotifier {
           selectedType: selectedType,
           quantity: quantity,
           pricePerUnit: pricePerUnit,
-          totalPrice: totalPrice,
+          totalPrice: expectedTotal,
         ),
       );
     }

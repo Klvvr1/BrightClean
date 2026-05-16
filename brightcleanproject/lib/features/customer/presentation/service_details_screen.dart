@@ -214,6 +214,9 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
     if (widget.serviceType.contains('سجاد') || widget.serviceType.contains('مفروشات')) {
       double l = double.tryParse(_lengthController.text) ?? 1.0;
       double w = double.tryParse(_widthController.text) ?? 1.0;
+      // Validate and clamp dimensions to minimum of 1.0
+      if (l <= 0) l = 1.0;
+      if (w <= 0) w = 1.0;
       price = price * (l * w);
     } else if (widget.serviceType.contains('سيار')) {
       price = price * (_carTypes[selectedCarType] ?? 1.0);
@@ -467,14 +470,20 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
           child: ElevatedButton(
             onPressed: () {
               final cart = Provider.of<CartProvider>(context, listen: false);
+              // Include clothing item in selectedType if this is a clothing service
+              String selectedTypeWithClothing = selectedOption.displayName;
+              if (widget.serviceType.contains('لابس')) {
+                selectedTypeWithClothing = '$selectedClothingItem - ${selectedOption.displayName}';
+              }
+
               cart.addItem(
                 serviceName: widget.serviceType,
-                selectedType: selectedOption.displayName,
+                selectedType: selectedTypeWithClothing,
                 quantity: quantity,
                 pricePerUnit: totalPrice / quantity,
                 totalPrice: totalPrice,
               );
-              
+
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: const Text('تم إضافة الخدمة إلى السلة بنجاح'),

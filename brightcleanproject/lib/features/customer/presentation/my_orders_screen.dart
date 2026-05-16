@@ -146,14 +146,14 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
     );
   }
 
-  void _showRatingDialog(BuildContext context, String orderId) {
+  void _showRatingDialog(BuildContext parentContext, String orderId) {
     double rating = 5;
     final TextEditingController reviewController = TextEditingController();
 
     showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
+      context: parentContext,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setState) => AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: const Text('تقييم الخدمة', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold)),
           content: Column(
@@ -189,7 +189,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(dialogContext),
               child: const Text('إلغاء', style: TextStyle(color: Colors.grey)),
             ),
             ElevatedButton(
@@ -200,10 +200,10 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                   rating: rating,
                   date: DateTime.now(),
                 );
-                Provider.of<ReviewProvider>(context, listen: false).addReview(review);
-                Provider.of<OrderProvider>(context, listen: false).markOrderAsRated(orderId);
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
+                Provider.of<ReviewProvider>(parentContext, listen: false).addReview(review);
+                Provider.of<OrderProvider>(parentContext, listen: false).markOrderAsRated(orderId);
+                Navigator.pop(dialogContext);
+                ScaffoldMessenger.of(parentContext).showSnackBar(
                   const SnackBar(
                     content: Text('شكراً لتقييمك! تم إضافة رأيك في القائمة الرئيسية.'),
                     backgroundColor: AppColors.success,

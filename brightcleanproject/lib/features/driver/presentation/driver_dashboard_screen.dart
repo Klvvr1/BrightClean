@@ -439,7 +439,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  isAr ? '120.50 ر.ي' : '120.50 ر.ي',
+                  isAr ? '120.50 ر.ي' : '120.50 YER',
                   style: const TextStyle(
                       color: Colors.white,
                       fontSize: 28,

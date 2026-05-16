@@ -7,6 +7,8 @@ class Order {
   final String? locationDescription;
   final String? paymentMethod;
   final bool isRated;
+  final DateTime? pickupDate;
+  final String? pickupTimeSlot;
 
   Order({
     required this.orderId,
@@ -17,5 +19,7 @@ class Order {
     this.locationDescription,
     this.paymentMethod,
     this.isRated = false,
+    this.pickupDate,
+    this.pickupTimeSlot,
   });
 }
