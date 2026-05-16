@@ -11,6 +11,8 @@ import 'core/controllers/language_controller.dart';
 import 'core/controllers/theme_controller.dart';
 import 'package:provider/provider.dart';
 import 'features/customer/data/providers/order_provider.dart';
+import 'features/customer/data/providers/review_provider.dart';
+import 'features/customer/data/providers/cart_provider.dart';
 
 void main() {
   // Initialize FFI database factory for desktop platforms (Windows, macOS, Linux)
@@ -23,6 +25,8 @@ void main() {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => OrderProvider()),
+        ChangeNotifierProvider(create: (_) => ReviewProvider()),
+        ChangeNotifierProvider(create: (_) => CartProvider()),
       ],
       child: const BrightCleanApp(),
     ),

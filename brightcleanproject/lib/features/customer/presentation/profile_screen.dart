@@ -25,7 +25,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   UserProfile _currentUser = const UserProfile(
     name: 'أحمد محمد',
     phone: '+971 50 123 4567',
-    walletBalance: '150 درهم',
+    walletBalance: '150 ر.ي',
   );
 
   @override
@@ -38,7 +38,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final prefs = await SharedPreferences.getInstance();
     final name = prefs.getString('user_name') ?? 'أحمد محمد';
     final phone = prefs.getString('user_phone') ?? '+971 50 123 4567';
-    final walletBalance = prefs.getString('wallet_balance') ?? '150 درهم';
+    final walletBalance = prefs.getString('wallet_balance') ?? '150 ر.ي';
 
     if (mounted) {
       setState(() {

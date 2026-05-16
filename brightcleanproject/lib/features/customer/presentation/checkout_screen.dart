@@ -7,20 +7,10 @@ import 'package:provider/provider.dart';
 import 'order_success_screen.dart';
 import 'package:brightcleanprojet/features/customer/domain/models/order.dart';
 import 'package:brightcleanprojet/features/customer/data/providers/order_provider.dart';
+import '../data/providers/cart_provider.dart';
 
 class CheckoutScreen extends StatefulWidget {
-  final String serviceName;
-  final String selectedType;
-  final int quantity;
-  final double totalPrice;
-
-  const CheckoutScreen({
-    super.key, 
-    this.serviceName = 'غسيل ملابس', 
-    this.selectedType = 'غسيل وكي', 
-    this.quantity = 5, 
-    this.totalPrice = 50.0,
-  });
+  const CheckoutScreen({super.key});
 
   @override
   State<CheckoutScreen> createState() => _CheckoutScreenState();
@@ -31,7 +21,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   String? _selectedTimeSlot;
   String _selectedPaymentMethod = 'cash';
   bool _isLocationVerified = false;
+  final TextEditingController _locationDescriptionController = TextEditingController();
 
+  @override
+  void dispose() {
+    _locationDescriptionController.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -100,7 +96,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final canCompleteOrder = _isLocationVerified && _selectedDate != null && _selectedTimeSlot != null;
+    final cart = Provider.of<CartProvider>(context);
+    final canCompleteOrder = _isLocationVerified && _selectedDate != null && _selectedTimeSlot != null && cart.items.isNotEmpty;
 
     return Scaffold(
       appBar: AppBar(title: const Text('إتمام الطلب')),
@@ -111,16 +108,18 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           children: [
             // Order Summary
             const Text('ملخص الطلب', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            Card(
+            const SizedBox(height: 12),
+            ...cart.items.map((item) => Card(
+              margin: const EdgeInsets.only(bottom: 8),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              elevation: 2,
+              elevation: 1,
               child: ListTile(
-                title: Text('${widget.serviceName} (${widget.selectedType})', style: const TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: Text('الكمية / عدد القطع: ${widget.quantity}'),
-                trailing: Text('${widget.totalPrice.toStringAsFixed(2)} درهم', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                title: Text('${item.serviceName} (${item.selectedType})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                subtitle: Text('الكمية: ${item.quantity}'),
+                trailing: Text('${item.totalPrice.toStringAsFixed(0)} ر.ي', style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
               ),
-            ),
+            )).toList(),
+            
             const SizedBox(height: 24),
             // Location
             Row(
@@ -150,7 +149,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               child: ListTile(
                 leading: Icon(Icons.location_on, color: _isLocationVerified ? AppColors.success : AppColors.primary),
                 title: const Text('المنزل'),
-                subtitle: const Text('شارع الشيخ زايد، دبي'),
+                subtitle: const Text('شارع الزبيري، صنعاء'),
                 trailing: TextButton(
                   onPressed: () {
                     setState(() {
@@ -162,6 +161,20 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   },
                   child: Text(_isLocationVerified ? 'تغيير' : 'تأكيد الموقع'),
                 ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text('وصف الموقع (اختياري)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _locationDescriptionController,
+              maxLines: 2,
+              decoration: InputDecoration(
+                hintText: 'مثلاً: بجوار صيدلية النور، رقم الدور، أو أي علامة مميزة...',
+                hintStyle: TextStyle(fontSize: 13, color: Colors.grey.shade500),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                filled: true,
+                fillColor: Colors.grey.shade50,
               ),
             ),
             const SizedBox(height: 24),
@@ -226,6 +239,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             const SizedBox(height: 8),
             _buildPaymentOption('الدفع كاش', 'cash', Icons.money),
             _buildPaymentOption('تحويل لحساب بنكي', 'bank_transfer', Icons.account_balance),
+            _buildPaymentOption('الدفع عبر المحفظة', 'wallet', Icons.account_balance_wallet),
             const SizedBox(height: 16),
             const Divider(),
             const SizedBox(height: 8),
@@ -233,7 +247,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text('المجموع الكلي:', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                Text('${widget.totalPrice.toStringAsFixed(2)} درهم', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.primary)),
+                Text('${cart.totalAmount.toStringAsFixed(0)} ر.ي', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.primary)),
               ],
             ),
             const SizedBox(height: 100), // padding for bottom bar
@@ -258,15 +272,23 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             child: ElevatedButton(
               onPressed: canCompleteOrder
                   ? () {
+                      // Create details string for the order
+                      String orderDetails = cart.items.map((i) => '${i.serviceName} (${i.selectedType})').join(', ');
+                      
                       // Add order to list
                       final newOrder = Order(
                         orderId: const Uuid().v4(),
                         date: DateFormat('dd MMMM yyyy', 'ar').format(DateTime.now()),
-                        details: '${widget.serviceName} (${widget.selectedType}) - ${widget.quantity} قطع',
+                        details: orderDetails,
                         status: 'قيد الانتظار',
                         activeStepIndex: 0,
+                        locationDescription: _locationDescriptionController.text,
+                        paymentMethod: _selectedPaymentMethod,
                       );
                       Provider.of<OrderProvider>(context, listen: false).addOrder(newOrder);
+
+                      // Clear cart
+                      cart.clearCart();
 
                       Navigator.pushReplacement(
                         context,
