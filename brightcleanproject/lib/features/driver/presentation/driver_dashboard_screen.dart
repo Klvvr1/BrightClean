@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/controllers/theme_controller.dart';
 import '../../../core/controllers/language_controller.dart';
+import '../../customer/presentation/profile_screen.dart';
 
 class DriverDashboardScreen extends StatefulWidget {
   const DriverDashboardScreen({super.key});
@@ -711,125 +712,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
     );
   }
 
-  // --- Profile Tab ---
-  Widget _buildProfileTab() {
-    final isAr = LanguageController().isArabic;
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
-    return ListView(
-      padding: const EdgeInsets.all(20),
-      children: [
-        // Profile Header
-        Center(
-          child: Column(
-            children: [
-              Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                  border:
-                      Border.all(color: theme.colorScheme.primary, width: 2),
-                ),
-                child: Icon(Icons.person,
-                    size: 60,
-                    color: isDark ? Colors.white : theme.colorScheme.primary),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                _userName,
-                style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.white : Colors.black87),
-              ),
-              Text(
-                isAr ? 'شريك توصيل معتمد' : 'Certified Delivery Partner',
-                style: TextStyle(color: isDark ? Colors.white : Colors.grey),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 40),
-
-        // Info Cards
-        _buildProfileItem(Icons.phone_outlined,
-            isAr ? 'رقم الهاتف' : 'Phone Number', _userPhone),
-        _buildProfileItem(
-            Icons.email_outlined,
-            isAr ? 'البريد الإلكتروني' : 'Email Address',
-            'driver@brightclean.com'),
-        _buildProfileItem(
-            Icons.drive_eta_outlined,
-            isAr ? 'نوع المركبة' : 'Vehicle Type',
-            isAr ? 'سيارة صالون' : 'Sedan Car'),
-        _buildProfileItem(Icons.confirmation_number_outlined,
-            isAr ? 'رقم اللوحة' : 'Plate Number', 'A 12345'),
-
-        const SizedBox(height: 32),
-
-        // Logout Button
-        SizedBox(
-          width: double.infinity,
-          child: OutlinedButton.icon(
-            onPressed: _showLogoutDialog,
-            icon: const Icon(Icons.logout, color: Colors.red),
-            label: Text(isAr ? 'تسجيل الخروج' : 'Logout',
-                style: const TextStyle(color: Colors.red)),
-            style: OutlinedButton.styleFrom(
-              side: const BorderSide(color: Colors.red),
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildProfileItem(IconData icon, String title, String value) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: theme.cardColor,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: isDark ? Colors.white : theme.colorScheme.primary),
-          const SizedBox(width: 16),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title,
-                  style: TextStyle(
-                      color: isDark ? Colors.white : Colors.grey,
-                      fontSize: 12)),
-              Text(value,
-                  style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: isDark ? Colors.white : Colors.black87)),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
 
   Future<void> _showLogoutDialog() async {
     final isAr = LanguageController().isArabic;
@@ -965,7 +848,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
         children: [
           _buildHomeTab(),
           _buildMyOrdersTab(),
-          _buildProfileTab(),
+          const ProfileScreen(),
         ],
       ),
       bottomNavigationBar: Container(

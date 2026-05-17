@@ -2,10 +2,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:latlong2/latlong.dart';
 import '../../../../core/widgets/custom_text_field.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/widgets/map_picker_screen.dart';
 import '../../../../core/database/database_helper.dart';
 
 class DriverRegistrationScreen extends StatefulWidget {
@@ -40,10 +38,6 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
   XFile? _idImage;
   XFile? _licenseImage;
   XFile? _carImage;
-
-  // بيانات الموقع
-  String? _selectedAddress;
-  LatLng? _selectedCoordinates;
 
   String? _selectedVehicleType;
   bool _isTermsAccepted = false;
@@ -106,19 +100,7 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
     }
   }
 
-  // دالة اختيار الموقع
-  Future<void> _selectLocation() async {
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const MapPickerScreen()),
-    );
-    if (result != null && result is Map<String, dynamic>) {
-      setState(() {
-        _selectedCoordinates = result['coordinates'] as LatLng;
-        _selectedAddress = result['address'] as String;
-      });
-    }
-  }
+
 
   // Validation Logic
   String? _validateName(String? value) {
@@ -193,16 +175,6 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
         return;
       }
 
-      if (_selectedAddress == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('يرجى تحديد الموقع'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        return;
-      }
-
       setState(() => _isSubmitting = true);
 
       try {
@@ -222,10 +194,7 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
           'car_year': _selectedVehicleType == 'سيارة' ? _carYearController.text.trim() : null,
           'plate_number': _plateNumberController.text.trim(),
           'role': 'driver',
-          // Optional but good to keep:
-          'address_string': _selectedAddress,
-          'latitude': _selectedCoordinates?.latitude,
-          'longitude': _selectedCoordinates?.longitude,
+
           'id_image_path': _idImage?.path,
           'license_image_path': _licenseImage?.path,
           'car_image_path': _carImage?.path,
@@ -511,50 +480,6 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
                   onTap: () => _pickImage('CAR'),
                 ),
 
-                const SizedBox(height: 16),
-                // الموقع
-                GestureDetector(
-                  onTap: _selectLocation,
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: isDark ? Colors.grey.shade900 : AppColors.background,
-                      border: Border.all(
-                        color: _selectedAddress == null
-                            ? (isDark ? Colors.grey.shade700 : Colors.grey.shade300)
-                            : AppColors.primary,
-                      ),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Column(
-                      children: [
-                        Icon(
-                          Icons.map,
-                          color: _selectedAddress == null
-                              ? (isDark ? Colors.white70 : Colors.grey)
-                              : (isDark ? AppColors.lightBlue : AppColors.primary),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          _selectedAddress ?? 'حدد الموقع على الخريطة',
-                          style: TextStyle(
-                            color: isDark ? Colors.white : Colors.black87,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                if (_hasAttemptedSubmit && _selectedAddress == null)
-                  const Padding(
-                    padding: EdgeInsets.only(top: 8, right: 12),
-                    child: Text(
-                      'يرجى تحديد الموقع',
-                      style: TextStyle(color: Colors.red, fontSize: 12),
-                    ),
-                  ),
 
                 const SizedBox(height: 16),
                 Row(

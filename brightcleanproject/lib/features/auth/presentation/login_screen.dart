@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/custom_text_field.dart';
 import '../../../../core/database/database_helper.dart';
@@ -56,6 +57,14 @@ class _LoginScreenState extends State<LoginScreen> {
         if (mounted) {
           if (user != null) {
             final String role = (user['role'] as String? ?? 'customer').toLowerCase();
+            
+            // Save role to SharedPreferences
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setString('user_role', role);
+            if (user['id'] != null) {
+              await prefs.setString('user_id', user['id'].toString());
+            }
+
             if (role == 'admin') {
               context.go('/admin');
             } else if (role == 'manager' || role == 'agent') {
@@ -104,7 +113,9 @@ class _LoginScreenState extends State<LoginScreen> {
         Text(
           'حسابات تجريبية (للتطوير فقط)',
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppColors.textLight,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white70
+                    : AppColors.textLight,
                 fontWeight: FontWeight.bold,
               ),
         ),
@@ -125,8 +136,14 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _debugLoginButton(String role, String phone, String password) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return ActionChip(
-      label: Text(role),
+      label: Text(
+        role,
+        style: TextStyle(
+          color: isDark ? Colors.white : AppColors.primary,
+        ),
+      ),
       onPressed: () {
         _phoneController.text = phone;
         _passwordController.text = password;
@@ -136,15 +153,20 @@ class _LoginScreenState extends State<LoginScreen> {
           _handleLogin();
         });
       },
-      backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-      side: const BorderSide(color: AppColors.primary),
+      backgroundColor: isDark
+          ? AppColors.primary.withValues(alpha: 0.3)
+          : AppColors.primary.withValues(alpha: 0.1),
+      side: BorderSide(
+        color: isDark ? AppColors.lightBlue : AppColors.primary,
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: isDark ? null : AppColors.background,
       body: SafeArea(
         child: Center(
           // Place ConstrainedBox outside SingleChildScrollView for better scrolling and layout stability
@@ -169,7 +191,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       textAlign: TextAlign.center,
                       style:
                           Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                color: AppColors.primary,
+                                color: isDark ? Colors.white : AppColors.primary,
                                 fontWeight: FontWeight.bold,
                               ),
                     ),
@@ -178,7 +200,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       'مرحباً بك مجدداً في برايت كلين',
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppColors.textLight,
+                            color: isDark ? Colors.white70 : AppColors.textLight,
                           ),
                     ),
                     const SizedBox(height: 48),
@@ -250,9 +272,11 @@ class _LoginScreenState extends State<LoginScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Text(
+                        Text(
                           'ليس لديك حساب؟',
-                          style: TextStyle(color: AppColors.textMain),
+                          style: TextStyle(
+                            color: isDark ? Colors.white70 : AppColors.textMain,
+                          ),
                         ),
                         TextButton(
                           onPressed: () {
