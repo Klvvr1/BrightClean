@@ -817,7 +817,7 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
                     children: [
                       const Text('إجمالي العدد المختار', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                       Text(
-                        '${widget.serviceType.contains('لابس') ? totalClothingPieces : (widget.serviceType.contains('سجاد') || widget.serviceType.contains('مفروشات') ? totalCarpetPieces : (widget.serviceType.contains('خزان') ? totalTankPieces : (widget.serviceType.contains('سيار') ? _carQuantities.values.fold<int>(0, (sum, q) => sum + q) : (widget.serviceType.contains('مكيف') ? _acQuantities.values.fold<int>(0, (sum, q) => sum + q) : (widget.serviceType.contains('شمس') ? _solarQuantities.values.fold<int>(0, (sum, q) => sum + q) : 1)))))} قطعة',
+                        '${widget.serviceType.contains('لابس') ? totalClothingPieces : (widget.serviceType.contains('سجاد') || widget.serviceType.contains('مفروشات') ? totalCarpetPieces : (widget.serviceType.contains('خزان') ? totalTankPieces : (widget.serviceType.contains('سيار') ? _carQuantities.values.fold<int>(0, (sum, q) => sum + q) : (widget.serviceType.contains('مكيف') ? _acQuantities.values.fold<int>(0, (sum, q) => sum + q) : (widget.serviceType.contains('شمس') ? _solarQuantities.values.fold<int>(0, (sum, q) => sum + q) : (widget.serviceType.contains('عاملات') ? maidPersons : 1))))))} قطعة',
                         style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primary),
                       ),
                     ],

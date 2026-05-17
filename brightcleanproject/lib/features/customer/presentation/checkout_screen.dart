@@ -105,11 +105,17 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       minAmount = double.tryParse(minAmountStr.toString()) ?? 0.0;
     }
 
+    // Compute the total amount for the items being checked out
+    final itemsToCheckout = widget.directItems != null ? widget.directItems! : cart.items;
+    final totalAmount = widget.directItems != null
+        ? widget.directItems!.fold<double>(0.0, (sum, item) => sum + item.totalPrice)
+        : cart.totalAmount;
+
     setState(() {
       _appliedCoupon = coupon;
       _couponErrorMessage = null;
 
-      if (cart.totalAmount >= minAmount) {
+      if (totalAmount >= minAmount) {
         _isCouponApplied = true;
         _couponEnteredButConditionNotMet = false;
       } else {

@@ -545,11 +545,15 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                                   const SizedBox(width: 8),
                                   Text(review.userName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                                   const Spacer(),
-                                  ...List.generate(5, (starIdx) => Icon(
-                                    Icons.star, 
-                                    color: starIdx < displayRating ? Colors.amber : Colors.grey.shade300, 
-                                    size: 14
-                                  )),
+                                  ...List.generate(5, (starIdx) {
+                                    if ((starIdx + 1) <= displayRating) {
+                                      return const Icon(Icons.star, color: Colors.amber, size: 14);
+                                    } else if (displayRating > starIdx && displayRating < (starIdx + 1)) {
+                                      return const Icon(Icons.star_half, color: Colors.amber, size: 14);
+                                    } else {
+                                      return Icon(Icons.star, color: Colors.grey.shade300, size: 14);
+                                    }
+                                  }),
                                 ],
                               ),
                               const SizedBox(height: 10),

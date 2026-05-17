@@ -325,7 +325,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
               onPressed: () {
                 final review = Review(
                   userName: 'عميل برايت كلين',
-                  comment: reviewController.text.isEmpty ? 'خدمة ممتازة وتوصيل سريع! شكراً لكم.' : reviewController.text,
+                  comment: reviewController.text.trim().isEmpty ? 'خدمة ممتازة وتوصيل سريع! شكراً لكم.' : reviewController.text.trim(),
                   rating: (serviceRating + driverRating) / 2.0,
                   serviceRating: serviceRating,
                   driverRating: driverRating,
