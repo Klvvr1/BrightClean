@@ -31,6 +31,11 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
   final TextEditingController _dobController = TextEditingController();
   final TextEditingController _plateNumberController = TextEditingController();
 
+  // Controllers for car details
+  final TextEditingController _carCompanyController = TextEditingController();
+  final TextEditingController _carModelController = TextEditingController();
+  final TextEditingController _carYearController = TextEditingController();
+
   // Selected Files
   XFile? _idImage;
   XFile? _licenseImage;
@@ -56,6 +61,9 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
     _confirmPasswordController.dispose();
     _dobController.dispose();
     _plateNumberController.dispose();
+    _carCompanyController.dispose();
+    _carModelController.dispose();
+    _carYearController.dispose();
     super.dispose();
   }
 
@@ -209,6 +217,9 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
           'password': dbHelper.hashPassword(_passwordController.text),
           'dob': _dobController.text.trim(),
           'vehicle_type': _selectedVehicleType,
+          'car_company': _selectedVehicleType == 'سيارة' ? _carCompanyController.text.trim() : null,
+          'car_model': _selectedVehicleType == 'سيارة' ? _carModelController.text.trim() : null,
+          'car_year': _selectedVehicleType == 'سيارة' ? _carYearController.text.trim() : null,
           'plate_number': _plateNumberController.text.trim(),
           'role': 'driver',
           // Optional but good to keep:
@@ -259,6 +270,7 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
     required VoidCallback onTap,
   }) {
     bool isUploaded = imageFile != null;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -266,9 +278,13 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
         width: double.infinity,
         margin: const EdgeInsets.only(bottom: 16),
         decoration: BoxDecoration(
-          color: isUploaded ? AppColors.primary.withValues(alpha: 0.05) : AppColors.background,
+          color: isUploaded
+              ? (isDark ? AppColors.primary.withValues(alpha: 0.2) : AppColors.primary.withValues(alpha: 0.05))
+              : (isDark ? Colors.grey.shade900 : AppColors.background),
           border: Border.all(
-            color: isUploaded ? AppColors.primary : Colors.grey.shade400,
+            color: isUploaded
+                ? AppColors.primary
+                : (isDark ? Colors.grey.shade700 : Colors.grey.shade400),
             width: isUploaded ? 2 : 1,
           ),
           borderRadius: BorderRadius.circular(8),
@@ -285,14 +301,18 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
           children: [
             Icon(
               isUploaded ? Icons.check_circle : Icons.add_a_photo,
-              color: isUploaded ? AppColors.primary : AppColors.secondary,
+              color: isUploaded
+                  ? (isDark ? Colors.greenAccent : AppColors.primary)
+                  : (isDark ? Colors.white70 : AppColors.secondary),
               size: 32,
             ),
             const SizedBox(height: 8),
             Text(
               isUploaded ? 'تم اختيار $title بنجاح' : 'رفع $title',
               style: TextStyle(
-                color: isUploaded ? AppColors.primary : AppColors.secondary,
+                color: isUploaded
+                    ? (isDark ? AppColors.lightBlue : AppColors.primary)
+                    : (isDark ? Colors.white70 : AppColors.secondary),
                 fontWeight: isUploaded ? FontWeight.bold : FontWeight.normal,
               ),
             ),
@@ -304,6 +324,7 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
@@ -444,6 +465,28 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
                     ),
                   ),
                 const SizedBox(height: 16),
+                if (_selectedVehicleType == 'سيارة') ...[
+                  CustomTextField(
+                    controller: _carCompanyController,
+                    hintText: 'شركة السيارة (مثل تويوتا)',
+                    validator: (v) => v == null || v.isEmpty ? 'يرجى إدخال شركة السيارة' : null,
+                  ),
+                  const SizedBox(height: 16),
+                  CustomTextField(
+                    controller: _carModelController,
+                    hintText: 'نوع المركبة (مثل كامري)',
+                    validator: (v) => v == null || v.isEmpty ? 'يرجى إدخال نوع المركبة' : null,
+                  ),
+                  const SizedBox(height: 16),
+                  CustomTextField(
+                    controller: _carYearController,
+                    hintText: 'موديل المركبة (مثل 2013)',
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    validator: (v) => v == null || v.isEmpty ? 'يرجى إدخال موديل المركبة' : null,
+                  ),
+                  const SizedBox(height: 16),
+                ],
                 CustomTextField(
                   controller: _plateNumberController,
                   hintText: 'رقم اللوحة',
@@ -476,10 +519,10 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
                     padding: const EdgeInsets.all(16),
                     width: double.infinity,
                     decoration: BoxDecoration(
-                      color: AppColors.background,
+                      color: isDark ? Colors.grey.shade900 : AppColors.background,
                       border: Border.all(
                         color: _selectedAddress == null
-                            ? Colors.grey.shade300
+                            ? (isDark ? Colors.grey.shade700 : Colors.grey.shade300)
                             : AppColors.primary,
                       ),
                       borderRadius: BorderRadius.circular(8),
@@ -489,12 +532,15 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
                         Icon(
                           Icons.map,
                           color: _selectedAddress == null
-                              ? Colors.grey
-                              : AppColors.primary,
+                              ? (isDark ? Colors.white70 : Colors.grey)
+                              : (isDark ? AppColors.lightBlue : AppColors.primary),
                         ),
                         const SizedBox(height: 8),
                         Text(
                           _selectedAddress ?? 'حدد الموقع على الخريطة',
+                          style: TextStyle(
+                            color: isDark ? Colors.white : Colors.black87,
+                          ),
                           textAlign: TextAlign.center,
                         ),
                       ],

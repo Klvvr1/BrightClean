@@ -131,6 +131,7 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
     required VoidCallback onTap,
   }) {
     bool isUploaded = imageFile != null;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -139,10 +140,12 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
         margin: const EdgeInsets.only(bottom: 16),
         decoration: BoxDecoration(
           color: isUploaded
-              ? AppColors.primary.withValues(alpha: 0.05)
-              : AppColors.background,
+              ? (isDark ? AppColors.primary.withValues(alpha: 0.2) : AppColors.primary.withValues(alpha: 0.05))
+              : (isDark ? Colors.grey.shade900 : AppColors.background),
           border: Border.all(
-            color: isUploaded ? AppColors.primary : Colors.grey.shade400,
+            color: isUploaded
+                ? AppColors.primary
+                : (isDark ? Colors.grey.shade700 : Colors.grey.shade400),
             width: isUploaded ? 2 : 1,
           ),
           borderRadius: BorderRadius.circular(8),
@@ -159,14 +162,18 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
           children: [
             Icon(
               isUploaded ? Icons.check_circle : Icons.add_a_photo,
-              color: isUploaded ? AppColors.primary : AppColors.secondary,
+              color: isUploaded
+                  ? (isDark ? Colors.greenAccent : AppColors.primary)
+                  : (isDark ? Colors.white70 : AppColors.secondary),
               size: 32,
             ),
             const SizedBox(height: 8),
             Text(
               isUploaded ? 'تم اختيار $title بنجاح' : 'رفع $title',
               style: TextStyle(
-                color: isUploaded ? AppColors.primary : AppColors.secondary,
+                color: isUploaded
+                    ? (isDark ? AppColors.lightBlue : AppColors.primary)
+                    : (isDark ? Colors.white70 : AppColors.secondary),
                 fontWeight: isUploaded ? FontWeight.bold : FontWeight.normal,
               ),
             ),
@@ -179,6 +186,7 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
   // ويدجت خدمة مخصصة (Checkbox System)
   Widget _buildServiceItem(String service) {
     bool isSelected = _availableServices[service] ?? false;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return GestureDetector(
       onTap: () {
         setState(() {
@@ -189,10 +197,14 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
         duration: const Duration(milliseconds: 250),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary.withValues(alpha: 0.1) : Colors.white,
+          color: isSelected
+              ? (isDark ? AppColors.primary.withValues(alpha: 0.3) : AppColors.primary.withValues(alpha: 0.1))
+              : (isDark ? Colors.grey.shade900 : Colors.white),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected ? AppColors.primary : Colors.grey.shade300,
+            color: isSelected
+                ? AppColors.primary
+                : (isDark ? Colors.grey.shade700 : Colors.grey.shade300),
             width: 1.5,
           ),
           boxShadow: isSelected
@@ -211,13 +223,17 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
             Icon(
               isSelected ? Icons.check_box : Icons.check_box_outline_blank,
               size: 20,
-              color: isSelected ? AppColors.primary : Colors.grey,
+              color: isSelected
+                  ? (isDark ? Colors.greenAccent : AppColors.primary)
+                  : (isDark ? Colors.white70 : Colors.grey),
             ),
             const SizedBox(width: 8),
             Text(
               service,
               style: TextStyle(
-                color: isSelected ? AppColors.primary : Colors.black87,
+                color: isSelected
+                    ? (isDark ? AppColors.lightBlue : AppColors.primary)
+                    : (isDark ? Colors.white70 : Colors.black87),
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               ),
             ),
@@ -387,6 +403,7 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
@@ -542,10 +559,10 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
                     padding: const EdgeInsets.all(16),
                     width: double.infinity,
                     decoration: BoxDecoration(
-                      color: AppColors.background,
+                      color: isDark ? Colors.grey.shade900 : AppColors.background,
                       border: Border.all(
                         color: _selectedAddress == null
-                            ? Colors.grey.shade300
+                            ? (isDark ? Colors.grey.shade700 : Colors.grey.shade300)
                             : AppColors.primary,
                       ),
                       borderRadius: BorderRadius.circular(8),
@@ -555,12 +572,15 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
                         Icon(
                           Icons.map,
                           color: _selectedAddress == null
-                              ? Colors.grey
-                              : AppColors.primary,
+                              ? (isDark ? Colors.white70 : Colors.grey)
+                              : (isDark ? AppColors.lightBlue : AppColors.primary),
                         ),
                         const SizedBox(height: 8),
                         Text(
                           _selectedAddress ?? 'حدد الموقع على الخريطة',
+                          style: TextStyle(
+                            color: isDark ? Colors.white : Colors.black87,
+                          ),
                           textAlign: TextAlign.center,
                         ),
                       ],
