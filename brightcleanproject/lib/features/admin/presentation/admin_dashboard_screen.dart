@@ -961,13 +961,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   onChanged: (v) {
                     setState(() {
                       _systemSuspended = v;
-                      _logActivity(
-                        v ? 'تم تفعيل وضع صيانة النظام' : 'تم إلغاء وضع صيانة النظام',
-                        v ? 'error' : 'success',
-                        Icons.settings_suggest,
-                        v ? AppColors.error : AppColors.success,
-                      );
                     });
+                    _logActivity(
+                      v ? 'تم تفعيل وضع صيانة النظام' : 'تم إلغاء وضع صيانة النظام',
+                      v ? 'error' : 'success',
+                      Icons.settings_suggest,
+                      v ? AppColors.error : AppColors.success,
+                    );
                   },
                   activeThumbColor: AppColors.error,
                 ),
@@ -1049,13 +1049,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   onChanged: (v) {
                     setState(() {
                       _systemNotificationsEnabled = v;
-                      _logActivity(
-                        v ? 'تم تفعيل إشعارات النظام الذكية' : 'تم تعطيل إشعارات النظام الذكية',
-                        'info',
-                        Icons.notifications_active_outlined,
-                        AppColors.primary,
-                      );
                     });
+                    _logActivity(
+                      v ? 'تم تفعيل إشعارات النظام الذكية' : 'تم تعطيل إشعارات النظام الذكية',
+                      'info',
+                      Icons.notifications_active_outlined,
+                      AppColors.primary,
+                    );
                   },
                   activeThumbColor: AppColors.primary,
                 ),
@@ -2464,38 +2464,67 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ),
             ElevatedButton(
               onPressed: () {
-                if (titleController.text.isNotEmpty && codeController.text.isNotEmpty) {
-                  setState(() {
-                    _coupons.add({
-                      'title': titleController.text,
-                      'code': codeController.text.toUpperCase(),
-                      'discount': discountController.text,
-                      'target': selectedTarget,
-                      'status': 'نشط',
-                      'startDate': startDate != null 
-                          ? '${startDate!.year}/${startDate!.month.toString().padLeft(2, '0')}/${startDate!.day.toString().padLeft(2, '0')}' 
-                          : 'غير محدد',
-                      'endDate': endDate != null 
-                          ? '${endDate!.year}/${endDate!.month.toString().padLeft(2, '0')}/${endDate!.day.toString().padLeft(2, '0')}' 
-                          : 'غير محدد',
-                      'minAmount': hasCondition ? minAmountController.text : null,
-                    });
-                  });
-                  _logActivity(
-                    'تم إضافة عرض/كوبون جديد (${codeController.text.toUpperCase()}) بخصم ${discountController.text}',
-                    'add_coupon',
-                    Icons.local_offer,
-                    AppColors.primary,
-                  );
-                  titleController.dispose();
-                  codeController.dispose();
-                  discountController.dispose();
-                  minAmountController.dispose();
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('تم إضافة العرض بنجاح')),
-                  );
+                if (titleController.text.isEmpty || codeController.text.isEmpty) {
+                  return;
                 }
+
+                // Validate discount field
+                if (discountController.text.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('يجب إدخال قيمة الخصم')),
+                  );
+                  return;
+                }
+
+                // Validate discount is a valid number
+                final discountValue = double.tryParse(discountController.text.trim());
+                if (discountValue == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('قيمة الخصم يجب أن تكون رقم صحيح')),
+                  );
+                  return;
+                }
+
+                // Check for duplicate codes
+                final upperCode = codeController.text.toUpperCase();
+                final isDuplicate = _coupons.any((c) => c['code'] == upperCode);
+                if (isDuplicate) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('كود الكوبون موجود بالفعل')),
+                  );
+                  return;
+                }
+
+                setState(() {
+                  _coupons.add({
+                    'title': titleController.text,
+                    'code': upperCode,
+                    'discount': discountController.text,
+                    'target': selectedTarget,
+                    'status': 'نشط',
+                    'startDate': startDate != null
+                        ? '${startDate!.year}/${startDate!.month.toString().padLeft(2, '0')}/${startDate!.day.toString().padLeft(2, '0')}'
+                        : 'غير محدد',
+                    'endDate': endDate != null
+                        ? '${endDate!.year}/${endDate!.month.toString().padLeft(2, '0')}/${endDate!.day.toString().padLeft(2, '0')}'
+                        : 'غير محدد',
+                    'minAmount': hasCondition ? minAmountController.text : null,
+                  });
+                });
+                _logActivity(
+                  'تم إضافة عرض/كوبون جديد ($upperCode) بخصم ${discountController.text}',
+                  'add_coupon',
+                  Icons.local_offer,
+                  AppColors.primary,
+                );
+                titleController.dispose();
+                codeController.dispose();
+                discountController.dispose();
+                minAmountController.dispose();
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('تم إضافة العرض بنجاح')),
+                );
               },
               style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
               child: const Text('إضافة العرض', style: TextStyle(color: Colors.white)),

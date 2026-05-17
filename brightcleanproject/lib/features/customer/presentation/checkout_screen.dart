@@ -47,7 +47,42 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     }
 
     final matchingCoupons = AdminDashboardScreen.couponsList.where(
-      (c) => c['code'].toString().toLowerCase() == code.toLowerCase(),
+      (c) {
+        // Check if code matches
+        if (c['code'].toString().toLowerCase() != code.toLowerCase()) {
+          return false;
+        }
+
+        // Check if coupon is active
+        if (c['status'] != null && c['status'] != 'نشط') {
+          return false;
+        }
+
+        // Check expiry date
+        final endDateStr = c['endDate'];
+        if (endDateStr != null && endDateStr != 'غير محدد') {
+          try {
+            // Parse date in format YYYY/MM/DD
+            final parts = endDateStr.toString().split('/');
+            if (parts.length == 3) {
+              final year = int.tryParse(parts[0]);
+              final month = int.tryParse(parts[1]);
+              final day = int.tryParse(parts[2]);
+              if (year != null && month != null && day != null) {
+                final expiryDate = DateTime(year, month, day, 23, 59, 59);
+                if (DateTime.now().isAfter(expiryDate)) {
+                  return false;
+                }
+              }
+            }
+          } catch (e) {
+            // If parsing fails, treat coupon as invalid
+            return false;
+          }
+        }
+
+        return true;
+      },
     ).toList();
 
     if (matchingCoupons.isEmpty) {
