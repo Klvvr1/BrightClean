@@ -257,7 +257,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                   (index) => GestureDetector(
                     onTap: () => setState(() => rating = index + 1.0),
                     child: Icon(
-                      index < rating ? Icons.star : Icons.star,
+                      index < rating ? Icons.star : Icons.star_outline,
                       color: index < rating
                           ? Colors.amber
                           : Colors.grey.shade300,

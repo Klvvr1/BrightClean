@@ -362,17 +362,15 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
-        RadioGroup<String>(
-          groupValue: groupValue,
-          onChanged: onChanged,
-          child: Column(
-            children: items.map((item) {
-              return RadioListTile<String>(
-                title: Text(item, style: const TextStyle(fontSize: 16)),
-                value: item,
-              );
-            }).toList(),
-          ),
+        Column(
+          children: items.map((item) {
+            return RadioListTile<String>(
+              title: Text(item, style: const TextStyle(fontSize: 16)),
+              value: item,
+              groupValue: groupValue,
+              onChanged: onChanged,
+            );
+          }).toList(),
         ),
         const SizedBox(height: 24),
       ],
