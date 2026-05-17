@@ -5,13 +5,15 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:uuid/uuid.dart';
 import 'package:provider/provider.dart';
 import 'order_success_screen.dart';
+import 'package:brightcleanproject/features/customer/domain/models/cart_item.dart';
 import 'package:brightcleanproject/features/customer/domain/models/order.dart';
 import 'package:brightcleanproject/features/customer/data/providers/order_provider.dart';
 import 'package:brightcleanproject/features/admin/presentation/admin_dashboard_screen.dart';
 import '../data/providers/cart_provider.dart';
 
 class CheckoutScreen extends StatefulWidget {
-  const CheckoutScreen({super.key});
+  final List<CartItem>? directItems;
+  const CheckoutScreen({super.key, this.directItems});
 
   @override
   State<CheckoutScreen> createState() => _CheckoutScreenState();
@@ -103,11 +105,17 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       minAmount = double.tryParse(minAmountStr.toString()) ?? 0.0;
     }
 
+    // Compute the total amount for the items being checked out
+    final itemsToCheckout = widget.directItems != null ? widget.directItems! : cart.items;
+    final totalAmount = widget.directItems != null
+        ? widget.directItems!.fold<double>(0.0, (sum, item) => sum + item.totalPrice)
+        : cart.totalAmount;
+
     setState(() {
       _appliedCoupon = coupon;
       _couponErrorMessage = null;
 
-      if (cart.totalAmount >= minAmount) {
+      if (totalAmount >= minAmount) {
         _isCouponApplied = true;
         _couponEnteredButConditionNotMet = false;
       } else {
@@ -228,15 +236,18 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   @override
   Widget build(BuildContext context) {
     final cart = Provider.of<CartProvider>(context);
+    final itemsToCheckout = widget.directItems != null ? widget.directItems! : cart.items;
 
-    final totalAmount = cart.totalAmount;
+    final totalAmount = widget.directItems != null
+        ? widget.directItems!.fold<double>(0.0, (sum, item) => sum + item.totalPrice)
+        : cart.totalAmount;
     final discountAmount = _calculateDiscount(totalAmount);
     final finalPrice = _calculateFinalPrice(totalAmount);
 
     final canCompleteOrder = _isLocationVerified &&
         _selectedDate != null &&
         _selectedTimeSlot != null &&
-        cart.items.isNotEmpty;
+        itemsToCheckout.isNotEmpty;
 
     return Scaffold(
       appBar: AppBar(title: const Text('إتمام الطلب')),
@@ -250,33 +261,22 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
-
-            ...cart.items.map(
-              (item) => Card(
-                margin: const EdgeInsets.only(bottom: 8),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 1,
-                child: ListTile(
-                  title: Text(
-                    '${item.serviceName} (${item.selectedType})',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
+            ...itemsToCheckout.map((item) => Card(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  elevation: 1,
+                  child: ListTile(
+                    title: Text('${item.serviceName} (${item.selectedType})',
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 14)),
+                    subtitle: Text('الكمية: ${item.quantity}'),
+                    trailing: Text('${item.totalPrice.toStringAsFixed(0)} ر.ي',
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primary)),
                   ),
-                  subtitle: Text('الكمية: ${item.quantity}'),
-                  trailing: Text(
-                    '${item.totalPrice.toStringAsFixed(0)} ر.ي',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                ),
-              ),
-            ),
+                )),
 
             const SizedBox(height: 24),
 
@@ -746,7 +746,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             child: ElevatedButton(
               onPressed: canCompleteOrder
                   ? () {
-                      final orderDetails = cart.items
+                      // Create details string for the order
+                      final orderDetails = itemsToCheckout
                           .map((i) => '${i.serviceName} (${i.selectedType})')
                           .join(', ');
 
@@ -767,7 +768,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       Provider.of<OrderProvider>(context, listen: false)
                           .addOrder(newOrder);
 
-                      cart.clearCart();
+                      // Clear cart only if this is a cart-based checkout
+                      if (widget.directItems == null) {
+                        cart.clearCart();
+                      }
 
                       Navigator.pushReplacement(
                         context,

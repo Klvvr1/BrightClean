@@ -230,43 +230,73 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
   }
 
   void _showRatingDialog(BuildContext parentContext, String orderId) {
-    double rating = 5;
+    double serviceRating = 5;
+    double driverRating = 5;
     final TextEditingController reviewController = TextEditingController();
 
     showDialog(
       context: parentContext,
       builder: (dialogContext) => StatefulBuilder(
         builder: (dialogContext, setState) => AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
+          scrollable: true,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: const Text(
-            'تقييم الخدمة',
+            'تقييم الطلب',
             textAlign: TextAlign.center,
             style: TextStyle(fontWeight: FontWeight.bold),
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text('كيف كانت تجربتك مع برايت كلين؟'),
+              const Text(
+                'كيف كانت تجربتك الإجمالية مع برايت كلين؟',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey, fontSize: 13),
+              ),
               const SizedBox(height: 20),
+              
+              // 1. Service Rating Section
+              const Text(
+                'تقييم الخدمة والنظافة',
+                textAlign: TextAlign.right,
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textMain),
+              ),
+              const SizedBox(height: 8),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(
-                  5,
-                  (index) => GestureDetector(
-                    onTap: () => setState(() => rating = index + 1.0),
-                    child: Icon(
-                      index < rating ? Icons.star : Icons.star_outline,
-                      color: index < rating
-                          ? Colors.amber
-                          : Colors.grey.shade300,
-                      size: 40,
-                    ),
+                children: List.generate(5, (index) => GestureDetector(
+                  onTap: () => setState(() => serviceRating = index + 1.0),
+                  child: Icon(
+                    index < serviceRating ? Icons.star : Icons.star_border,
+                    color: index < serviceRating ? Colors.amber : Colors.grey.shade400,
+                    size: 36,
                   ),
-                ),
+                )),
+              ),
+              const SizedBox(height: 20),
+              
+              // 2. Driver Rating Section
+              const Text(
+                'تقييم تعامل وسرعة المندوب',
+                textAlign: TextAlign.right,
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textMain),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(5, (index) => GestureDetector(
+                  onTap: () => setState(() => driverRating = index + 1.0),
+                  child: Icon(
+                    index < driverRating ? Icons.star : Icons.star_border,
+                    color: index < driverRating ? Colors.amber : Colors.grey.shade400,
+                    size: 36,
+                  ),
+                )),
               ),
               const SizedBox(height: 24),
+              
+              // Comments
               TextField(
                 controller: reviewController,
                 maxLines: 3,
@@ -295,10 +325,10 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
               onPressed: () {
                 final review = Review(
                   userName: 'عميل برايت كلين',
-                  comment: reviewController.text.isEmpty
-                      ? 'خدمة رائعة جداً، شكراً لكم!'
-                      : reviewController.text,
-                  rating: rating,
+                  comment: reviewController.text.trim().isEmpty ? 'خدمة ممتازة وتوصيل سريع! شكراً لكم.' : reviewController.text.trim(),
+                  rating: (serviceRating + driverRating) / 2.0,
+                  serviceRating: serviceRating,
+                  driverRating: driverRating,
                   date: DateTime.now(),
                 );
 
@@ -320,6 +350,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                       'شكراً لتقييمك! تم إضافة رأيك في القائمة الرئيسية.',
                     ),
                     backgroundColor: AppColors.success,
+                    behavior: SnackBarBehavior.floating,
                   ),
                 );
               },

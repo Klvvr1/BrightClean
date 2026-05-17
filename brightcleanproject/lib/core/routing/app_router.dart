@@ -9,6 +9,7 @@ import '../../features/auth/presentation/agent_registration_screen.dart';
 import '../../features/auth/presentation/driver_registration_screen.dart';
 import '../../features/customer/presentation/customer_main_layout.dart';
 import '../../features/customer/presentation/service_details_screen.dart';
+import '../../features/customer/domain/models/cart_item.dart';
 import '../../features/customer/presentation/checkout_screen.dart';
 import '../../features/agent/presentation/agent_dashboard_screen.dart';
 import '../../features/agent/presentation/agent_order_management_screen.dart';
@@ -59,7 +60,14 @@ class AppRouter {
       ),
       GoRoute(
         path: '/checkout',
-        builder: (context, state) => const CheckoutScreen(),
+        builder: (context, state) {
+          if (state.extra is List<CartItem>) {
+            return CheckoutScreen(directItems: state.extra as List<CartItem>);
+          } else if (state.extra is CartItem) {
+            return CheckoutScreen(directItems: [state.extra as CartItem]);
+          }
+          return const CheckoutScreen();
+        },
       ),
       GoRoute(
         path: '/agent_dashboard',

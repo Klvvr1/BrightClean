@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
+import 'dart:async';
 import '../../../../core/theme/app_colors.dart';
 import 'service_details_screen.dart';
 import 'package:provider/provider.dart';
@@ -18,14 +19,75 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   final TextEditingController _searchController = TextEditingController();
   bool _isSearching = false;
 
+  late final PageController _offersPageController;
+  Timer? _offersTimer;
+  int _currentOfferPage = 0;
+
+  late final PageController _reviewsPageController;
+  Timer? _reviewsTimer;
+  int _currentReviewPage = 0;
+
+  final List<Map<String, dynamic>> _offers = [
+    {
+      'title': 'خصم 20%',
+      'subtitle': 'على غسيل السجاد والمفروشات',
+      'color': AppColors.primary,
+    },
+    {
+      'title': 'غسيل مجاني',
+      'subtitle': 'اغسل 5 قمصان والسادس مجاناً',
+      'color': AppColors.tertiary,
+    },
+    {
+      'title': 'باقة التوفير',
+      'subtitle': 'خصم خاص للاشتراكات الشهرية',
+      'color': Colors.teal,
+    },
+  ];
+
   final List<Map<String, dynamic>> _allCategories = [
-    {'title': 'الملابس', 'icon': Icons.checkroom, 'color': AppColors.primary},
-    {'title': 'السجاد والمفروشات', 'icon': Icons.dataset, 'color': AppColors.secondary},
-    {'title': 'السيارات', 'icon': Icons.directions_car, 'color': AppColors.tertiary},
-    {'title': 'تنظيف المكيفات', 'icon': Icons.ac_unit, 'color': Colors.teal},
-    {'title': 'عاملات النظافة', 'icon': Icons.cleaning_services, 'color': Colors.pink},
-    {'title': 'تنظيف الخزانات', 'icon': Icons.water_drop, 'color': Colors.blueAccent},
-    {'title': 'غسيل الألواح الشمسية', 'icon': Icons.solar_power, 'color': Colors.orange},
+    {
+      'title': 'الملابس',
+      'icon': Icons.checkroom,
+      'color': AppColors.primary,
+      'subtitle': 'غسيل وكي ملابس بأعلى معايير الجودة والنظافة'
+    },
+    {
+      'title': 'السجاد والمفروشات',
+      'icon': Icons.dataset,
+      'color': AppColors.secondary,
+      'subtitle': 'تنظيف عميق وتطهير للسجاد والموكيت والمفروشات'
+    },
+    {
+      'title': 'السيارات',
+      'icon': Icons.directions_car,
+      'color': AppColors.tertiary,
+      'subtitle': 'تلميع وغسيل خارجي وداخلي متكامل عند باب بيتك'
+    },
+    {
+      'title': 'تنظيف المكيفات',
+      'icon': Icons.ac_unit,
+      'color': Colors.teal,
+      'subtitle': 'غسيل وتطهير فلاتر ووحدات المكيف لزيادة الكفاءة'
+    },
+    {
+      'title': 'عاملات النظافة',
+      'icon': Icons.cleaning_services,
+      'color': Colors.pink,
+      'subtitle': 'عاملات نظافة محترفات ومدربات بنظام الساعات'
+    },
+    {
+      'title': 'تنظيف الخزانات',
+      'icon': Icons.water_drop,
+      'color': Colors.blueAccent,
+      'subtitle': 'تعقيم وغسيل الخزانات العلوية والسفلية لحمايتكم'
+    },
+    {
+      'title': 'غسيل الألواح الشمسية',
+      'icon': Icons.solar_power,
+      'color': Colors.orange,
+      'subtitle': 'تنظيف دوري بمواد خاصة لزيادة كفاءة الألواح'
+    },
   ];
 
   List<Map<String, dynamic>> get _filteredCategories {
@@ -36,15 +98,55 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   @override
   void initState() {
     super.initState();
+    _offersPageController = PageController(viewportFraction: 0.88, initialPage: 0);
+    _reviewsPageController = PageController(viewportFraction: 0.88, initialPage: 0);
     _searchController.addListener(() {
       setState(() {
         _isSearching = _searchController.text.isNotEmpty;
       });
     });
+
+    // Auto-scroll the offers banner every 3 seconds
+    _offersTimer = Timer.periodic(const Duration(seconds: 3), (Timer timer) {
+      if (_offersPageController.hasClients) {
+        _currentOfferPage++;
+        if (_currentOfferPage >= _offers.length) {
+          _currentOfferPage = 0;
+        }
+        _offersPageController.animateToPage(
+          _currentOfferPage,
+          duration: const Duration(milliseconds: 800),
+          curve: Curves.easeInOutCubic,
+        );
+      }
+    });
+
+    // Auto-scroll the reviews banner every 4 seconds (slower to allow reading text)
+    _reviewsTimer = Timer.periodic(const Duration(seconds: 4), (Timer timer) {
+      if (_reviewsPageController.hasClients) {
+        final reviewProvider = Provider.of<ReviewProvider>(context, listen: false);
+        final reviewCount = reviewProvider.reviews.length;
+        if (reviewCount > 0) {
+          _currentReviewPage++;
+          if (_currentReviewPage >= reviewCount) {
+            _currentReviewPage = 0;
+          }
+          _reviewsPageController.animateToPage(
+            _currentReviewPage,
+            duration: const Duration(milliseconds: 800),
+            curve: Curves.easeInOutCubic,
+          );
+        }
+      }
+    });
   }
 
   @override
   void dispose() {
+    _offersTimer?.cancel();
+    _offersPageController.dispose();
+    _reviewsTimer?.cancel();
+    _reviewsPageController.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -87,10 +189,13 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     );
   }
 
-  Widget _buildOfferCard(String title, String subtitle, Color bgColor) {
+  Widget _buildOfferCard(String title, String subtitle, Color bgColor, {bool isCarousel = false}) {
     return Container(
-      width: 280,
-      margin: const EdgeInsets.only(left: 16),
+      width: isCarousel ? null : 280,
+      margin: EdgeInsets.only(
+        left: isCarousel ? 6 : 16,
+        right: isCarousel ? 6 : 0,
+      ),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: bgColor,
@@ -120,15 +225,127 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     );
   }
 
+  Widget _buildVerticalCategoryCard(BuildContext context, Map<String, dynamic> cat) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final borderCol = isDark ? Colors.white12 : Colors.grey.shade100;
+    final textCol = isDark ? Colors.white : AppColors.textMain;
+    final subtitleCol = isDark ? Colors.white70 : AppColors.textLight;
+    final Color catColor = cat['color'] as Color;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: borderCol, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ServiceDetailsScreen(serviceType: cat['title']),
+                ),
+              );
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              child: Row(
+                children: [
+                  Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          catColor.withValues(alpha: 0.15),
+                          catColor.withValues(alpha: 0.05),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: catColor.withValues(alpha: 0.25),
+                        width: 1,
+                      ),
+                    ),
+                    child: Icon(
+                      cat['icon'] as IconData,
+                      size: 28,
+                      color: catColor,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          cat['title'] as String,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: textCol,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          cat['subtitle'] as String,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: subtitleCol,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.white10 : Colors.grey.shade50,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.arrow_forward_ios,
+                      size: 14,
+                      color: isDark ? Colors.white54 : Colors.grey.shade400,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: isDark ? const Color(0xFF121212) : AppColors.background,
       appBar: AppBar(
         title: const Text('برايت كلين', style: TextStyle(fontWeight: FontWeight.bold)),
         elevation: 0,
         backgroundColor: Colors.transparent,
-        foregroundColor: AppColors.primary,
+        foregroundColor: isDark ? Colors.white : AppColors.primary,
         actions: [
           IconButton(icon: const Icon(Icons.notifications_none), onPressed: () => context.push('/notifications')),
           Consumer<CartProvider>(
@@ -154,7 +371,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
@@ -217,7 +434,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                   },
                 ),
             ] else ...[
-            // Offers Carousel (Horizontal Scroll)
+            // Offers Carousel (Auto-scrolling Horizontal View)
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 16.0),
               child: Text('العروض الترويجية', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
@@ -232,56 +449,44 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                     PointerDeviceKind.mouse,
                   },
                 ),
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  clipBehavior: Clip.none,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  children: [
-                    _buildOfferCard('خصم 20%', 'على غسيل السجاد والمفروشات', AppColors.primary),
-                    _buildOfferCard('غسيل مجاني', 'اغسل 5 قمصان والسادس مجاناً', AppColors.tertiary),
-                    _buildOfferCard('باقة التوفير', 'خصم خاص للاشتراكات الشهرية', Colors.teal),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Categories (Horizontal Scroll)
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.0),
-              child: Text('الخدمات', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              height: 120, // Adjusted height for category cards
-              child: ScrollConfiguration(
-                behavior: ScrollConfiguration.of(context).copyWith(
-                  dragDevices: {
-                    PointerDeviceKind.touch,
-                    PointerDeviceKind.mouse,
+                child: PageView.builder(
+                  controller: _offersPageController,
+                  itemCount: _offers.length,
+                  onPageChanged: (int index) {
+                    _currentOfferPage = index;
+                  },
+                  itemBuilder: (context, index) {
+                    final offer = _offers[index];
+                    return _buildOfferCard(
+                      offer['title'] as String,
+                      offer['subtitle'] as String,
+                      offer['color'] as Color,
+                      isCarousel: true,
+                    );
                   },
                 ),
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  clipBehavior: Clip.none,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  children: [
-                    _buildCategoryCard(context, 'الملابس', Icons.checkroom, AppColors.primary),
-                    _buildCategoryCard(context, 'السجاد والمفروشات', Icons.dataset, AppColors.secondary),
-                    _buildCategoryCard(context, 'السيارات', Icons.directions_car, AppColors.tertiary),
-                    _buildCategoryCard(context, 'تنظيف المكيفات', Icons.ac_unit, Colors.teal),
-                    _buildCategoryCard(context, 'عاملات النظافة', Icons.cleaning_services, Colors.pink),
-                    _buildCategoryCard(context, 'تنظيف الخزانات', Icons.water_drop, Colors.blueAccent),
-                    _buildCategoryCard(context, 'غسيل الألواح الشمسية', Icons.solar_power, Colors.orange),
-                  ],
-                ),
               ),
             ),
             const SizedBox(height: 24),
 
-            // Reviews
+            // Categories (Vertical Scroll)
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.0),
+              child: Text('الخدمات المتاحة', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            ),
+            const SizedBox(height: 8),
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: _allCategories.length,
+              itemBuilder: (context, index) {
+                final cat = _allCategories[index];
+                return _buildVerticalCategoryCard(context, cat);
+              },
+            ),
+            const SizedBox(height: 24),
+
+            // Reviews Carousel (Auto-scrolling Horizontal View)
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 16.0),
               child: Text('آراء العملاء', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
@@ -291,49 +496,81 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
               builder: (context, reviewProvider, child) {
                 final reviews = reviewProvider.reviews;
                 if (reviews.isEmpty) return const SizedBox.shrink();
-                return Column(
-                  children: reviews.map((review) => Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey.shade200),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.02),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          )
-                        ]
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
+                return SizedBox(
+                  height: 140,
+                  child: ScrollConfiguration(
+                    behavior: ScrollConfiguration.of(context).copyWith(
+                      dragDevices: {
+                        PointerDeviceKind.touch,
+                        PointerDeviceKind.mouse,
+                      },
+                    ),
+                    child: PageView.builder(
+                      controller: _reviewsPageController,
+                      itemCount: reviews.length,
+                      onPageChanged: (int index) {
+                        _currentReviewPage = index;
+                      },
+                      itemBuilder: (context, index) {
+                        final review = reviews[index];
+                        // Publicly only display the service rating (keeping driver rating private/internal)
+                        final displayRating = review.serviceRating ?? review.rating;
+                        
+                        return Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 6),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: isDark ? Colors.white12 : Colors.grey.shade100),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.03),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
+                              )
+                            ]
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const CircleAvatar(
-                                radius: 16,
-                                backgroundColor: AppColors.lightBlue,
-                                child: Icon(Icons.person, color: AppColors.primary, size: 20),
+                              Row(
+                                children: [
+                                  const CircleAvatar(
+                                    radius: 16,
+                                    backgroundColor: AppColors.lightBlue,
+                                    child: Icon(Icons.person, color: AppColors.primary, size: 20),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(review.userName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                  const Spacer(),
+                                  ...List.generate(5, (starIdx) {
+                                    if ((starIdx + 1) <= displayRating) {
+                                      return const Icon(Icons.star, color: Colors.amber, size: 14);
+                                    } else if (displayRating > starIdx && displayRating < (starIdx + 1)) {
+                                      return const Icon(Icons.star_half, color: Colors.amber, size: 14);
+                                    } else {
+                                      return Icon(Icons.star, color: Colors.grey.shade300, size: 14);
+                                    }
+                                  }),
+                                ],
                               ),
-                              const SizedBox(width: 8),
-                              Text(review.userName, style: const TextStyle(fontWeight: FontWeight.bold)),
-                              const Spacer(),
-                              ...List.generate(5, (index) => Icon(
-                                Icons.star, 
-                                color: index < review.rating ? Colors.amber : Colors.grey.shade300, 
-                                size: 16
-                              )),
+                              const SizedBox(height: 10),
+                              Expanded(
+                                child: Text(
+                                  review.comment, 
+                                  style: TextStyle(color: isDark ? Colors.white70 : Colors.black87, fontSize: 12),
+                                  maxLines: 3,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
                             ],
                           ),
-                          const SizedBox(height: 12),
-                          Text(review.comment, style: const TextStyle(color: Colors.black87)),
-                        ],
-                      ),
+                        );
+                      },
                     ),
-                  )).toList(),
+                  ),
                 );
               },
             ),
