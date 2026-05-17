@@ -23,12 +23,20 @@ class DatabaseHelper {
       path,
       version: 1,
       onCreate: _createDB,
+      onOpen: (db) async {
+        // Ensure database tables exist and are properly seeded on every launch
+        await _ensureTablesAndSeeding(db);
+      },
     );
   }
 
   Future _createDB(Database db, int version) async {
+    await _ensureTablesAndSeeding(db);
+  }
+
+  Future _ensureTablesAndSeeding(Database db) async {
     await db.execute('''
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   first_name TEXT,
   father_name TEXT,
@@ -56,7 +64,7 @@ CREATE TABLE users (
 )
 ''');
     
-    // Insert seed data for testing with hashed passwords
+    // Insert seed data for testing with hashed passwords if they don't already exist
     final testUsers = [
       {'phone': '0500000000', 'password': hashPassword('Password123'), 'role': 'Admin', 'status': 'active', 'created_at': DateTime.now().toIso8601String()},
       {'phone': '0511111111', 'password': hashPassword('Password123'), 'role': 'Manager', 'status': 'active', 'created_at': DateTime.now().toIso8601String()},
@@ -65,7 +73,14 @@ CREATE TABLE users (
     ];
     
     for (var user in testUsers) {
-      await db.insert('users', user);
+      final existing = await db.query(
+        'users',
+        where: 'phone = ?',
+        whereArgs: [user['phone']],
+      );
+      if (existing.isEmpty) {
+        await db.insert('users', user);
+      }
     }
   }
 

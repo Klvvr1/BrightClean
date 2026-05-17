@@ -250,6 +250,15 @@ class WalletDetailsScreen extends StatelessWidget {
                     }
                     // Implement submission logic
                     final operationNumber = operationNumberController.text.trim();
+                    
+                    // Log upload information to console to keep variables active for future upload implementation
+                    debugPrint(
+                      'Submitting deposit via $method:\n'
+                      'File: $selectedFileName, Path: $selectedFilePath, '
+                      'Bytes length: ${selectedFileBytes?.length}, '
+                      'Operation Number: $operationNumber'
+                    );
+
                     // TODO: Use selectedFilePath, selectedFileBytes, and operationNumber for actual upload
                     operationNumberController.dispose();
                     if (!context.mounted) return;

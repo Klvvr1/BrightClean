@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import 'checkout_screen.dart';
-import 'package:brightcleanprojet/features/customer/domain/models/service_option.dart';
+import 'package:brightcleanproject/features/customer/domain/models/service_option.dart';
 
 class ServiceDetailsScreen extends StatefulWidget {
   final String serviceType;
@@ -180,19 +180,21 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
             if (widget.serviceType == 'الملابس') ...[
               const Text('اختر نوع القطعة', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
-              Column(
-                children: _clothingItems.map((item) {
-                  return RadioListTile<String>(
-                    title: Text(item, style: const TextStyle(fontSize: 16)),
-                    value: item,
-                    groupValue: selectedClothingItem,
-                    onChanged: (value) {
-                      setState(() {
-                        selectedClothingItem = value!;
-                      });
-                    },
-                  );
-                }).toList(),
+              RadioGroup<String>(
+                groupValue: selectedClothingItem,
+                onChanged: (value) {
+                  setState(() {
+                    selectedClothingItem = value!;
+                  });
+                },
+                child: Column(
+                  children: _clothingItems.map((item) {
+                    return RadioListTile<String>(
+                      title: Text(item, style: const TextStyle(fontSize: 16)),
+                      value: item,
+                    );
+                  }).toList(),
+                ),
               ),
               const SizedBox(height: 24),
             ],
