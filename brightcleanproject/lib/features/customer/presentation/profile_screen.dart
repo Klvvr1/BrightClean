@@ -273,6 +273,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ThemeController().toggleTheme();
                   },
                 ),
+                onTap: () {
+                  ThemeController().toggleTheme();
+                },
               );
             },
           ),

@@ -250,8 +250,10 @@ class WalletDetailsScreen extends StatelessWidget {
                     }
                     // Implement submission logic
                     final operationNumber = operationNumberController.text.trim();
+
+                    debugPrint('Deposit submission initiated');
+
                     // TODO: Use selectedFilePath, selectedFileBytes, and operationNumber for actual upload
-                    debugPrint('Upload mock: path=$selectedFilePath, bytes=${selectedFileBytes?.length}, op=$operationNumber');
                     operationNumberController.dispose();
                     if (!context.mounted) return;
                     Navigator.pop(context);

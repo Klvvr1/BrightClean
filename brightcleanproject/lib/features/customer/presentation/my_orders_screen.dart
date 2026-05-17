@@ -7,8 +7,6 @@ import 'package:brightcleanproject/features/customer/data/providers/order_provid
 import 'package:brightcleanproject/features/customer/domain/models/review.dart';
 import 'package:brightcleanproject/features/customer/data/providers/review_provider.dart';
 
-
-
 class MyOrdersScreen extends StatefulWidget {
   const MyOrdersScreen({super.key});
 
@@ -36,16 +34,28 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
     }
   }
 
-  Widget _buildStep(String title, bool isActive, {Color activeColor = AppColors.success}) {
+  Widget _buildStep(
+    String title,
+    bool isActive, {
+    Color activeColor = AppColors.success,
+  }) {
     return Column(
       children: [
         CircleAvatar(
           radius: 12,
           backgroundColor: isActive ? activeColor : Colors.grey.shade300,
-          child: isActive ? const Icon(Icons.check, size: 16, color: Colors.white) : null,
+          child: isActive
+              ? const Icon(Icons.check, size: 16, color: Colors.white)
+              : null,
         ),
         const SizedBox(height: 4),
-        Text(title, style: TextStyle(fontSize: 10, color: isActive ? AppColors.textMain : Colors.grey)),
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: 10,
+            color: isActive ? AppColors.textMain : Colors.grey,
+          ),
+        ),
       ],
     );
   }
@@ -73,17 +83,34 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('طلب رقم #$orderId', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                Expanded(
+                  child: Text(
+                    'طلب رقم #$orderId',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: statusColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: statusColor.withValues(alpha: 0.5)),
+                    border: Border.all(
+                      color: statusColor.withValues(alpha: 0.5),
+                    ),
                   ),
                   child: Text(
                     status,
-                    style: TextStyle(color: statusColor, fontWeight: FontWeight.bold, fontSize: 12),
+                    style: TextStyle(
+                      color: statusColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
                   ),
                 ),
               ],
@@ -94,31 +121,84 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
               children: [
                 Expanded(
                   child: Text(
-                    details, 
-                    style: const TextStyle(color: AppColors.textMain, fontSize: 14),
+                    details,
+                    style: const TextStyle(
+                      color: AppColors.textMain,
+                      fontSize: 14,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
-                Text(date, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                Text(
+                  date,
+                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                ),
               ],
             ),
             if (showTracker) ...[
               const SizedBox(height: 16),
               const Divider(),
               const SizedBox(height: 8),
-              // Progress Tracker
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _buildStep('قيد الانتظار', activeStepIndex >= 0, activeColor: AppColors.success),
-                  Expanded(child: Divider(color: activeStepIndex >= 1 ? AppColors.success : Colors.grey, thickness: 2)),
-                  _buildStep('في الطريق', activeStepIndex >= 1, activeColor: AppColors.success),
-                  Expanded(child: Divider(color: activeStepIndex >= 2 ? AppColors.success : Colors.grey, thickness: 2)),
-                  _buildStep('قيد المعالجة', activeStepIndex >= 2, activeColor: AppColors.success),
-                  Expanded(child: Divider(color: activeStepIndex >= 3 ? AppColors.success : Colors.grey, thickness: 2)),
-                  _buildStep('جاهز', activeStepIndex >= 3, activeColor: AppColors.success),
-                  Expanded(child: Divider(color: activeStepIndex >= 4 ? AppColors.success : Colors.grey, thickness: 2)),
-                  _buildStep('تم التوصيل', activeStepIndex >= 4, activeColor: AppColors.success),
+                  _buildStep(
+                    'قيد الانتظار',
+                    activeStepIndex >= 0,
+                    activeColor: AppColors.success,
+                  ),
+                  Expanded(
+                    child: Divider(
+                      color: activeStepIndex >= 1
+                          ? AppColors.success
+                          : Colors.grey,
+                      thickness: 2,
+                    ),
+                  ),
+                  _buildStep(
+                    'في الطريق',
+                    activeStepIndex >= 1,
+                    activeColor: AppColors.success,
+                  ),
+                  Expanded(
+                    child: Divider(
+                      color: activeStepIndex >= 2
+                          ? AppColors.success
+                          : Colors.grey,
+                      thickness: 2,
+                    ),
+                  ),
+                  _buildStep(
+                    'قيد المعالجة',
+                    activeStepIndex >= 2,
+                    activeColor: AppColors.success,
+                  ),
+                  Expanded(
+                    child: Divider(
+                      color: activeStepIndex >= 3
+                          ? AppColors.success
+                          : Colors.grey,
+                      thickness: 2,
+                    ),
+                  ),
+                  _buildStep(
+                    'جاهز',
+                    activeStepIndex >= 3,
+                    activeColor: AppColors.success,
+                  ),
+                  Expanded(
+                    child: Divider(
+                      color: activeStepIndex >= 4
+                          ? AppColors.success
+                          : Colors.grey,
+                      thickness: 2,
+                    ),
+                  ),
+                  _buildStep(
+                    'تم التوصيل',
+                    activeStepIndex >= 4,
+                    activeColor: AppColors.success,
+                  ),
                 ],
               ),
             ],
@@ -131,15 +211,18 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                   icon: Icon(isRated ? Icons.star : Icons.star_outline),
                   label: Text(isRated ? 'تم التقييم' : 'تقييم الخدمة'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: isRated ? Colors.grey.shade200 : AppColors.primary,
+                    backgroundColor:
+                        isRated ? Colors.grey.shade200 : AppColors.primary,
                     foregroundColor: isRated ? Colors.grey : Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                     elevation: isRated ? 0 : 2,
                   ),
                 ),
               ),
-            ]
+            ],
           ],
         ),
       ),
@@ -154,8 +237,14 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
       context: parentContext,
       builder: (dialogContext) => StatefulBuilder(
         builder: (dialogContext, setState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text('تقييم الخدمة', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Text(
+            'تقييم الخدمة',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -163,14 +252,19 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
               const SizedBox(height: 20),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(5, (index) => GestureDetector(
-                  onTap: () => setState(() => rating = index + 1.0),
-                  child: Icon(
-                    index < rating ? Icons.star : Icons.star,
-                    color: index < rating ? Colors.amber : Colors.grey.shade300,
-                    size: 40,
+                children: List.generate(
+                  5,
+                  (index) => GestureDetector(
+                    onTap: () => setState(() => rating = index + 1.0),
+                    child: Icon(
+                      index < rating ? Icons.star : Icons.star_outline,
+                      color: index < rating
+                          ? Colors.amber
+                          : Colors.grey.shade300,
+                      size: 40,
+                    ),
                   ),
-                )),
+                ),
               ),
               const SizedBox(height: 24),
               TextField(
@@ -180,7 +274,9 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                 decoration: InputDecoration(
                   hintText: 'اكتب رأيك هنا (اختياري)...',
                   hintStyle: const TextStyle(fontSize: 14),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   filled: true,
                   fillColor: Colors.grey.shade50,
                 ),
@@ -190,39 +286,68 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('إلغاء', style: TextStyle(color: Colors.grey)),
+              child: const Text(
+                'إلغاء',
+                style: TextStyle(color: Colors.grey),
+              ),
             ),
             ElevatedButton(
               onPressed: () {
                 final review = Review(
                   userName: 'عميل برايت كلين',
-                  comment: reviewController.text.isEmpty ? 'خدمة رائعة جداً، شكراً لكم!' : reviewController.text,
+                  comment: reviewController.text.isEmpty
+                      ? 'خدمة رائعة جداً، شكراً لكم!'
+                      : reviewController.text,
                   rating: rating,
                   date: DateTime.now(),
                 );
-                Provider.of<ReviewProvider>(parentContext, listen: false).addReview(review);
-                Provider.of<OrderProvider>(parentContext, listen: false).markOrderAsRated(orderId);
+
+                Provider.of<ReviewProvider>(
+                  parentContext,
+                  listen: false,
+                ).addReview(review);
+
+                Provider.of<OrderProvider>(
+                  parentContext,
+                  listen: false,
+                ).markOrderAsRated(orderId);
+
                 Navigator.pop(dialogContext);
+
                 ScaffoldMessenger.of(parentContext).showSnackBar(
                   const SnackBar(
-                    content: Text('شكراً لتقييمك! تم إضافة رأيك في القائمة الرئيسية.'),
+                    content: Text(
+                      'شكراً لتقييمك! تم إضافة رأيك في القائمة الرئيسية.',
+                    ),
                     backgroundColor: AppColors.success,
                   ),
                 );
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
-              child: const Text('إرسال التقييم', style: TextStyle(color: Colors.white)),
+              child: const Text(
+                'إرسال التقييم',
+                style: TextStyle(color: Colors.white),
+              ),
             ),
           ],
         ),
       ),
-    );
+    ).then((_) {
+      reviewController.dispose();
+    });
   }
 
-  Widget _buildEmptyState(BuildContext context, {required String title, required String subtitle, required IconData icon}) {
+  Widget _buildEmptyState(
+    BuildContext context, {
+    required String title,
+    required String subtitle,
+    required IconData icon,
+  }) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32.0),
@@ -266,12 +391,16 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              child: const Text('اطلب الآن', style: TextStyle(color: AppColors.white)),
+              child: const Text(
+                'اطلب الآن',
+                style: TextStyle(color: AppColors.white),
+              ),
             ),
           ],
         ),
@@ -286,7 +415,10 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
-          title: const Text('طلباتي', style: TextStyle(fontWeight: FontWeight.bold)),
+          title: const Text(
+            'طلباتي',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
           centerTitle: true,
           backgroundColor: AppColors.white,
           foregroundColor: AppColors.primary,
@@ -305,45 +437,49 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
         ),
         body: TabBarView(
           children: [
-            // Current Orders
             Consumer<OrderProvider>(
               builder: (context, orderProvider, child) {
                 final currentOrders = orderProvider.orders;
-                return currentOrders.isEmpty 
-                  ? _buildEmptyState(
-                      context,
-                      title: 'لا توجد طلبات حالية',
-                      subtitle: 'قم بطلب خدمة جديدة لتبدأ التجربة.',
-                      icon: Icons.receipt_rounded,
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: currentOrders.length,
-                      itemBuilder: (context, index) {
-                        final Order order = currentOrders[index];
-                        final displayOrderId = order.orderId.length > 8
-                            ? order.orderId.substring(0, 8)
-                            : order.orderId;
-                        return _buildOrderCard(
-                          orderId: displayOrderId,
-                          date: order.date,
-                          details: order.details,
-                          status: order.status,
-                          statusColor: _getStatusColor(order.status),
-                          activeStepIndex: order.activeStepIndex,
-                          isRated: order.isRated,
-                          onRatePressed: () => _showRatingDialog(context, order.orderId),
-                          showTracker: order.status != 'تم التوصيل' && order.status != 'ملغي',
-                        );
-                      },
-                    );
+
+                return currentOrders.isEmpty
+                    ? _buildEmptyState(
+                        context,
+                        title: 'لا توجد طلبات حالية',
+                        subtitle: 'قم بطلب خدمة جديدة لتبدأ التجربة.',
+                        icon: Icons.receipt_rounded,
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: currentOrders.length,
+                        itemBuilder: (context, index) {
+                          final Order order = currentOrders[index];
+
+                          final displayOrderId = order.orderId.length > 8
+                              ? order.orderId.substring(0, 8)
+                              : order.orderId;
+
+                          return _buildOrderCard(
+                            orderId: displayOrderId,
+                            date: order.date,
+                            details: order.details,
+                            status: order.status,
+                            statusColor: _getStatusColor(order.status),
+                            activeStepIndex: order.activeStepIndex,
+                            isRated: order.isRated,
+                            onRatePressed: () =>
+                                _showRatingDialog(context, order.orderId),
+                            showTracker: order.status != 'تم التوصيل' &&
+                                order.status != 'ملغي',
+                          );
+                        },
+                      );
               },
             ),
-            // Past Orders (Empty State Example)
             _buildEmptyState(
               context,
               title: 'لا توجد طلبات سابقة',
-              subtitle: 'يبدو أنك لم تقم بأي طلبات في الماضي. اطلب الآن لتجربة خدماتنا المميزة.',
+              subtitle:
+                  'يبدو أنك لم تقم بأي طلبات في الماضي. اطلب الآن لتجربة خدماتنا المميزة.',
               icon: Icons.receipt_long_rounded,
             ),
           ],
