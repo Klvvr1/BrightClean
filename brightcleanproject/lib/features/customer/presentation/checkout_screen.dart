@@ -5,12 +5,14 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:uuid/uuid.dart';
 import 'package:provider/provider.dart';
 import 'order_success_screen.dart';
+import 'package:brightcleanproject/features/customer/domain/models/cart_item.dart';
 import 'package:brightcleanproject/features/customer/domain/models/order.dart';
 import 'package:brightcleanproject/features/customer/data/providers/order_provider.dart';
 import '../data/providers/cart_provider.dart';
 
 class CheckoutScreen extends StatefulWidget {
-  const CheckoutScreen({super.key});
+  final List<CartItem>? directItems;
+  const CheckoutScreen({super.key, this.directItems});
 
   @override
   State<CheckoutScreen> createState() => _CheckoutScreenState();
@@ -100,10 +102,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   @override
   Widget build(BuildContext context) {
     final cart = Provider.of<CartProvider>(context);
+    final itemsToCheckout = widget.directItems != null ? widget.directItems! : cart.items;
     final canCompleteOrder = _isLocationVerified &&
         _selectedDate != null &&
         _selectedTimeSlot != null &&
-        cart.items.isNotEmpty;
+        itemsToCheckout.isNotEmpty;
 
     return Scaffold(
       appBar: AppBar(title: const Text('إتمام الطلب')),
@@ -116,7 +119,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             const Text('ملخص الطلب',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
-            ...cart.items.map((item) => Card(
+            ...itemsToCheckout.map((item) => Card(
                   margin: const EdgeInsets.only(bottom: 8),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),
@@ -299,7 +302,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 const Text('المجموع الكلي:',
                     style:
                         TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                Text('${cart.totalAmount.toStringAsFixed(0)} ر.ي',
+                 Text('${(widget.directItems != null ? widget.directItems!.fold<double>(0.0, (sum, item) => sum + item.totalPrice) : cart.totalAmount).toStringAsFixed(0)} ر.ي',
                     style: const TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
@@ -329,7 +332,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               onPressed: canCompleteOrder
                   ? () {
                       // Create details string for the order
-                      String orderDetails = cart.items
+                      String orderDetails = itemsToCheckout
                           .map((i) => '${i.serviceName} (${i.selectedType})')
                           .join(', ');
 
@@ -350,8 +353,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       Provider.of<OrderProvider>(context, listen: false)
                           .addOrder(newOrder);
 
-                      // Clear cart
-                      cart.clearCart();
+                      // Clear cart only if this is a cart-based checkout
+                      if (widget.directItems == null) {
+                        cart.clearCart();
+                      }
 
                       Navigator.pushReplacement(
                         context,
