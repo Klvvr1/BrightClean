@@ -9,7 +9,7 @@ import 'widgets/custom_profile_tile.dart';
 import 'widgets/profile_header_section.dart';
 import 'widgets/wallet_section.dart';
 import 'widgets/help_center_bottom_sheet.dart';
-import 'package:brightcleanprojet/core/controllers/theme_controller.dart';
+import 'package:brightcleanproject/core/controllers/theme_controller.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});

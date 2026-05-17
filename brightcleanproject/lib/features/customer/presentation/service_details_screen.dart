@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../data/providers/cart_provider.dart';
-import 'package:brightcleanprojet/features/customer/domain/models/service_option.dart';
+import 'package:brightcleanproject/features/customer/domain/models/service_option.dart';
 
 class ServiceDetailsScreen extends StatefulWidget {
   final String serviceType;

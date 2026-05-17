@@ -1,4 +1,4 @@
-# brightcleanprojet
+# brightcleanproject
 
 A new Flutter project.
 

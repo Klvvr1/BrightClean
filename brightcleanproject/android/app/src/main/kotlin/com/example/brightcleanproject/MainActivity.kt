@@ -1,4 +1,4 @@
-package com.example.brightcleanprojet
+package com.example.brightcleanproject
 
 import io.flutter.embedding.android.FlutterActivity
 
