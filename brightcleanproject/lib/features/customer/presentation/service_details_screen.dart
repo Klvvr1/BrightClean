@@ -91,51 +91,6 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
   ];
   late String selectedClothingItem;
 
-  // List of clothing items for the 'الملابس' service
-  final List<String> _clothingItems = [
-    'ثوب أبيض',
-    'ثوب ملون',
-    'ثوب صوف',
-    'غترة',
-    'شماغ',
-    'فليئة داخلية',
-    'سروال قصير',
-    'سروال طويل',
-    'طاقية',
-    'قميص نوم',
-    'جوارب',
-    'منشفة صغيرة',
-    'منشفة كبيرة',
-    'بدلة عسكرية',
-    'بدلة رياضية',
-    'بدلة باكستاني',
-    'بدلة صوف',
-    'بالطو',
-    'بنطلون',
-    'قميص',
-    'ربطة عنق',
-    'فستان',
-    'بلوزة',
-    'تنورة',
-    'قميص حرير',
-    'عباية',
-    'طرحة',
-    'شرشف مزدوج',
-    'شرشف مفرد',
-    'كيس مخدة',
-    'مخدة',
-    'روب حمام',
-    'بجامة',
-    'جاكيت',
-    'جاكيت سبور',
-    'بطانية',
-    'مفرش',
-    'ستائر',
-    'سجاد',
-    'فروة',
-    'بشت',
-  ];
-  late String selectedClothingItem;
 
   List<ServiceOption> get _serviceOptions {
     switch (widget.serviceType) {

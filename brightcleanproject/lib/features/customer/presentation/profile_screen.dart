@@ -264,6 +264,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               return CustomProfileTile(
                 icon: isDarkMode ? Icons.dark_mode : Icons.light_mode,
                 title: 'الوضع الليلي',
+                onTap: () {
+                  ThemeController().toggleTheme();
+                },
                 trailing: Switch(
                   value: isDarkMode,
                   onChanged: (value) {
