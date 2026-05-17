@@ -103,7 +103,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
 
       // 2. Clear API Headers (if using Dio or http client)
-      // TODO: Add when API client is implemented
+      // Note: Add when API client is implemented
       // Example for Dio:
       // DioClient.instance.options.headers.remove('Authorization');
       // Example for http:
@@ -273,9 +273,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ThemeController().toggleTheme();
                   },
                 ),
-                onTap: () {
-                  ThemeController().toggleTheme();
-                },
               );
             },
           ),
