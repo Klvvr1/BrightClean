@@ -5,8 +5,8 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:uuid/uuid.dart';
 import 'package:provider/provider.dart';
 import 'order_success_screen.dart';
-import 'package:brightcleanprojet/features/customer/domain/models/order.dart';
-import 'package:brightcleanprojet/features/customer/data/providers/order_provider.dart';
+import 'package:brightcleanproject/features/customer/domain/models/order.dart';
+import 'package:brightcleanproject/features/customer/data/providers/order_provider.dart';
 import '../data/providers/cart_provider.dart';
 
 class CheckoutScreen extends StatefulWidget {

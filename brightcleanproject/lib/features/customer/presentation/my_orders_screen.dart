@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/theme/app_colors.dart';
-import 'package:brightcleanprojet/features/customer/domain/models/order.dart';
-import 'package:brightcleanprojet/features/customer/data/providers/order_provider.dart';
-import 'package:brightcleanprojet/features/customer/domain/models/review.dart';
-import 'package:brightcleanprojet/features/customer/data/providers/review_provider.dart';
+import 'package:brightcleanproject/features/customer/domain/models/order.dart';
+import 'package:brightcleanproject/features/customer/data/providers/order_provider.dart';
+import 'package:brightcleanproject/features/customer/domain/models/review.dart';
+import 'package:brightcleanproject/features/customer/data/providers/review_provider.dart';
 
 
 

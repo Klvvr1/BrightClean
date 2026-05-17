@@ -1,6 +1,6 @@
 {
-    "name": "brightcleanprojet",
-    "short_name": "brightcleanprojet",
+    "name": "brightcleanproject",
+    "short_name": "brightcleanproject",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
