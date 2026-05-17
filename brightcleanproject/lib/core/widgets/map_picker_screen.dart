@@ -32,17 +32,21 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
     LocationPermission permission;
 
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!mounted) return;
     if (!serviceEnabled) return;
 
     permission = await Geolocator.checkPermission();
+    if (!mounted) return;
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
+      if (!mounted) return;
       if (permission == LocationPermission.denied) return;
     }
 
     if (permission == LocationPermission.deniedForever) return;
 
     final position = await Geolocator.getCurrentPosition();
+    if (!mounted) return;
     _mapController.move(LatLng(position.latitude, position.longitude), 13.0);
   }
 

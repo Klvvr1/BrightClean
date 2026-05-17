@@ -11,20 +11,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:brightcleanproject/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
+  testWidgets('App starts and displays SplashScreen', (WidgetTester tester) async {
     // Build our app and trigger a frame.
     await tester.pumpWidget(const BrightCleanApp());
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    // Verify that the SplashScreen title is displayed.
+    expect(find.text('برايت كلين'), findsOneWidget);
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // Dispose the app to clean up infinite animation controllers.
+    await tester.pumpWidget(const SizedBox());
+    
+    // Advance fake time to flush the pending navigation timer.
+    await tester.pump(const Duration(seconds: 4));
   });
 }
