@@ -4,6 +4,11 @@ class Order {
   final String details;
   final String status;
   final int activeStepIndex;
+  final String? locationDescription;
+  final String? paymentMethod;
+  final bool isRated;
+  final DateTime? pickupDate;
+  final String? pickupTimeSlot;
 
   Order({
     required this.orderId,
@@ -11,5 +16,10 @@ class Order {
     required this.details,
     required this.status,
     required this.activeStepIndex,
+    this.locationDescription,
+    this.paymentMethod,
+    this.isRated = false,
+    this.pickupDate,
+    this.pickupTimeSlot,
   });
 }

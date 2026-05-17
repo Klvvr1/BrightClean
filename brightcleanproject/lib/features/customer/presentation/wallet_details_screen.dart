@@ -260,6 +260,7 @@ class WalletDetailsScreen extends StatelessWidget {
                     );
 
                     // TODO: Use selectedFilePath, selectedFileBytes, and operationNumber for actual upload
+                    debugPrint('Upload mock: path=$selectedFilePath, bytes=${selectedFileBytes?.length}, op=$operationNumber');
                     operationNumberController.dispose();
                     if (!context.mounted) return;
                     Navigator.pop(context);

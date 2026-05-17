@@ -11,6 +11,7 @@ class DatabaseHelper {
 
   Future<Database> get database async {
     if (_database != null) return _database!;
+
     _database = await _initDB('brightclean.db');
     return _database!;
   }
@@ -21,8 +22,9 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _createDB,
+      onUpgrade: _upgradeDB,
       onOpen: (db) async {
         // Ensure database tables exist and are properly seeded on every launch
         await _ensureTablesAndSeeding(db);
@@ -30,11 +32,30 @@ class DatabaseHelper {
     );
   }
 
-  Future _createDB(Database db, int version) async {
+  Future<void> _upgradeDB(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      final columns = await db.rawQuery("PRAGMA table_info(users)");
+      final columnNames = columns.map((column) => column['name'] as String).toSet();
+
+      if (!columnNames.contains('car_company')) {
+        await db.execute("ALTER TABLE users ADD COLUMN car_company TEXT;");
+      }
+
+      if (!columnNames.contains('car_model')) {
+        await db.execute("ALTER TABLE users ADD COLUMN car_model TEXT;");
+      }
+
+      if (!columnNames.contains('car_year')) {
+        await db.execute("ALTER TABLE users ADD COLUMN car_year TEXT;");
+      }
+    }
+  }
+
+  Future<void> _createDB(Database db, int version) async {
     await _ensureTablesAndSeeding(db);
   }
 
-  Future _ensureTablesAndSeeding(Database db) async {
+  Future<void> _ensureTablesAndSeeding(Database db) async {
     await db.execute('''
 CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -56,6 +77,9 @@ CREATE TABLE IF NOT EXISTS users (
   business_name TEXT,
   selected_services TEXT,
   vehicle_type TEXT,
+  car_company TEXT,
+  car_model TEXT,
+  car_year TEXT,
   plate_number TEXT,
   commercial_reg_image_path TEXT,
   id_image_path TEXT,
@@ -63,21 +87,46 @@ CREATE TABLE IF NOT EXISTS users (
   car_image_path TEXT
 )
 ''');
-    
+
     // Insert seed data for testing with hashed passwords if they don't already exist
     final testUsers = [
-      {'phone': '0500000000', 'password': hashPassword('Password123'), 'role': 'Admin', 'status': 'active', 'created_at': DateTime.now().toIso8601String()},
-      {'phone': '0511111111', 'password': hashPassword('Password123'), 'role': 'Manager', 'status': 'active', 'created_at': DateTime.now().toIso8601String()},
-      {'phone': '0522222222', 'password': hashPassword('Password123'), 'role': 'Customer', 'status': 'active', 'created_at': DateTime.now().toIso8601String()},
-      {'phone': '0533333333', 'password': hashPassword('Password123'), 'role': 'Driver', 'status': 'active', 'created_at': DateTime.now().toIso8601String()},
+      {
+        'phone': '0500000000',
+        'password': hashPassword('Password123'),
+        'role': 'Admin',
+        'status': 'active',
+        'created_at': DateTime.now().toIso8601String(),
+      },
+      {
+        'phone': '0511111111',
+        'password': hashPassword('Password123'),
+        'role': 'Manager',
+        'status': 'active',
+        'created_at': DateTime.now().toIso8601String(),
+      },
+      {
+        'phone': '0522222222',
+        'password': hashPassword('Password123'),
+        'role': 'Customer',
+        'status': 'active',
+        'created_at': DateTime.now().toIso8601String(),
+      },
+      {
+        'phone': '0533333333',
+        'password': hashPassword('Password123'),
+        'role': 'Driver',
+        'status': 'active',
+        'created_at': DateTime.now().toIso8601String(),
+      },
     ];
-    
-    for (var user in testUsers) {
+
+    for (final user in testUsers) {
       final existing = await db.query(
         'users',
         where: 'phone = ?',
         whereArgs: [user['phone']],
       );
+
       if (existing.isEmpty) {
         await db.insert('users', user);
       }
@@ -85,8 +134,8 @@ CREATE TABLE IF NOT EXISTS users (
   }
 
   String hashPassword(String password) {
-    var bytes = utf8.encode(password);
-    var digest = sha256.convert(bytes);
+    final bytes = utf8.encode(password);
+    final digest = sha256.convert(bytes);
     return digest.toString();
   }
 
@@ -97,6 +146,7 @@ CREATE TABLE IF NOT EXISTS users (
 
   Future<Map<String, dynamic>?> loginUser(String phone, String password) async {
     final db = await instance.database;
+
     final results = await db.query(
       'users',
       where: 'phone = ? AND password = ?',
@@ -105,8 +155,8 @@ CREATE TABLE IF NOT EXISTS users (
 
     if (results.isNotEmpty) {
       return results.first;
-    } else {
-      return null;
     }
+
+    return null;
   }
 }

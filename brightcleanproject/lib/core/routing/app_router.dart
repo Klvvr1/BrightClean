@@ -15,6 +15,8 @@ import '../../features/agent/presentation/agent_order_management_screen.dart';
 import '../../features/driver/presentation/driver_dashboard_screen.dart';
 import '../../features/driver/presentation/driver_tracking_screen.dart';
 import '../../features/admin/presentation/admin_dashboard_screen.dart';
+import '../../features/customer/presentation/notifications_screen.dart';
+import '../../features/customer/presentation/cart_screen.dart';
 
 class AppRouter {
   static final router = GoRouter(
@@ -135,6 +137,14 @@ class AppRouter {
             workflow: workflow,
           );
         },
+      ),
+      GoRoute(
+        path: '/notifications',
+        builder: (context, state) => const NotificationsScreen(),
+      ),
+      GoRoute(
+        path: '/cart',
+        builder: (context, state) => const CartScreen(),
       ),
       GoRoute(
         path: '/admin',
