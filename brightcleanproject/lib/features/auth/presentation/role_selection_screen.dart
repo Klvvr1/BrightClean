@@ -11,6 +11,7 @@ class RoleSelectionScreen extends StatelessWidget {
     required IconData icon,
     required VoidCallback onTap,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Card(
       elevation: 2,
       margin: const EdgeInsets.only(bottom: 16),
@@ -25,22 +26,22 @@ class RoleSelectionScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: AppColors.lightBlue,
+                  color: isDark ? AppColors.primary.withValues(alpha: 0.3) : AppColors.lightBlue,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(icon, color: AppColors.primary, size: 32),
+                child: Icon(icon, color: isDark ? Colors.white : AppColors.primary, size: 32),
               ),
               const SizedBox(width: 16),
               Expanded(
                 child: Text(
                   title,
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: AppColors.primary,
+                        color: isDark ? Colors.white : AppColors.primary,
                         fontWeight: FontWeight.bold,
                       ),
                 ),
               ),
-              const Icon(Icons.arrow_forward_ios, color: AppColors.textLight),
+              Icon(Icons.arrow_forward_ios, color: isDark ? Colors.white70 : AppColors.textLight),
             ],
           ),
         ),
@@ -59,9 +60,14 @@ class RoleSelectionScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
+            Text(
               'الرجاء اختيار نوع الحساب الذي ترغب في تسجيله',
-              style: TextStyle(fontSize: 16, color: AppColors.textMain),
+              style: TextStyle(
+                fontSize: 16,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white
+                    : AppColors.textMain,
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 32),

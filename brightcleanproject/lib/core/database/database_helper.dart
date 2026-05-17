@@ -21,9 +21,18 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _createDB,
+      onUpgrade: _upgradeDB,
     );
+  }
+
+  Future _upgradeDB(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute("ALTER TABLE users ADD COLUMN car_company TEXT;");
+      await db.execute("ALTER TABLE users ADD COLUMN car_model TEXT;");
+      await db.execute("ALTER TABLE users ADD COLUMN car_year TEXT;");
+    }
   }
 
   Future _createDB(Database db, int version) async {
@@ -48,6 +57,9 @@ CREATE TABLE users (
   business_name TEXT,
   selected_services TEXT,
   vehicle_type TEXT,
+  car_company TEXT,
+  car_model TEXT,
+  car_year TEXT,
   plate_number TEXT,
   commercial_reg_image_path TEXT,
   id_image_path TEXT,

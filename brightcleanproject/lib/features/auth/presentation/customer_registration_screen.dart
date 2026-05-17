@@ -237,6 +237,7 @@ class _CustomerRegistrationScreenState
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       appBar: AppBar(title: const Text('تسجيل عميل جديد')),
       body: Center(
@@ -341,10 +342,10 @@ class _CustomerRegistrationScreenState
                       padding: const EdgeInsets.all(16),
                       width: double.infinity,
                       decoration: BoxDecoration(
-                        color: AppColors.background,
+                        color: isDark ? Colors.grey.shade900 : AppColors.background,
                         border: Border.all(
                           color: _selectedAddress == null
-                              ? Colors.grey.shade300
+                              ? (isDark ? Colors.grey.shade700 : Colors.grey.shade300)
                               : AppColors.primary,
                         ),
                         borderRadius: BorderRadius.circular(8),
@@ -356,8 +357,8 @@ class _CustomerRegistrationScreenState
                             Icons.map,
                             size: 40,
                             color: _selectedAddress == null
-                                ? Colors.grey
-                                : AppColors.primary,
+                                ? (isDark ? Colors.white70 : Colors.grey)
+                                : (isDark ? AppColors.lightBlue : AppColors.primary),
                           ),
                           const SizedBox(height: 8),
                           Text(
@@ -366,8 +367,8 @@ class _CustomerRegistrationScreenState
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               color: _selectedAddress == null
-                                  ? Colors.grey
-                                  : AppColors.primary,
+                                  ? (isDark ? Colors.white70 : Colors.grey)
+                                  : (isDark ? AppColors.lightBlue : AppColors.primary),
                               fontWeight: _selectedAddress == null
                                   ? FontWeight.normal
                                   : FontWeight.bold,
