@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/custom_text_field.dart';
-import '../../customer/presentation/profile_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -308,8 +307,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   final List<String> _titles = [
     'الرئيسية',
     'إدارة التسجيلات',
-    'العروض',
-    'الملف الشخصي'
+    'العروض'
   ];
 
   void _handleLogout() {
@@ -2561,7 +2559,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_selectedIndex >= 4) {
+    if (_selectedIndex >= 3) {
       _selectedIndex = 0;
     }
     return Scaffold(
@@ -2575,9 +2573,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ? PopupMenuButton<String>(
                 padding: EdgeInsets.zero,
                 onSelected: (value) {
-                  if (value == 'profile') {
-                    setState(() => _selectedIndex = 3);
-                  } else if (value == 'logout') {
+                  if (value == 'logout') {
                     _handleLogout();
                   }
                 },
@@ -2654,7 +2650,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           _buildHomeView(),
           _buildRegistrationsView(),
           _buildOffersView(),
-          const ProfileScreen(),
         ],
       ),
       bottomNavigationBar: Container(
@@ -2693,11 +2688,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               icon: Icon(Icons.local_offer_outlined),
               activeIcon: Icon(Icons.local_offer),
               label: 'العروض',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.person_outline),
-              activeIcon: Icon(Icons.person),
-              label: 'حسابي',
             ),
           ],
         ),

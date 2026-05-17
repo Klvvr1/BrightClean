@@ -20,7 +20,6 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   bool _isEditMode = false;
-  String _userRole = 'customer';
 
   // Mock data (should ideally come from State Management)
   UserProfile _currentUser = const UserProfile(
@@ -41,11 +40,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final phone = prefs.getString('user_phone') ?? '+971 50 123 4567';
     final walletBalance = prefs.getString('wallet_balance') ?? '0 ريال يمني';
     final imagePath = prefs.getString('profile_image_path');
-    final role = prefs.getString('user_role') ?? 'customer';
 
     if (mounted) {
       setState(() {
-        _userRole = role;
         _currentUser = UserProfile(
           name: name,
           phone: phone,
@@ -190,10 +187,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             onEditAvatarPressed: _isEditMode ? _handleEditAvatar : null,
           ),
           const SizedBox(height: 32),
-          if (_userRole == 'customer') ...[
-            WalletSection(balance: _currentUser.walletBalance),
-            const SizedBox(height: 16),
-          ],
+          WalletSection(balance: _currentUser.walletBalance),
+          const SizedBox(height: 16),
           _buildSettingsSection(),
         ],
       ),
@@ -218,20 +213,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
               await _loadUserFromPrefs();
             },
           ),
-          if (_userRole == 'customer' || _userRole == 'agent' || _userRole == 'manager') ...[
-            const Divider(height: 1),
-            CustomProfileTile(
-              icon: Icons.location_on,
-              title: 'العناوين المحفوظة',
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => const AddressesScreen(),
-                  ),
-                );
-              },
-            ),
-          ],
+          const Divider(height: 1),
+          CustomProfileTile(
+            icon: Icons.location_on,
+            title: 'العناوين المحفوظة',
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const AddressesScreen(),
+                ),
+              );
+            },
+          ),
           const Divider(height: 1),
           CustomProfileTile(
             icon: Icons.lock,

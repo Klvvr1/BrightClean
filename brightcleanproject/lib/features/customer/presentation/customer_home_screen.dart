@@ -92,10 +92,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
 
   List<Map<String, dynamic>> get _filteredCategories {
     if (_searchController.text.isEmpty) return [];
-    return _allCategories
-        .where(
-            (cat) => cat['title'].toString().contains(_searchController.text))
-        .toList();
+    return _allCategories.where((cat) => cat['title'].toString().contains(_searchController.text)).toList();
   }
 
   @override
@@ -154,9 +151,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     super.dispose();
   }
 
-  Widget _buildCategoryCard(
-      BuildContext context, String title, IconData icon, Color color,
-      {bool isSearch = false}) {
+  Widget _buildCategoryCard(BuildContext context, String title, IconData icon, Color color, {bool isSearch = false}) {
     return Container(
       width: isSearch ? null : 120, // null width to fill grid if searching
       margin: EdgeInsets.only(left: isSearch ? 0 : 16),
@@ -171,8 +166,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
         },
         child: Card(
           elevation: 2,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           child: Padding(
             padding: const EdgeInsets.all(12.0),
             child: Column(
@@ -182,8 +176,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                 const SizedBox(height: 8),
                 Text(
                   title,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 12),
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
                   textAlign: TextAlign.center,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -205,27 +198,24 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
       ),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: bgColor.withValues(alpha: 0.4),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            )
-          ]),
+        color: bgColor,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: bgColor.withValues(alpha: 0.4),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          )
+        ]
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(title,
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold)),
+          Text(title, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           Text(
-            subtitle,
+            subtitle, 
             style: const TextStyle(color: Colors.white70, fontSize: 14),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
@@ -352,15 +342,12 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF121212) : AppColors.background,
       appBar: AppBar(
-        title: const Text('برايت كلين',
-            style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('برايت كلين', style: TextStyle(fontWeight: FontWeight.bold)),
         elevation: 0,
         backgroundColor: Colors.transparent,
         foregroundColor: isDark ? Colors.white : AppColors.primary,
         actions: [
-          IconButton(
-              icon: const Icon(Icons.notifications_none),
-              onPressed: () => context.push('/notifications')),
+          IconButton(icon: const Icon(Icons.notifications_none), onPressed: () => context.push('/notifications')),
           Consumer<CartProvider>(
             builder: (context, cart, child) => Badge(
               label: Text(cart.itemCount.toString()),
@@ -380,8 +367,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
           children: [
             // Search Bar
             Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
                 decoration: BoxDecoration(
@@ -389,9 +375,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: _isSearching
-                          ? AppColors.primary.withValues(alpha: 0.2)
-                          : Colors.black.withValues(alpha: 0.05),
+                      color: _isSearching ? AppColors.primary.withValues(alpha: 0.2) : Colors.black.withValues(alpha: 0.05),
                       blurRadius: _isSearching ? 8 : 4,
                       spreadRadius: _isSearching ? 2 : 0,
                     ),
@@ -401,8 +385,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                   controller: _searchController,
                   decoration: InputDecoration(
                     hintText: 'ابحث عن خدمات...',
-                    prefixIcon: Icon(Icons.search,
-                        color: _isSearching ? AppColors.primary : Colors.grey),
+                    prefixIcon: Icon(Icons.search, color: _isSearching ? AppColors.primary : Colors.grey),
                     suffixIcon: _isSearching
                         ? IconButton(
                             icon: const Icon(Icons.clear, color: Colors.grey),
@@ -419,21 +402,18 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
               ),
             ),
             const SizedBox(height: 24),
-
+            
             if (_isSearching) ...[
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16.0),
-                child: Text('نتائج البحث',
-                    style:
-                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                child: Text('نتائج البحث', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               ),
               const SizedBox(height: 12),
               if (_filteredCategories.isEmpty)
                 const Center(
                   child: Padding(
                     padding: EdgeInsets.all(32.0),
-                    child: Text('لا توجد نتائج تطابق بحثك',
-                        style: TextStyle(color: Colors.grey)),
+                    child: Text('لا توجد نتائج تطابق بحثك', style: TextStyle(color: Colors.grey)),
                   ),
                 )
               else
@@ -450,9 +430,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                   itemCount: _filteredCategories.length,
                   itemBuilder: (context, index) {
                     final cat = _filteredCategories[index];
-                    return _buildCategoryCard(
-                        context, cat['title'], cat['icon'], cat['color'],
-                        isSearch: true);
+                    return _buildCategoryCard(context, cat['title'], cat['icon'], cat['color'], isSearch: true);
                   },
                 ),
             ] else ...[
@@ -488,7 +466,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                   },
                 ),
               ),
-              const SizedBox(height: 24),
+            ),
+            const SizedBox(height: 24),
 
             // Categories (Vertical Scroll)
             const Padding(
@@ -597,8 +576,9 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
             ),
             const SizedBox(height: 32),
           ],
-        ),
+        ],
       ),
+    ),
     );
   }
 }
