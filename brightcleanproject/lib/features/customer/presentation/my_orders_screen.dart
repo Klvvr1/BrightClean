@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import 'package:brightcleanprojet/features/customer/domain/models/order.dart';
 import 'package:brightcleanprojet/features/customer/data/providers/order_provider.dart';
+import 'package:brightcleanprojet/features/customer/domain/models/review.dart';
+import 'package:brightcleanprojet/features/customer/data/providers/review_provider.dart';
 
 
 
@@ -56,6 +58,8 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
     required Color statusColor,
     bool showTracker = true,
     int activeStepIndex = 1,
+    bool isRated = false,
+    VoidCallback? onRatePressed,
   }) {
     return Card(
       elevation: 2,
@@ -86,9 +90,15 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
             ),
             const SizedBox(height: 8),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(details, style: const TextStyle(color: AppColors.textMain, fontSize: 14)),
+                Expanded(
+                  child: Text(
+                    details, 
+                    style: const TextStyle(color: AppColors.textMain, fontSize: 14),
+                  ),
+                ),
+                const SizedBox(width: 8),
                 Text(date, style: const TextStyle(color: Colors.grey, fontSize: 12)),
               ],
             ),
@@ -111,7 +121,101 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                   _buildStep('تم التوصيل', activeStepIndex >= 4, activeColor: AppColors.success),
                 ],
               ),
+            ],
+            if (status == 'تم التوصيل') ...[
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: isRated ? null : onRatePressed,
+                  icon: Icon(isRated ? Icons.star : Icons.star_outline),
+                  label: Text(isRated ? 'تم التقييم' : 'تقييم الخدمة'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isRated ? Colors.grey.shade200 : AppColors.primary,
+                    foregroundColor: isRated ? Colors.grey : Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    elevation: isRated ? 0 : 2,
+                  ),
+                ),
+              ),
             ]
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showRatingDialog(BuildContext parentContext, String orderId) {
+    double rating = 5;
+    final TextEditingController reviewController = TextEditingController();
+
+    showDialog(
+      context: parentContext,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('تقييم الخدمة', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('كيف كانت تجربتك مع برايت كلين؟'),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(5, (index) => GestureDetector(
+                  onTap: () => setState(() => rating = index + 1.0),
+                  child: Icon(
+                    index < rating ? Icons.star : Icons.star,
+                    color: index < rating ? Colors.amber : Colors.grey.shade300,
+                    size: 40,
+                  ),
+                )),
+              ),
+              const SizedBox(height: 24),
+              TextField(
+                controller: reviewController,
+                maxLines: 3,
+                textAlign: TextAlign.right,
+                decoration: InputDecoration(
+                  hintText: 'اكتب رأيك هنا (اختياري)...',
+                  hintStyle: const TextStyle(fontSize: 14),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  filled: true,
+                  fillColor: Colors.grey.shade50,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('إلغاء', style: TextStyle(color: Colors.grey)),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final review = Review(
+                  userName: 'عميل برايت كلين',
+                  comment: reviewController.text.isEmpty ? 'خدمة رائعة جداً، شكراً لكم!' : reviewController.text,
+                  rating: rating,
+                  date: DateTime.now(),
+                );
+                Provider.of<ReviewProvider>(parentContext, listen: false).addReview(review);
+                Provider.of<OrderProvider>(parentContext, listen: false).markOrderAsRated(orderId);
+                Navigator.pop(dialogContext);
+                ScaffoldMessenger.of(parentContext).showSnackBar(
+                  const SnackBar(
+                    content: Text('شكراً لتقييمك! تم إضافة رأيك في القائمة الرئيسية.'),
+                    backgroundColor: AppColors.success,
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              child: const Text('إرسال التقييم', style: TextStyle(color: Colors.white)),
+            ),
           ],
         ),
       ),
@@ -227,7 +331,9 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                           status: order.status,
                           statusColor: _getStatusColor(order.status),
                           activeStepIndex: order.activeStepIndex,
-                          showTracker: true,
+                          isRated: order.isRated,
+                          onRatePressed: () => _showRatingDialog(context, order.orderId),
+                          showTracker: order.status != 'تم التوصيل' && order.status != 'ملغي',
                         );
                       },
                     );
