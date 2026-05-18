@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:brightcleanproject/core/theme/app_spacing.dart';
+
 import 'package:brightcleanproject/core/theme/app_colors.dart';
 import 'package:go_router/go_router.dart';
 import 'package:brightcleanproject/core/enums/laundry_type.dart';
@@ -161,7 +163,7 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
   Widget _buildStatCard(String title, String count, Color color, IconData icon) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.md),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [color.withValues(alpha: 0.8), color],
@@ -177,7 +179,7 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Icon(icon, color: Colors.white.withValues(alpha: 0.8), size: 20),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.sm),
             Text(count, style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
             Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 11), maxLines: 1, overflow: TextOverflow.ellipsis),
           ],
@@ -203,11 +205,11 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
         Row(
           children: [
             const Icon(Icons.star_outline, size: 20, color: AppColors.tertiary),
-            const SizedBox(width: 8),
+            const SizedBox(width: AppSpacing.xs),
             Text(isArabic ? 'الخدمات التي تقدمها' : 'Your Services', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: AppSpacing.sm),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
@@ -268,7 +270,7 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
                       ),
                       child: const Icon(Icons.receipt_long_rounded, color: Colors.white, size: 18),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: AppSpacing.sm),
                     Text((isArabic ? 'طلب #' : 'Order #') + order.id, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
                   ],
                 ),
@@ -289,7 +291,7 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(isArabic ? 'الخدمات المطلوبة' : 'Requested Services', style: TextStyle(color: isDark ? Colors.white54 : Colors.grey.shade600, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
-                const SizedBox(height: 12),
+                const SizedBox(height: AppSpacing.sm),
                 Wrap(
                   spacing: 10, runSpacing: 10,
                   children: order.services.map((service) {
@@ -320,7 +322,7 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(icon, size: 16, color: isDark ? AppColors.lightBlue : AppColors.tertiary),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: AppSpacing.xs),
                           Text(isArabic ? service : _translateService(service), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                         ],
                       ),
@@ -337,7 +339,7 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
                     Row(
                       children: [
                         Icon(Icons.location_on_rounded, size: 18, color: isDark ? AppColors.lightBlue : AppColors.tertiary),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: AppSpacing.xs),
                         Text(
                           isArabic ? order.customerLocation : _translateLocation(order.customerLocation), 
                           style: TextStyle(color: isDark ? Colors.white70 : Colors.grey.shade700, fontSize: 13, fontWeight: FontWeight.w500)
@@ -351,7 +353,7 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: AppSpacing.xl),
                 ElevatedButton(
                   onPressed: () async {
                     final newStatus = await context.push<OrderStatus>(
@@ -399,13 +401,13 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
         children: [
           Text(isArabic ? 'مرحباً بك مجدداً!' : 'Welcome Back!', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, letterSpacing: -0.5)),
           Text(isArabic ? 'إليك ملخص نشاطك اليوم' : 'Here is your activity summary', style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
-          const SizedBox(height: 24),
+          const SizedBox(height: AppSpacing.xl),
           Row(
             children: [
               _buildStatCard(isArabic ? 'طلبات استلمت' : 'Received', orders.where((o) => o.status == OrderStatus.received).length.toString(), AppColors.primary, Icons.download_rounded),
-              const SizedBox(width: 12),
+              const SizedBox(width: AppSpacing.sm),
               _buildStatCard(isArabic ? 'قيد التنفيذ' : 'In Progress', orders.where((o) => o.status == OrderStatus.washing || o.status == OrderStatus.ironing).length.toString(), AppColors.tertiary, Icons.sync_rounded),
-              const SizedBox(width: 12),
+              const SizedBox(width: AppSpacing.sm),
               _buildStatCard(isArabic ? 'مكتمل' : 'Completed', _allOrders.where((o) => o.laundryType == widget.laundryType && (o.status == OrderStatus.ready || o.status == OrderStatus.completed)).length.toString(), AppColors.success, Icons.check_circle_rounded),
             ],
           ),
@@ -419,7 +421,7 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
               TextButton(onPressed: () {}, child: Text(isArabic ? 'عرض الكل' : 'View All')),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.sm),
           if (orders.isEmpty) _buildEmptyState(isArabic ? 'لا توجد طلبات جارية حالياً' : 'No current orders')
           else ...orders.map((order) => _buildOrderRequestCard(context, order, isArabic)),
         ],
@@ -437,7 +439,7 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
         children: [
           Text(isArabic ? 'سجل الطلبات' : 'Order History', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
           Text(isArabic ? 'مراجعة كافة الطلبات السابقة' : 'Review all previous orders', style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
-          const SizedBox(height: 24),
+          const SizedBox(height: AppSpacing.xl),
           if (orders.isEmpty) _buildEmptyState(isArabic ? 'سجل الطلبات فارغ' : 'Order history is empty')
           else ...orders.map((order) => _buildOrderRequestCard(context, order, isArabic, isReadOnly: true)),
         ],
@@ -451,7 +453,7 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AppSpacing.md),
       children: [
         // الملف الشخصي
         _buildSettingsHeader(isArabic ? 'الملف الشخصي' : 'Profile'),
@@ -459,7 +461,7 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
         _buildSettingsTile(Icons.phone_outlined, isArabic ? 'رقم الهاتف' : 'Phone Number', _phoneController.text, onTap: () => _showEditDialog(isArabic ? 'رقم الهاتف' : 'Phone Number', _phoneController)),
         _buildSettingsTile(Icons.email_outlined, isArabic ? 'البريد الإلكتروني' : 'Email', _emailController.text, onTap: () => _showEditDialog(isArabic ? 'البريد الإلكتروني' : 'Email', _emailController)),
         
-        const SizedBox(height: 24),
+        const SizedBox(height: AppSpacing.xl),
         
         // التنبيهات
         _buildSettingsHeader(isArabic ? 'إعدادات التنبيهات' : 'Notification Settings'),
@@ -467,7 +469,7 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
         _buildSwitchTile(isArabic ? 'العروض الترويجية' : 'Promotions', _notifyPromotions, (v) => setState(() => _notifyPromotions = v)),
         _buildSwitchTile(isArabic ? 'تنبيهات النظام' : 'System Alerts', _notifySystem, (v) => setState(() => _notifySystem = v)),
         
-        const SizedBox(height: 24),
+        const SizedBox(height: AppSpacing.xl),
         
         // اللغة
         _buildSettingsHeader(isArabic ? 'التفضيلات' : 'Preferences'),
@@ -556,7 +558,7 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
       child: Column(
         children: [
           const Icon(Icons.inbox_outlined, size: 60, color: Colors.grey),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.md),
           Text(message, style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? Colors.white70 : Colors.grey, fontSize: 16, fontWeight: FontWeight.bold)),
         ],
       ),

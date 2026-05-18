@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/theme/app_radius.dart';
+import '../../../../core/theme/app_shadows.dart';
+import '../../../../core/theme/app_styles.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:uuid/uuid.dart';
@@ -50,21 +54,17 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
     final matchingCoupons = AdminDashboardScreen.couponsList.where(
       (c) {
-        // Check if code matches
         if (c['code'].toString().toLowerCase() != code.toLowerCase()) {
           return false;
         }
 
-        // Check if coupon is active
         if (c['status'] != null && c['status'] != 'نشط') {
           return false;
         }
 
-        // Check expiry date
         final endDateStr = c['endDate'];
         if (endDateStr != null && endDateStr != 'غير محدد') {
           try {
-            // Parse date in format YYYY/MM/DD
             final parts = endDateStr.toString().split('/');
             if (parts.length == 3) {
               final year = int.tryParse(parts[0]);
@@ -78,7 +78,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               }
             }
           } catch (e) {
-            // If parsing fails, treat coupon as invalid
             return false;
           }
         }
@@ -105,8 +104,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       minAmount = double.tryParse(minAmountStr.toString()) ?? 0.0;
     }
 
-    // Compute the total amount for the items being checked out
-    final itemsToCheckout = widget.directItems != null ? widget.directItems! : cart.items;
     final totalAmount = widget.directItems != null
         ? widget.directItems!.fold<double>(0.0, (sum, item) => sum + item.totalPrice)
         : cart.totalAmount;
@@ -189,8 +186,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     }
   }
 
-  Widget _buildPaymentOption(String title, String value, IconData icon) {
+  Widget _buildPaymentOption(BuildContext context, String title, String value, IconData icon) {
     final isSelected = _selectedPaymentMethod == value;
+    final theme = Theme.of(context);
 
     return GestureDetector(
       onTap: () {
@@ -200,33 +198,33 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16),
+        margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+        padding: const EdgeInsets.all(AppSpacing.md),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.primary.withValues(alpha: 0.08)
-              : Colors.white,
+              ? theme.colorScheme.primary.withValues(alpha: 0.1)
+              : theme.colorScheme.surface,
           border: Border.all(
-            color: isSelected ? AppColors.primary : Colors.grey.shade300,
+            color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurface.withValues(alpha: 0.2),
             width: isSelected ? 2 : 1,
           ),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: AppRadius.button,
         ),
         child: Row(
           children: [
-            Icon(icon, color: isSelected ? AppColors.primary : Colors.grey),
-            const SizedBox(width: 16),
+            Icon(icon, color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurface.withValues(alpha: 0.5)),
+            const SizedBox(width: AppSpacing.md),
             Expanded(
               child: Text(
                 title,
-                style: TextStyle(
+                style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  color: isSelected ? AppColors.primary : AppColors.textMain,
+                  color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurface,
                 ),
               ),
             ),
             if (isSelected)
-              const Icon(Icons.check_circle, color: AppColors.primary),
+              Icon(Icons.check_circle, color: theme.colorScheme.primary),
           ],
         ),
       ),
@@ -236,6 +234,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   @override
   Widget build(BuildContext context) {
     final cart = Provider.of<CartProvider>(context);
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     final itemsToCheckout = widget.directItems != null ? widget.directItems! : cart.items;
 
     final totalAmount = widget.directItems != null
@@ -252,52 +253,47 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('إتمام الطلب')),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
+        padding: const EdgeInsets.all(AppSpacing.xl),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'ملخص الطلب',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 12),
-            ...itemsToCheckout.map((item) => Card(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                  elevation: 1,
+            const SizedBox(height: AppSpacing.sm),
+            ...itemsToCheckout.map((item) => Container(
+                  margin: const EdgeInsets.only(bottom: AppSpacing.xs),
+                  decoration: AppStyles.surface(context),
                   child: ListTile(
                     title: Text('${item.serviceName} (${item.selectedType})',
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 14)),
-                    subtitle: Text('الكمية: ${item.quantity}'),
+                        style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                    subtitle: Text('الكمية: ${item.quantity}', style: theme.textTheme.bodyMedium),
                     trailing: Text('${item.totalPrice.toStringAsFixed(0)} ر.ي',
-                        style: const TextStyle(
+                        style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
-                            color: AppColors.primary)),
+                            color: theme.colorScheme.primary)),
                   ),
                 )),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: AppSpacing.xl),
 
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
+                Text(
                   'موقع التوصيل',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 if (_isLocationVerified)
-                  const Row(
+                  Row(
                     children: [
-                      Icon(Icons.check_circle,
-                          color: AppColors.success, size: 16),
-                      SizedBox(width: 4),
+                      const Icon(Icons.check_circle, color: AppColors.success, size: 16),
+                      const SizedBox(width: AppSpacing.xs),
                       Text(
                         'تم التحقق',
-                        style: TextStyle(
+                        style: theme.textTheme.labelSmall?.copyWith(
                           color: AppColors.success,
-                          fontSize: 12,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -306,27 +302,27 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               ],
             ),
 
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.xs),
 
-            Card(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-                side: BorderSide(
+            Container(
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface,
+                borderRadius: AppRadius.card,
+                border: Border.all(
                   color: _isLocationVerified
                       ? AppColors.success
-                      : Colors.transparent,
+                      : theme.colorScheme.onSurface.withValues(alpha: 0.1),
                   width: 1,
                 ),
+                boxShadow: AppShadows.getSm(context),
               ),
-              elevation: 2,
               child: ListTile(
                 leading: Icon(
                   Icons.location_on,
-                  color:
-                      _isLocationVerified ? AppColors.success : AppColors.primary,
+                  color: _isLocationVerified ? AppColors.success : theme.colorScheme.primary,
                 ),
-                title: const Text('المنزل'),
-                subtitle: const Text('شارع الزبيري، صنعاء'),
+                title: Text('المنزل', style: theme.textTheme.titleMedium),
+                subtitle: Text('شارع الزبيري، صنعاء', style: theme.textTheme.bodyMedium),
                 trailing: TextButton(
                   onPressed: () {
                     setState(() {
@@ -344,74 +340,75 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               ),
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.md),
 
-            const Text(
+            Text(
               'وصف الموقع (اختياري)',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.xs),
 
             TextField(
               controller: _locationDescriptionController,
               maxLines: 2,
               decoration: InputDecoration(
-                hintText:
-                    'مثلاً: بجوار صيدلية النور، رقم الدور، أو أي علامة مميزة...',
-                hintStyle: TextStyle(fontSize: 13, color: Colors.grey.shade500),
+                hintText: 'مثلاً: بجوار صيدلية النور، رقم الدور...',
+                hintStyle: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: AppRadius.button,
+                  borderSide: BorderSide(color: theme.colorScheme.onSurface.withValues(alpha: 0.2)),
                 ),
                 filled: true,
-                fillColor: Colors.grey.shade50,
+                fillColor: isDark ? theme.colorScheme.surfaceContainerHighest : Colors.grey.shade50,
               ),
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: AppSpacing.xl),
 
-            const Text(
+            Text(
               'موعد الاستلام',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.xs),
 
             Row(
               children: [
                 Expanded(
                   child: InkWell(
                     onTap: _pickDate,
+                    borderRadius: AppRadius.button,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 16,
+                        horizontal: AppSpacing.sm,
+                        vertical: AppSpacing.md,
                       ),
                       decoration: BoxDecoration(
                         border: Border.all(
                           color: _selectedDate == null
-                              ? Colors.grey.shade400
-                              : AppColors.primary,
+                              ? theme.colorScheme.onSurface.withValues(alpha: 0.3)
+                              : theme.colorScheme.primary,
                         ),
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: AppRadius.button,
                       ),
                       child: Row(
                         children: [
                           Icon(
                             Icons.calendar_today,
                             color: _selectedDate == null
-                                ? Colors.grey
-                                : AppColors.primary,
+                                ? theme.colorScheme.onSurface.withValues(alpha: 0.5)
+                                : theme.colorScheme.primary,
                             size: 20,
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: AppSpacing.xs),
                           Text(
                             _selectedDate == null
                                 ? 'اختر التاريخ'
                                 : DateFormat('yyyy/MM/dd')
                                     .format(_selectedDate!),
-                            style: TextStyle(
+                            style: theme.textTheme.bodyMedium?.copyWith(
                               color: _selectedDate == null
-                                  ? Colors.grey.shade700
-                                  : AppColors.primary,
+                                  ? theme.colorScheme.onSurface.withValues(alpha: 0.7)
+                                  : theme.colorScheme.primary,
                               fontWeight: _selectedDate == null
                                   ? FontWeight.normal
                                   : FontWeight.bold,
@@ -422,17 +419,17 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: AppSpacing.md),
                 Expanded(
                   child: DropdownButtonFormField<String>(
                     decoration: InputDecoration(
                       contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12,
+                        horizontal: AppSpacing.sm,
                         vertical: 14,
                       ),
                       hintText: 'اختر الوقت',
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: AppRadius.button,
                       ),
                     ),
                     initialValue: _selectedTimeSlot,
@@ -460,48 +457,29 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               ],
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: AppSpacing.xl),
 
-            const Text(
+            Text(
               'طريقة الدفع',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.xs),
 
-            _buildPaymentOption('الدفع كاش', 'cash', Icons.money),
-            _buildPaymentOption(
-              'تحويل لحساب بنكي',
-              'bank_transfer',
-              Icons.account_balance,
-            ),
-            _buildPaymentOption(
-              'الدفع عبر المحفظة',
-              'wallet',
-              Icons.account_balance_wallet,
-            ),
+            _buildPaymentOption(context, 'الدفع كاش', 'cash', Icons.money),
+            _buildPaymentOption(context, 'تحويل لحساب بنكي', 'bank_transfer', Icons.account_balance),
+            _buildPaymentOption(context, 'الدفع عبر المحفظة', 'wallet', Icons.account_balance_wallet),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: AppSpacing.xl),
 
-            const Text(
+            Text(
               'كوبون الخصم',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.xs),
 
             Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey.shade200),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.02),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
+              padding: const EdgeInsets.all(AppSpacing.md),
+              decoration: AppStyles.surface(context),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -512,65 +490,43 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           controller: _couponController,
                           decoration: InputDecoration(
                             hintText: 'أدخل كود الخصم (مثال: WELCOME30)',
-                            hintStyle: TextStyle(
-                              color: Colors.grey.shade400,
-                              fontSize: 13,
-                            ),
+                            hintStyle: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
                             contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 12,
+                              horizontal: AppSpacing.sm,
+                              vertical: AppSpacing.sm,
                             ),
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide:
-                                  BorderSide(color: Colors.grey.shade300),
+                              borderRadius: AppRadius.button,
+                              borderSide: BorderSide(color: theme.colorScheme.onSurface.withValues(alpha: 0.2)),
                             ),
                             focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide:
-                                  const BorderSide(color: AppColors.primary),
+                              borderRadius: AppRadius.button,
+                              borderSide: BorderSide(color: theme.colorScheme.primary),
                             ),
                           ),
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: AppSpacing.xs),
                       ElevatedButton(
                         onPressed: _applyCouponCode,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 12,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        child: const Text(
-                          'تطبيق',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                        child: const Text('تطبيق'),
                       ),
                     ],
                   ),
 
                   if (_couponErrorMessage != null) ...[
-                    const SizedBox(height: 8),
+                    const SizedBox(height: AppSpacing.xs),
                     Text(
                       _couponErrorMessage!,
-                      style: const TextStyle(
+                      style: theme.textTheme.labelSmall?.copyWith(
                         color: AppColors.error,
-                        fontSize: 12,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                   ],
 
                   if (_isCouponApplied && _appliedCoupon != null) ...[
-                    const SizedBox(height: 8),
+                    const SizedBox(height: AppSpacing.xs),
                     Row(
                       children: [
                         const Icon(
@@ -578,13 +534,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           color: AppColors.success,
                           size: 16,
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: AppSpacing.xs),
                         Expanded(
                           child: Text(
                             'تم تطبيق الكوبون بنجاح: ${_appliedCoupon!['title']} (${_appliedCoupon!['discount']})',
-                            style: const TextStyle(
+                            style: theme.textTheme.labelSmall?.copyWith(
                               color: AppColors.success,
-                              fontSize: 12,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -595,12 +550,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                             padding: EdgeInsets.zero,
                             minimumSize: Size.zero,
                           ),
-                          child: const Text(
+                          child: Text(
                             'إلغاء',
-                            style: TextStyle(
-                              color: AppColors.error,
-                              fontSize: 12,
-                            ),
+                            style: theme.textTheme.labelSmall?.copyWith(color: AppColors.error),
                           ),
                         ),
                       ],
@@ -609,12 +561,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
                   if (_couponEnteredButConditionNotMet &&
                       _appliedCoupon != null) ...[
-                    const SizedBox(height: 8),
+                    const SizedBox(height: AppSpacing.xs),
                     Container(
-                      padding: const EdgeInsets.all(8),
+                      padding: const EdgeInsets.all(AppSpacing.xs),
                       decoration: BoxDecoration(
                         color: AppColors.warning.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: AppRadius.button,
                         border: Border.all(
                           color: AppColors.warning.withValues(alpha: 0.3),
                         ),
@@ -629,12 +581,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                 color: AppColors.warning,
                                 size: 18,
                               ),
-                              const SizedBox(width: 8),
-                              const Text(
+                              const SizedBox(width: AppSpacing.xs),
+                              Text(
                                 'الشرط غير مستوفٍ',
-                                style: TextStyle(
+                                style: theme.textTheme.labelSmall?.copyWith(
                                   color: AppColors.warning,
-                                  fontSize: 12,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -645,12 +596,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                   padding: EdgeInsets.zero,
                                   minimumSize: Size.zero,
                                 ),
-                                child: const Text(
+                                child: Text(
                                   'إلغاء',
-                                  style: TextStyle(
-                                    color: AppColors.error,
-                                    fontSize: 12,
-                                  ),
+                                  style: theme.textTheme.labelSmall?.copyWith(color: AppColors.error),
                                 ),
                               ),
                             ],
@@ -658,9 +606,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           const SizedBox(height: 4),
                           Text(
                             'هذا العرض يتطلب طلباً بقيمة أعلى من ${_appliedCoupon!['minAmount']} ريال لتفعيل الخصم. المبلغ الحالي هو ${totalAmount.toStringAsFixed(0)} ر.ي (لم يتم تطبيق الخصم).',
-                            style: const TextStyle(
-                              color: AppColors.textMain,
-                              fontSize: 11,
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: theme.colorScheme.onSurface,
                             ),
                           ),
                         ],
@@ -671,16 +618,16 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               ),
             ),
 
-            const SizedBox(height: 16),
-            const Divider(),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.xl),
+            Divider(color: theme.colorScheme.onSurface.withValues(alpha: 0.1)),
+            const SizedBox(height: AppSpacing.sm),
 
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
+                Text(
                   'المجموع الكلي:',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 if (_isCouponApplied && _appliedCoupon != null)
                   Column(
@@ -688,24 +635,21 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     children: [
                       Text(
                         '${totalAmount.toStringAsFixed(0)} ر.ي',
-                        style: const TextStyle(
-                          fontSize: 16,
+                        style: theme.textTheme.titleMedium?.copyWith(
                           decoration: TextDecoration.lineThrough,
-                          color: Colors.grey,
+                          color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
                         ),
                       ),
                       Text(
                         '${finalPrice.toStringAsFixed(0)} ر.ي',
-                        style: const TextStyle(
-                          fontSize: 24,
+                        style: theme.textTheme.headlineSmall?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: AppColors.success,
                         ),
                       ),
                       Text(
                         'وفرت ${discountAmount.toStringAsFixed(0)} ر.ي',
-                        style: const TextStyle(
-                          fontSize: 12,
+                        style: theme.textTheme.labelSmall?.copyWith(
                           color: AppColors.success,
                           fontWeight: FontWeight.bold,
                         ),
@@ -715,10 +659,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 else
                   Text(
                     '${totalAmount.toStringAsFixed(0)} ر.ي',
-                    style: const TextStyle(
-                      fontSize: 24,
+                    style: theme.textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.bold,
-                      color: AppColors.primary,
+                      color: theme.colorScheme.primary,
                     ),
                   ),
               ],
@@ -729,24 +672,18 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         ),
       ),
       bottomSheet: Container(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(AppSpacing.md),
         decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, -5),
-            ),
-          ],
+          color: theme.colorScheme.surface,
+          boxShadow: AppShadows.getMd(context),
         ),
         child: SafeArea(
           child: SizedBox(
             width: double.infinity,
+            height: 56,
             child: ElevatedButton(
               onPressed: canCompleteOrder
                   ? () {
-                      // Create details string for the order
                       final orderDetails = itemsToCheckout
                           .map((i) => '${i.serviceName} (${i.selectedType})')
                           .join(', ');
@@ -768,7 +705,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       Provider.of<OrderProvider>(context, listen: false)
                           .addOrder(newOrder);
 
-                      // Clear cart only if this is a cart-based checkout
                       if (widget.directItems == null) {
                         cart.clearCart();
                       }
@@ -782,29 +718,21 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     }
                   : () {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
+                        SnackBar(
+                          content: const Text(
                             'الرجاء التحقق من الموقع واختيار موعد الاستلام لتأكيد الطلب',
                           ),
-                          backgroundColor: AppColors.error,
+                          backgroundColor: theme.colorScheme.error,
                         ),
                       );
                     },
               style: ElevatedButton.styleFrom(
                 backgroundColor:
-                    canCompleteOrder ? AppColors.primary : Colors.grey.shade400,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                    canCompleteOrder ? theme.colorScheme.primary : theme.colorScheme.surfaceContainerHighest,
+                foregroundColor: canCompleteOrder ? theme.colorScheme.onPrimary : theme.colorScheme.onSurfaceVariant,
               ),
-              child: const Text(
-                'تأكيد الطلب',
-                style: TextStyle(
-                  fontSize: 18,
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
+              child: Text(
+                'إتمام الطلب (${finalPrice.toStringAsFixed(0)} ر.ي)',
               ),
             ),
           ),

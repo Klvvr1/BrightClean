@@ -1,8 +1,31 @@
 import 'package:flutter/foundation.dart';
+import '../../../../core/database/database_helper.dart';
 import '../../domain/models/cart_item.dart';
 
 class CartProvider with ChangeNotifier {
-  final List<CartItem> _items = [];
+  List<CartItem> _items = [];
+
+  CartProvider() {
+    _loadCartItems();
+  }
+
+  Future<void> _loadCartItems() async {
+    try {
+      final db = await DatabaseHelper.instance.database;
+      final maps = await db.query('cart_items');
+      _items = maps.map((map) => CartItem(
+        id: map['id'] as String,
+        serviceName: map['serviceName'] as String,
+        selectedType: map['selectedType'] as String,
+        quantity: map['quantity'] as int,
+        pricePerUnit: map['pricePerUnit'] as double,
+        totalPrice: map['totalPrice'] as double,
+      )).toList();
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error loading cart items: $e');
+    }
+  }
 
   List<CartItem> get items => [..._items];
 
@@ -65,16 +88,40 @@ class CartProvider with ChangeNotifier {
         ),
       );
     }
+    
+    // Persist to DB
+    _saveToDb();
     notifyListeners();
+  }
+
+  Future<void> _saveToDb() async {
+    try {
+      final db = await DatabaseHelper.instance.database;
+      await db.delete('cart_items');
+      for (var item in _items) {
+        await db.insert('cart_items', {
+          'id': item.id,
+          'serviceName': item.serviceName,
+          'selectedType': item.selectedType,
+          'quantity': item.quantity,
+          'pricePerUnit': item.pricePerUnit,
+          'totalPrice': item.totalPrice,
+        });
+      }
+    } catch (e) {
+      debugPrint('Error saving cart items: $e');
+    }
   }
 
   void removeItem(String id) {
     _items.removeWhere((item) => item.id == id);
+    _saveToDb();
     notifyListeners();
   }
 
   void clearCart() {
     _items.clear();
+    _saveToDb();
     notifyListeners();
   }
 }

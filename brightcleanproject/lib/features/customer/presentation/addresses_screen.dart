@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/theme/app_styles.dart';
 import 'map_picker_screen.dart';
 
 class AddressesScreen extends StatefulWidget {
@@ -65,10 +66,11 @@ class _AddressesScreenState extends State<AddressesScreen> {
       await _saveAddress(selectedAddress); // Persist!
       
       if (mounted) {
+        final theme = Theme.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('تمت إضافة العنوان بنجاح'),
-            backgroundColor: AppColors.success,
+          SnackBar(
+            content: const Text('تمت إضافة العنوان بنجاح'),
+            backgroundColor: theme.colorScheme.primary,
           ),
         );
       }
@@ -77,7 +79,9 @@ class _AddressesScreenState extends State<AddressesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
+      backgroundColor: theme.colorScheme.surface,
       appBar: AppBar(
         title: const Text('العناوين المحفوظة'),
       ),
@@ -86,32 +90,32 @@ class _AddressesScreenState extends State<AddressesScreen> {
           : (_addresses.isEmpty ? _buildEmptyState() : _buildAddressesList()),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _navigateAndAddNewAddress,
-        backgroundColor: AppColors.primary,
-        icon: const Icon(Icons.add, color: AppColors.white),
-        label: const Text('إضافة عنوان جديد', style: TextStyle(color: AppColors.white)),
+        backgroundColor: theme.colorScheme.primary,
+        icon: Icon(Icons.add, color: theme.colorScheme.onPrimary),
+        label: Text('إضافة عنوان جديد', style: TextStyle(color: theme.colorScheme.onPrimary)),
       ),
     );
   }
 
   Widget _buildEmptyState() {
+    final theme = Theme.of(context);
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.location_off, size: 80, color: AppColors.textLight.withValues(alpha: 0.5)),
-          const SizedBox(height: 16),
-          const Text(
+          Icon(Icons.location_off, size: 80, color: theme.colorScheme.onSurface.withValues(alpha: 0.2)),
+          const SizedBox(height: AppSpacing.md),
+          Text(
             'لا توجد عناوين محفوظة',
-            style: TextStyle(
-              fontSize: 18,
+            style: theme.textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.bold,
-              color: AppColors.textMain,
+              color: theme.colorScheme.onSurface,
             ),
           ),
-          const SizedBox(height: 8),
-          const Text(
+          const SizedBox(height: AppSpacing.sm),
+          Text(
             'قم بإضافة عنوان جديد لتسهيل وصول المندوب إليك',
-            style: TextStyle(color: AppColors.textLight),
+            style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
             textAlign: TextAlign.center,
           ),
         ],
@@ -120,19 +124,19 @@ class _AddressesScreenState extends State<AddressesScreen> {
   }
 
   Widget _buildAddressesList() {
+    final theme = Theme.of(context);
     return ListView.separated(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.all(AppSpacing.md),
       itemCount: _addresses.length,
-      separatorBuilder: (context, index) => const SizedBox(height: 12),
+      separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
       itemBuilder: (context, index) {
-        return Card(
-          elevation: 2,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        return Container(
+          decoration: AppStyles.surface(context),
           child: ListTile(
-            leading: const Icon(Icons.location_on, color: AppColors.primary),
-            title: Text(_addresses[index]),
+            leading: Icon(Icons.location_on, color: theme.colorScheme.primary),
+            title: Text(_addresses[index], style: theme.textTheme.bodyLarge),
             trailing: IconButton(
-              icon: const Icon(Icons.delete_outline, color: AppColors.error),
+              icon: Icon(Icons.delete_outline, color: theme.colorScheme.error),
               onPressed: () => _removeAddress(index), // Remove completely from memory
             ),
           ),

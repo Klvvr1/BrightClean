@@ -6,6 +6,8 @@ import 'package:latlong2/latlong.dart';
 import 'dart:convert';
 import '../../../../core/widgets/custom_text_field.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/theme/app_radius.dart';
 import '../../../../core/widgets/map_picker_screen.dart';
 import '../../../../core/database/database_helper.dart';
 
@@ -21,7 +23,6 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
   final _formKey = GlobalKey<FormState>();
   final ImagePicker _picker = ImagePicker();
 
-  // Controllers
   final TextEditingController _firstNameController = TextEditingController();
   final TextEditingController _fatherNameController = TextEditingController();
   final TextEditingController _grandfatherNameController =
@@ -35,11 +36,9 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
       TextEditingController();
   final TextEditingController _dobController = TextEditingController();
 
-  // الملفات المختارة
   XFile? _commercialRegImage;
   XFile? _idImage;
 
-  // خريطة الخدمات (Checkboxes)
   final Map<String, bool> _availableServices = {
     'ملابس': false,
     'مفارش': false,
@@ -51,12 +50,12 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
     'خزانات': false,
   };
 
-  // بيانات الموقع
   String? _selectedAddress;
   LatLng? _selectedCoordinates;
 
   bool _isTermsAccepted = false;
   bool _hasAttemptedSubmit = false;
+  bool _isSubmitting = false;
 
   @override
   void dispose() {
@@ -73,7 +72,6 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
     super.dispose();
   }
 
-  // دالة اختيار الصورة
   Future<void> _pickImage(bool isCommercial) async {
     try {
       final XFile? image = await _picker.pickImage(
@@ -94,7 +92,6 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
     }
   }
 
-  // دالة اختيار التاريخ
   Future<void> _selectDOB() async {
     final DateTime? pickedDate = await showDatePicker(
       context: context,
@@ -110,7 +107,6 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
     }
   }
 
-  // دالة اختيار الموقع
   Future<void> _selectLocation() async {
     final result = await Navigator.push(
       context,
@@ -124,31 +120,30 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
     }
   }
 
-  // ويدجت رفع المستندات
   Widget _buildFileUploadPlaceholder({
     required String title,
     required XFile? imageFile,
     required VoidCallback onTap,
   }) {
     bool isUploaded = imageFile != null;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
     return GestureDetector(
       onTap: onTap,
       child: Container(
         height: 110,
         width: double.infinity,
-        margin: const EdgeInsets.only(bottom: 16),
+        margin: const EdgeInsets.only(bottom: AppSpacing.md),
         decoration: BoxDecoration(
           color: isUploaded
-              ? (isDark ? AppColors.primary.withValues(alpha: 0.2) : AppColors.primary.withValues(alpha: 0.05))
-              : (isDark ? Colors.grey.shade900 : AppColors.background),
+              ? theme.colorScheme.primary.withValues(alpha: 0.1)
+              : theme.colorScheme.surface,
           border: Border.all(
             color: isUploaded
-                ? AppColors.primary
-                : (isDark ? Colors.grey.shade700 : Colors.grey.shade400),
+                ? theme.colorScheme.primary
+                : theme.colorScheme.onSurface.withValues(alpha: 0.2),
             width: isUploaded ? 2 : 1,
           ),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: AppRadius.button,
           image: isUploaded
               ? DecorationImage(
                   image: FileImage(File(imageFile.path)),
@@ -163,17 +158,17 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
             Icon(
               isUploaded ? Icons.check_circle : Icons.add_a_photo,
               color: isUploaded
-                  ? (isDark ? Colors.greenAccent : AppColors.primary)
-                  : (isDark ? Colors.white70 : AppColors.secondary),
+                  ? AppColors.success
+                  : theme.colorScheme.onSurface.withValues(alpha: 0.4),
               size: 32,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             Text(
               isUploaded ? 'تم اختيار $title بنجاح' : 'رفع $title',
-              style: TextStyle(
+              style: theme.textTheme.bodyMedium?.copyWith(
                 color: isUploaded
-                    ? (isDark ? AppColors.lightBlue : AppColors.primary)
-                    : (isDark ? Colors.white70 : AppColors.secondary),
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.onSurface.withValues(alpha: 0.6),
                 fontWeight: isUploaded ? FontWeight.bold : FontWeight.normal,
               ),
             ),
@@ -183,10 +178,9 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
     );
   }
 
-  // ويدجت خدمة مخصصة (Checkbox System)
   Widget _buildServiceItem(String service) {
     bool isSelected = _availableServices[service] ?? false;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
     return GestureDetector(
       onTap: () {
         setState(() {
@@ -195,27 +189,18 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 250),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 12),
         decoration: BoxDecoration(
           color: isSelected
-              ? (isDark ? AppColors.primary.withValues(alpha: 0.3) : AppColors.primary.withValues(alpha: 0.1))
-              : (isDark ? Colors.grey.shade900 : Colors.white),
-          borderRadius: BorderRadius.circular(12),
+              ? theme.colorScheme.primary.withValues(alpha: 0.1)
+              : theme.colorScheme.surface,
+          borderRadius: AppRadius.button,
           border: Border.all(
             color: isSelected
-                ? AppColors.primary
-                : (isDark ? Colors.grey.shade700 : Colors.grey.shade300),
+                ? theme.colorScheme.primary
+                : theme.colorScheme.onSurface.withValues(alpha: 0.2),
             width: 1.5,
           ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: AppColors.primary.withValues(alpha: 0.1),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : null,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -224,16 +209,16 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
               isSelected ? Icons.check_box : Icons.check_box_outline_blank,
               size: 20,
               color: isSelected
-                  ? (isDark ? Colors.greenAccent : AppColors.primary)
-                  : (isDark ? Colors.white70 : Colors.grey),
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.onSurface.withValues(alpha: 0.4),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: AppSpacing.sm),
             Text(
               service,
-              style: TextStyle(
+              style: theme.textTheme.bodyMedium?.copyWith(
                 color: isSelected
-                    ? (isDark ? AppColors.lightBlue : AppColors.primary)
-                    : (isDark ? Colors.white70 : Colors.black87),
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.onSurface,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               ),
             ),
@@ -242,8 +227,6 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
       ),
     );
   }
-
-  // --- منطق التحقق من البيانات (Validation Logic) ---
 
   String? _validateName(String? value) {
     if (value == null || value.trim().isEmpty) return 'هذا الحقل مطلوب';
@@ -288,7 +271,6 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
   void _submitForm() {
     setState(() => _hasAttemptedSubmit = true);
 
-    // تجميع الخدمات المختارة
     final selectedServices = _availableServices.entries
         .where((e) => e.value)
         .map((e) => e.key)
@@ -298,9 +280,9 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
 
     if (!_isTermsAccepted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('الرجاء الموافقة على الشروط أولاً'),
-          backgroundColor: Colors.red,
+        SnackBar(
+          content: const Text('الرجاء الموافقة على الشروط أولاً'),
+          backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
       return;
@@ -309,9 +291,9 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
     if (_formKey.currentState!.validate()) {
       if (_selectedAddress == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('يرجى تحديد الموقع'),
-            backgroundColor: Colors.red,
+          SnackBar(
+            content: const Text('يرجى تحديد الموقع'),
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
         return;
@@ -319,9 +301,9 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
 
       if (!isServiceSelected) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('يرجى اختيار خدمة واحدة على الأقل'),
-            backgroundColor: Colors.red,
+          SnackBar(
+            content: const Text('يرجى اختيار خدمة واحدة على الأقل'),
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
         return;
@@ -329,22 +311,17 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
 
       if (_commercialRegImage == null || _idImage == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('يرجى رفع السجل التجاري وصورة الهوية'),
-            backgroundColor: Colors.red,
+          SnackBar(
+            content: const Text('يرجى رفع السجل التجاري وصورة الهوية'),
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
         return;
       }
 
-      setState(() => _hasAttemptedSubmit = true); // Using a loading state if needed, but the prompt asked for loading indicators. I'll add a local loading state.
-
       _performRegistration(selectedServices);
     }
   }
-
-
-  bool _isSubmitting = false;
 
   Future<void> _performRegistration(List<String> selectedServices) async {
     setState(() => _isSubmitting = true);
@@ -378,7 +355,7 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('تم تسجيل المغسلة بنجاح!'),
-            backgroundColor: Colors.green,
+            backgroundColor: AppColors.success,
           ),
         );
         if (mounted) {
@@ -390,7 +367,7 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('حدث خطأ أثناء التسجيل: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
@@ -403,7 +380,7 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
@@ -416,13 +393,12 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
           ),
         ),
         body: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
+          padding: const EdgeInsets.all(AppSpacing.xl),
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // الاسم الرباعي
                 Row(
                   children: [
                     Expanded(
@@ -432,7 +408,7 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
                         validator: _validateName,
                       ),
                     ),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: AppSpacing.md),
                     Expanded(
                       child: CustomTextField(
                         controller: _fatherNameController,
@@ -442,7 +418,7 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.md),
                 Row(
                   children: [
                     Expanded(
@@ -452,7 +428,7 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
                         validator: _validateName,
                       ),
                     ),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: AppSpacing.md),
                     Expanded(
                       child: CustomTextField(
                         controller: _lastNameController,
@@ -462,21 +438,20 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.md),
                 CustomTextField(
                   controller: _businessNameController,
                   hintText: 'اسم المغسلة',
                   validator: (v) =>
                       v == null || v.isEmpty ? 'يرجى إدخال اسم المغسلة' : null,
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: AppSpacing.xl),
 
-                // قسم الخدمات التفاعلي
-                const Text(
+                Text(
                   'الخدمات المتوفرة:',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  style: theme.textTheme.titleMedium,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: AppSpacing.sm),
                 Wrap(
                   spacing: 12.0,
                   runSpacing: 12.0,
@@ -486,15 +461,15 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
                 ),
                 if (_hasAttemptedSubmit &&
                     !_availableServices.values.contains(true))
-                  const Padding(
-                    padding: EdgeInsets.only(top: 8),
+                  Padding(
+                    padding: const EdgeInsets.only(top: AppSpacing.xs),
                     child: Text(
                       'يرجى اختيار خدمة واحدة على الأقل',
-                      style: TextStyle(color: Colors.red, fontSize: 12),
+                      style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.error),
                     ),
                   ),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: AppSpacing.xl),
                 CustomTextField(
                   controller: _phoneController,
                   hintText: 'رقم الهاتف',
@@ -502,28 +477,28 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   validator: _validatePhone,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.md),
                 CustomTextField(
                   controller: _emailController,
                   hintText: 'البريد الإلكتروني',
                   keyboardType: TextInputType.emailAddress,
                   validator: _validateEmail,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.md),
                 CustomTextField(
                   controller: _passwordController,
                   hintText: 'كلمة المرور',
                   isPassword: true,
                   validator: _validatePassword,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.md),
                 CustomTextField(
                   controller: _confirmPasswordController,
                   hintText: 'تأكيد كلمة المرور',
                   isPassword: true,
                   validator: _validateConfirmPassword,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.md),
                 GestureDetector(
                   onTap: _selectDOB,
                   child: AbsorbPointer(
@@ -537,9 +512,8 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: AppSpacing.xl),
 
-                // المستندات
                 _buildFileUploadPlaceholder(
                   title: 'السجل التجاري',
                   imageFile: _commercialRegImage,
@@ -551,35 +525,36 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
                   onTap: () => _pickImage(false),
                 ),
 
-                const SizedBox(height: 16),
-                // الموقع
+                const SizedBox(height: AppSpacing.md),
                 GestureDetector(
                   onTap: _selectLocation,
                   child: Container(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(AppSpacing.md),
                     width: double.infinity,
                     decoration: BoxDecoration(
-                      color: isDark ? Colors.grey.shade900 : AppColors.background,
+                      color: theme.colorScheme.surface,
                       border: Border.all(
                         color: _selectedAddress == null
-                            ? (isDark ? Colors.grey.shade700 : Colors.grey.shade300)
-                            : AppColors.primary,
+                            ? theme.colorScheme.onSurface.withValues(alpha: 0.2)
+                            : theme.colorScheme.primary,
                       ),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: AppRadius.button,
                     ),
                     child: Column(
                       children: [
                         Icon(
                           Icons.map,
                           color: _selectedAddress == null
-                              ? (isDark ? Colors.white70 : Colors.grey)
-                              : (isDark ? AppColors.lightBlue : AppColors.primary),
+                              ? theme.colorScheme.onSurface.withValues(alpha: 0.4)
+                              : theme.colorScheme.primary,
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: AppSpacing.sm),
                         Text(
                           _selectedAddress ?? 'حدد الموقع على الخريطة',
-                          style: TextStyle(
-                            color: isDark ? Colors.white : Colors.black87,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: _selectedAddress == null
+                                ? theme.colorScheme.onSurface.withValues(alpha: 0.8)
+                                : theme.colorScheme.onSurface,
                           ),
                           textAlign: TextAlign.center,
                         ),
@@ -588,15 +563,15 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
                   ),
                 ),
                 if (_hasAttemptedSubmit && _selectedAddress == null)
-                  const Padding(
-                    padding: EdgeInsets.only(top: 8, right: 12),
+                  Padding(
+                    padding: const EdgeInsets.only(top: AppSpacing.xs, right: AppSpacing.sm),
                     child: Text(
                       'يرجى تحديد الموقع',
-                      style: TextStyle(color: Colors.red, fontSize: 12),
+                      style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.error),
                     ),
                   ),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: AppSpacing.xl),
                 Row(
                   children: [
                     Checkbox(
@@ -604,10 +579,15 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
                       onChanged: (v) =>
                           setState(() => _isTermsAccepted = v ?? false),
                     ),
-                    const Expanded(child: Text('أوافق على الشروط والأحكام')),
+                    Expanded(
+                      child: Text(
+                        'أوافق على الشروط والأحكام',
+                        style: theme.textTheme.bodyMedium,
+                      ),
+                    ),
                   ],
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: AppSpacing.xl),
                 SizedBox(
                   width: double.infinity,
                   height: 50,

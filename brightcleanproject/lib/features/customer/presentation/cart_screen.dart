@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/theme/app_radius.dart';
+import '../../../../core/theme/app_styles.dart';
 import '../data/providers/cart_provider.dart';
 
 class CartScreen extends StatelessWidget {
@@ -9,8 +11,9 @@ class CartScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: theme.colorScheme.surface,
       appBar: AppBar(
         title: const Text('سلة الخدمات', style: TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: true,
@@ -22,12 +25,15 @@ class CartScreen extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.shopping_basket_outlined, size: 80, color: Colors.grey.shade300),
-                  const SizedBox(height: 16),
-                  const Text('سلتك فارغة حالياً', style: TextStyle(color: Colors.grey, fontSize: 16)),
-                  const SizedBox(height: 24),
+                  Icon(Icons.shopping_basket_outlined, size: 80, color: theme.colorScheme.onSurface.withValues(alpha: 0.2)),
+                  const SizedBox(height: AppSpacing.md),
+                  Text('سلتك فارغة حالياً', style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.5))),
+                  const SizedBox(height: AppSpacing.xl),
                   ElevatedButton(
                     onPressed: () => context.go('/customer_home'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl, vertical: AppSpacing.md),
+                    ),
                     child: const Text('تصفح الخدمات'),
                   ),
                 ],
@@ -39,43 +45,43 @@ class CartScreen extends StatelessWidget {
             children: [
               Expanded(
                 child: ListView.builder(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(AppSpacing.md),
                   itemCount: cart.items.length,
                   itemBuilder: (context, index) {
                     final item = cart.items[index];
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+                      decoration: AppStyles.surface(context),
                       child: Padding(
-                        padding: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.all(AppSpacing.md),
                         child: Row(
                           children: [
                             Container(
-                              padding: const EdgeInsets.all(10),
+                              padding: const EdgeInsets.all(AppSpacing.sm),
                               decoration: BoxDecoration(
-                                color: AppColors.primary.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(8),
+                                color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                                borderRadius: AppRadius.button,
                               ),
-                              child: const Icon(Icons.cleaning_services, color: AppColors.primary),
+                              child: Icon(Icons.cleaning_services, color: theme.colorScheme.primary),
                             ),
-                            const SizedBox(width: 12),
+                            const SizedBox(width: AppSpacing.md),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(item.serviceName, style: const TextStyle(fontWeight: FontWeight.bold)),
-                                  Text(item.selectedType, style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
-                                  const SizedBox(height: 4),
-                                  Text('${item.pricePerUnit} ر.ي × ${item.quantity}', style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w500)),
+                                  Text(item.serviceName, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                                  Text(item.selectedType, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.6))),
+                                  const SizedBox(height: AppSpacing.xs),
+                                  Text('${item.pricePerUnit} ر.ي × ${item.quantity}', style: theme.textTheme.labelLarge?.copyWith(color: theme.colorScheme.primary, fontWeight: FontWeight.w500)),
                                 ],
                               ),
                             ),
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
-                                Text('${item.totalPrice} ر.ي', style: const TextStyle(fontWeight: FontWeight.bold)),
+                                Text('${item.totalPrice} ر.ي', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
                                 IconButton(
-                                  icon: const Icon(Icons.delete_outline, color: Colors.red),
+                                  icon: Icon(Icons.delete_outline, color: theme.colorScheme.error),
                                   onPressed: () => cart.removeItem(item.id),
                                 ),
                               ],
@@ -88,38 +94,37 @@ class CartScreen extends StatelessWidget {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(AppSpacing.xl),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: theme.colorScheme.surface,
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
                   boxShadow: [
                     BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, -5)),
                   ],
                 ),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text('الإجمالي', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                        Text('${cart.totalAmount} ر.ي', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primary)),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () => context.push('/checkout'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                        child: const Text('الانتقال للدفع', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                child: SafeArea(
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('الإجمالي', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+                          Text('${cart.totalAmount} ر.ي', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.primary)),
+                        ],
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: AppSpacing.xl),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () => context.push('/checkout'),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                          ),
+                          child: const Text('الانتقال للدفع', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],

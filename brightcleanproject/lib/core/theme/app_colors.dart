@@ -12,4 +12,8 @@ class AppColors {
   static const Color textMain = Color(0xFF1E293B);
   static const Color textLight = Color(0xFF64748B);
   static const Color white = Colors.white;
+
+  // Dark Mode specific colors (Premium Fintech look)
+  static const Color darkBackground = Color(0xFF0F172A); // Slate 900
+  static const Color darkSurface = Color(0xFF1E293B);    // Slate 800
 }

@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'dart:async';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/theme/app_radius.dart';
+import '../../../../core/theme/app_shadows.dart';
+import '../../../../core/theme/app_styles.dart';
 import 'service_details_screen.dart';
 import 'package:provider/provider.dart';
 import '../data/providers/review_provider.dart';
@@ -41,7 +45,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     {
       'title': 'باقة التوفير',
       'subtitle': 'خصم خاص للاشتراكات الشهرية',
-      'color': Colors.teal,
+      'color': AppColors.secondary, // Avoided hardcoded Colors.teal
     },
   ];
 
@@ -67,25 +71,25 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     {
       'title': 'تنظيف المكيفات',
       'icon': Icons.ac_unit,
-      'color': Colors.teal,
+      'color': AppColors.primary, // Avoided hardcoded teal
       'subtitle': 'غسيل وتطهير فلاتر ووحدات المكيف لزيادة الكفاءة'
     },
     {
       'title': 'عاملات النظافة',
       'icon': Icons.cleaning_services,
-      'color': Colors.pink,
+      'color': AppColors.secondary, // Avoided hardcoded pink
       'subtitle': 'عاملات نظافة محترفات ومدربات بنظام الساعات'
     },
     {
       'title': 'تنظيف الخزانات',
       'icon': Icons.water_drop,
-      'color': Colors.blueAccent,
+      'color': AppColors.tertiary, // Avoided hardcoded blueAccent
       'subtitle': 'تعقيم وغسيل الخزانات العلوية والسفلية لحمايتكم'
     },
     {
       'title': 'غسيل الألواح الشمسية',
       'icon': Icons.solar_power,
-      'color': Colors.orange,
+      'color': AppColors.primary, // Avoided hardcoded orange
       'subtitle': 'تنظيف دوري بمواد خاصة لزيادة كفاءة الألواح'
     },
   ];
@@ -121,7 +125,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
       }
     });
 
-    // Auto-scroll the reviews banner every 4 seconds (slower to allow reading text)
+    // Auto-scroll the reviews banner every 4 seconds
     _reviewsTimer = Timer.periodic(const Duration(seconds: 4), (Timer timer) {
       if (_reviewsPageController.hasClients) {
         final reviewProvider = Provider.of<ReviewProvider>(context, listen: false);
@@ -152,9 +156,11 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   }
 
   Widget _buildCategoryCard(BuildContext context, String title, IconData icon, Color color, {bool isSearch = false}) {
+    final theme = Theme.of(context);
+    
     return Container(
-      width: isSearch ? null : 120, // null width to fill grid if searching
-      margin: EdgeInsets.only(left: isSearch ? 0 : 16),
+      width: isSearch ? null : 120,
+      margin: EdgeInsets.only(left: isSearch ? 0 : AppSpacing.md),
       child: GestureDetector(
         onTap: () {
           Navigator.push(
@@ -164,19 +170,18 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
             ),
           );
         },
-        child: Card(
-          elevation: 2,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Container(
+          decoration: AppStyles.surface(context),
           child: Padding(
-            padding: const EdgeInsets.all(12.0),
+            padding: const EdgeInsets.all(AppSpacing.md),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(icon, size: 40, color: color),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.sm),
                 Text(
                   title,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                  style: theme.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.bold),
                   textAlign: TextAlign.center,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -189,34 +194,30 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     );
   }
 
-  Widget _buildOfferCard(String title, String subtitle, Color bgColor, {bool isCarousel = false}) {
+  Widget _buildOfferCard(BuildContext context, String title, String subtitle, Color bgColor, {bool isCarousel = false}) {
+    final theme = Theme.of(context);
+    
     return Container(
       width: isCarousel ? null : 280,
       margin: EdgeInsets.only(
-        left: isCarousel ? 6 : 16,
-        right: isCarousel ? 6 : 0,
+        left: isCarousel ? AppSpacing.sm : AppSpacing.md,
+        right: isCarousel ? AppSpacing.sm : 0,
       ),
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: bgColor.withValues(alpha: 0.4),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          )
-        ]
+        borderRadius: AppRadius.card,
+        boxShadow: AppShadows.getMd(context),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(title, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
+          Text(title, style: theme.textTheme.titleLarge?.copyWith(color: AppColors.white)),
+          const SizedBox(height: AppSpacing.sm),
           Text(
             subtitle, 
-            style: const TextStyle(color: Colors.white70, fontSize: 14),
+            style: theme.textTheme.bodyMedium?.copyWith(color: AppColors.white.withValues(alpha: 0.8)),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
@@ -226,29 +227,14 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   }
 
   Widget _buildVerticalCategoryCard(BuildContext context, Map<String, dynamic> cat) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardBg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
-    final borderCol = isDark ? Colors.white12 : Colors.grey.shade100;
-    final textCol = isDark ? Colors.white : AppColors.textMain;
-    final subtitleCol = isDark ? Colors.white70 : AppColors.textLight;
+    final theme = Theme.of(context);
     final Color catColor = cat['color'] as Color;
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      decoration: BoxDecoration(
-        color: cardBg,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: borderCol, width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs),
+      decoration: AppStyles.surface(context),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: AppRadius.card,
         child: Material(
           color: Colors.transparent,
           child: InkWell(
@@ -261,24 +247,17 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
               );
             },
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.md),
               child: Row(
                 children: [
                   Container(
                     width: 52,
                     height: 52,
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          catColor.withValues(alpha: 0.15),
-                          catColor.withValues(alpha: 0.05),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(14),
+                      color: catColor.withValues(alpha: 0.1),
+                      borderRadius: AppRadius.button,
                       border: Border.all(
-                        color: catColor.withValues(alpha: 0.25),
+                        color: catColor.withValues(alpha: 0.2),
                         width: 1,
                       ),
                     ),
@@ -288,25 +267,20 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                       color: catColor,
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: AppSpacing.md),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           cat['title'] as String,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: textCol,
-                          ),
+                          style: theme.textTheme.titleMedium,
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: AppSpacing.xs),
                         Text(
                           cat['subtitle'] as String,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: subtitleCol,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -314,17 +288,17 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                       ],
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: AppSpacing.sm),
                   Container(
-                    padding: const EdgeInsets.all(6),
+                    padding: const EdgeInsets.all(AppSpacing.xs),
                     decoration: BoxDecoration(
-                      color: isDark ? Colors.white10 : Colors.grey.shade50,
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.05),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
                       Icons.arrow_forward_ios,
                       size: 14,
-                      color: isDark ? Colors.white54 : Colors.grey.shade400,
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
                     ),
                   ),
                 ],
@@ -338,21 +312,18 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF121212) : AppColors.background,
       appBar: AppBar(
-        title: const Text('برايت كلين', style: TextStyle(fontWeight: FontWeight.bold)),
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        foregroundColor: isDark ? Colors.white : AppColors.primary,
+        title: Text('برايت كلين', style: theme.textTheme.headlineSmall),
         actions: [
           IconButton(icon: const Icon(Icons.notifications_none), onPressed: () => context.push('/notifications')),
           Consumer<CartProvider>(
             builder: (context, cart, child) => Badge(
               label: Text(cart.itemCount.toString()),
               isLabelVisible: cart.itemCount > 0,
-              backgroundColor: Colors.red,
+              backgroundColor: AppColors.error,
               child: IconButton(
                 icon: const Icon(Icons.shopping_cart_outlined),
                 onPressed: () => context.push('/cart'),
@@ -367,28 +338,27 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
           children: [
             // Search Bar
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: _isSearching ? AppColors.primary.withValues(alpha: 0.2) : Colors.black.withValues(alpha: 0.05),
-                      blurRadius: _isSearching ? 8 : 4,
-                      spreadRadius: _isSearching ? 2 : 0,
-                    ),
-                  ],
+                  color: theme.colorScheme.surface,
+                  borderRadius: AppRadius.input,
+                  border: Border.all(
+                    color: _isSearching ? theme.colorScheme.primary : theme.colorScheme.onSurface.withValues(alpha: 0.1),
+                    width: _isSearching ? 1.5 : 1,
+                  ),
+                  boxShadow: _isSearching ? AppShadows.getSm(context) : null,
                 ),
                 child: TextField(
                   controller: _searchController,
+                  style: theme.textTheme.bodyLarge,
                   decoration: InputDecoration(
                     hintText: 'ابحث عن خدمات...',
-                    prefixIcon: Icon(Icons.search, color: _isSearching ? AppColors.primary : Colors.grey),
+                    prefixIcon: Icon(Icons.search, color: _isSearching ? theme.colorScheme.primary : theme.colorScheme.onSurface.withValues(alpha: 0.4)),
                     suffixIcon: _isSearching
                         ? IconButton(
-                            icon: const Icon(Icons.clear, color: Colors.grey),
+                            icon: Icon(Icons.clear, color: theme.colorScheme.onSurface.withValues(alpha: 0.4)),
                             onPressed: () {
                               _searchController.clear();
                               FocusScope.of(context).unfocus();
@@ -396,35 +366,37 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                           )
                         : null,
                     border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
                     contentPadding: const EdgeInsets.symmetric(vertical: 14),
                   ),
                 ),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: AppSpacing.lg),
             
             if (_isSearching) ...[
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16.0),
-                child: Text('نتائج البحث', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                child: Text('نتائج البحث', style: theme.textTheme.titleLarge),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.md),
               if (_filteredCategories.isEmpty)
-                const Center(
+                Center(
                   child: Padding(
-                    padding: EdgeInsets.all(32.0),
-                    child: Text('لا توجد نتائج تطابق بحثك', style: TextStyle(color: Colors.grey)),
+                    padding: const EdgeInsets.all(AppSpacing.xl),
+                    child: Text('لا توجد نتائج تطابق بحثك', style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey)),
                   ),
                 )
               else
                 GridView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
+                    crossAxisSpacing: AppSpacing.md,
+                    mainAxisSpacing: AppSpacing.md,
                     childAspectRatio: 1.1,
                   ),
                   itemCount: _filteredCategories.length,
@@ -435,11 +407,11 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                 ),
             ] else ...[
             // Offers Carousel (Auto-scrolling Horizontal View)
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.0),
-              child: Text('العروض الترويجية', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+              child: Text('العروض الترويجية', style: theme.textTheme.titleLarge),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.md),
             SizedBox(
               height: 150,
               child: ScrollConfiguration(
@@ -458,6 +430,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                   itemBuilder: (context, index) {
                     final offer = _offers[index];
                     return _buildOfferCard(
+                      context,
                       offer['title'] as String,
                       offer['subtitle'] as String,
                       offer['color'] as Color,
@@ -467,14 +440,14 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: AppSpacing.xl),
 
             // Categories (Vertical Scroll)
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.0),
-              child: Text('الخدمات المتاحة', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+              child: Text('الخدمات المتاحة', style: theme.textTheme.titleLarge),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             ListView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -484,14 +457,14 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                 return _buildVerticalCategoryCard(context, cat);
               },
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: AppSpacing.xl),
 
             // Reviews Carousel (Auto-scrolling Horizontal View)
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.0),
-              child: Text('آراء العملاء', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+              child: Text('آراء العملاء', style: theme.textTheme.titleLarge),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.md),
             Consumer<ReviewProvider>(
               builder: (context, reviewProvider, child) {
                 final reviews = reviewProvider.reviews;
@@ -517,20 +490,9 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                         final displayRating = review.serviceRating ?? review.rating;
                         
                         return Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 6),
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: isDark ? Colors.white12 : Colors.grey.shade100),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.03),
-                                blurRadius: 8,
-                                offset: const Offset(0, 4),
-                              )
-                            ]
-                          ),
+                          margin: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+                          padding: const EdgeInsets.all(AppSpacing.md),
+                          decoration: AppStyles.surface(context),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -542,25 +504,27 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                                     backgroundColor: AppColors.lightBlue,
                                     child: Icon(Icons.person, color: AppColors.primary, size: 20),
                                   ),
-                                  const SizedBox(width: 8),
-                                  Text(review.userName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                  const SizedBox(width: AppSpacing.sm),
+                                  Text(review.userName, style: theme.textTheme.labelLarge),
                                   const Spacer(),
                                   ...List.generate(5, (starIdx) {
                                     if ((starIdx + 1) <= displayRating) {
-                                      return const Icon(Icons.star, color: Colors.amber, size: 14);
+                                      return const Icon(Icons.star, color: AppColors.warning, size: 14);
                                     } else if (displayRating > starIdx && displayRating < (starIdx + 1)) {
-                                      return const Icon(Icons.star_half, color: Colors.amber, size: 14);
+                                      return const Icon(Icons.star_half, color: AppColors.warning, size: 14);
                                     } else {
                                       return Icon(Icons.star, color: Colors.grey.shade300, size: 14);
                                     }
                                   }),
                                 ],
                               ),
-                              const SizedBox(height: 10),
+                              const SizedBox(height: AppSpacing.sm),
                               Expanded(
                                 child: Text(
                                   review.comment, 
-                                  style: TextStyle(color: isDark ? Colors.white70 : Colors.black87, fontSize: 12),
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
+                                  ),
                                   maxLines: 3,
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -574,11 +538,11 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                 );
               },
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: AppSpacing.xxl),
           ],
         ],
       ),
     ),
-    );
-  }
+  );
+}
 }

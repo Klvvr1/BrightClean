@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:brightcleanproject/core/theme/app_spacing.dart';
+
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/theme/app_colors.dart';
@@ -149,7 +151,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                   ),
                 ),
               ),
-              const SizedBox(width: 20),
+              const SizedBox(width: AppSpacing.lg),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -211,7 +213,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                         ],
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: AppSpacing.xs),
                     Text(
                       isAr
                           ? (_isOnline ? 'نشط' : 'غير نشط')
@@ -271,7 +273,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                           color: isDark
                               ? Colors.white12
                               : Colors.grey.withValues(alpha: 0.2)),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: AppSpacing.md),
                       Text(
                         isAr
                             ? 'قم بتفعيل وضع العمل للبدء'
@@ -351,7 +353,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                       color: isDark
                           ? Colors.white
                           : Colors.grey.withValues(alpha: 0.2)),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppSpacing.md),
                   Text(
                     isAr
                         ? 'لا توجد طلبات متاحة حالياً'
@@ -362,7 +364,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                         color: isDark ? Colors.white : Colors.grey,
                         fontWeight: FontWeight.w500),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppSpacing.xs),
                   Text(
                     isAr ? 'اسحب للأسفل للتحديث' : 'Pull down to refresh',
                     textAlign: TextAlign.center,
@@ -386,7 +388,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         children: [
           _buildEarningsCard(),
-          const SizedBox(height: 24),
+          const SizedBox(height: AppSpacing.xl),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4),
             child: Text(
@@ -397,7 +399,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                   color: isDark ? Colors.white : Colors.black87),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.md),
           ...availableOrdersWidgets,
         ],
       ),
@@ -437,7 +439,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                       fontSize: 16,
                       fontWeight: FontWeight.w500),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.xs),
                 Text(
                   isAr ? '120.50 ر.ي' : '120.50 YER',
                   style: const TextStyle(
@@ -448,7 +450,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
               ],
             ),
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(AppSpacing.md),
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(15),
@@ -512,7 +514,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: AppSpacing.xs),
                     // Order Type Badge
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -530,7 +532,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: AppSpacing.xs),
                     Text('${isAr ? 'طلب' : 'Order'} #$orderId',
                         style: TextStyle(
                             fontWeight: FontWeight.bold,
@@ -550,7 +552,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                 Icon(Icons.trip_origin,
                     size: 16,
                     color: isDark ? Colors.white : theme.colorScheme.primary),
-                const SizedBox(width: 12),
+                const SizedBox(width: AppSpacing.sm),
                 Expanded(
                     child: Text('${isAr ? 'من:' : 'From:'} $from',
                         style: TextStyle(
@@ -558,13 +560,13 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                             color: isDark ? Colors.white : Colors.black87))),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.xs),
             Row(
               children: [
                 Icon(Icons.location_on,
                     size: 16,
                     color: isDark ? Colors.white : AppColors.secondary),
-                const SizedBox(width: 12),
+                const SizedBox(width: AppSpacing.sm),
                 Expanded(
                     child: Text('${isAr ? 'إلى:' : 'To:'} $to',
                         style: TextStyle(
@@ -573,7 +575,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
               ],
             ),
             if (!isCompleted) ...[
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.md),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -591,7 +593,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
               ),
             ],
             if (isCompleted) ...[
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.md),
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 8),
@@ -664,13 +666,13 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                 // Current Orders (Not completed)
                 ListView(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(AppSpacing.md),
                   children: currentOrdersWidgets,
                 ),
                 // Previous Orders (Completed)
                 ListView(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(AppSpacing.md),
                   children: [
                     if (_completedTasks['1026'] == true)
                       _buildOrderCard(
@@ -718,7 +720,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
     final isDark = theme.brightness == Brightness.dark;
 
     return ListView(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       children: [
         // Profile Header
         Center(
@@ -737,7 +739,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                     size: 60,
                     color: isDark ? Colors.white : theme.colorScheme.primary),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.md),
               Text(
                 _userName,
                 style: TextStyle(
@@ -796,7 +798,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: theme.cardColor,
         borderRadius: BorderRadius.circular(12),
@@ -811,7 +813,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
       child: Row(
         children: [
           Icon(icon, color: isDark ? Colors.white : theme.colorScheme.primary),
-          const SizedBox(width: 16),
+          const SizedBox(width: AppSpacing.md),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -916,7 +918,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                           );
                         },
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: AppSpacing.xs),
                       ValueListenableBuilder<ThemeMode>(
                         valueListenable: ThemeController().themeMode,
                         builder: (context, themeMode, _) {

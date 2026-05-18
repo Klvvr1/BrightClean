@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:brightcleanproject/core/theme/app_spacing.dart';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -204,7 +206,7 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
                             ),
                             onPressed: () => ThemeController().toggleTheme(),
                             constraints: const BoxConstraints(),
-                            padding: const EdgeInsets.all(8),
+                            padding: const EdgeInsets.all(AppSpacing.xs),
                             style: IconButton.styleFrom(
                               backgroundColor: Colors.white.withValues(alpha: 0.15),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -274,7 +276,7 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
           Expanded(
             flex: 3,
             child: Container(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(AppSpacing.lg),
               decoration: BoxDecoration(
                 color: theme.cardColor,
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
@@ -319,7 +321,7 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
                           icon: const Icon(Icons.message),
                           style: IconButton.styleFrom(backgroundColor: AppColors.primary),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: AppSpacing.xs),
                         IconButton.filled(
                           onPressed: () => _makePhoneCall(_customerPhone),
                           icon: const Icon(Icons.call),
@@ -340,7 +342,7 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
                     fontSize: 16,
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.md),
                 
                 // Order Items
                 Text(
@@ -350,7 +352,7 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
                     color: isDark ? Colors.white : Colors.black87,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.xs),
                 SizedBox(
                   height: 60,
                   child: ListView.builder(
@@ -369,7 +371,7 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
                         child: Row(
                           children: [
                             Icon(item['icon'] as IconData, size: 18, color: isDark ? Colors.white : AppColors.primary),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: AppSpacing.xs),
                             Text(
                               '${item['count']} x ${isAr ? item['nameAr'] : item['nameEn']}',
                               style: TextStyle(
@@ -384,7 +386,7 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
                   ),
                 ),
                 
-                const SizedBox(height: 24),
+                const SizedBox(height: AppSpacing.xl),
                 
                 // Status Selection Label
                 Text(
@@ -394,7 +396,7 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
                     color: isDark ? Colors.white : Colors.black87,
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: AppSpacing.sm),
 
                 // Status Dropdown
                 Container(
@@ -431,7 +433,7 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
                   ),
                 ),
                 
-                const SizedBox(height: 24),
+                const SizedBox(height: AppSpacing.xl),
                 
                 // Finish Task Button (Only shows when on the last step)
                 if (_currentStep == currentStatuses.length - 1)

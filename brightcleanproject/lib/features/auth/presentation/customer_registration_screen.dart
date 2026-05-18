@@ -5,6 +5,8 @@ import 'package:latlong2/latlong.dart';
 import 'package:flutter/foundation.dart';
 import '../../../../core/widgets/custom_text_field.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/theme/app_radius.dart';
 import '../../../../core/database/database_helper.dart';
 import '../../../../core/widgets/map_picker_screen.dart';
 
@@ -18,7 +20,6 @@ class CustomerRegistrationScreen extends StatefulWidget {
 
 class _CustomerRegistrationScreenState
     extends State<CustomerRegistrationScreen> {
-  // 1. Form Infrastructure
   final _formKey = GlobalKey<FormState>();
 
   final _firstNameController = TextEditingController();
@@ -48,7 +49,6 @@ class _CustomerRegistrationScreenState
     super.dispose();
   }
 
-  // Pick Date of Birth
   Future<void> _selectDOB() async {
     final DateTime? pickedDate = await showDatePicker(
       context: context,
@@ -65,7 +65,6 @@ class _CustomerRegistrationScreenState
     }
   }
 
-  // Map Location Integration
   Future<void> _selectLocation() async {
     final result = await Navigator.push(
       context,
@@ -80,16 +79,14 @@ class _CustomerRegistrationScreenState
     }
   }
 
-  // Submit Form Handling
   Future<void> _submitForm() async {
     setState(() => _hasAttemptedSubmit = true);
 
-    // 4. Strict Validation for Terms & Conditions
     if (!_isTermsAccepted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('الرجاء الموافقة على الشروط والأحكام أولاً'),
-          backgroundColor: Colors.red,
+        SnackBar(
+          content: const Text('الرجاء الموافقة على الشروط والأحكام أولاً'),
+          backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
       return;
@@ -97,9 +94,9 @@ class _CustomerRegistrationScreenState
 
     if (_selectedAddress == null || _selectedCoordinates == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('يرجى تحديد موقعك على الخريطة أولاً'),
-          backgroundColor: Colors.red,
+        SnackBar(
+          content: const Text('يرجى تحديد موقعك على الخريطة أولاً'),
+          backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
       return;
@@ -140,7 +137,7 @@ class _CustomerRegistrationScreenState
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('تم التسجيل بنجاح! جاري تحويلك...'),
-              backgroundColor: Colors.green,
+              backgroundColor: AppColors.success,
             ),
           );
           await Future.delayed(const Duration(seconds: 1));
@@ -155,7 +152,10 @@ class _CustomerRegistrationScreenState
               : 'حدث خطأ أثناء التسجيل: $e';
 
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(errorMessage), backgroundColor: Colors.red),
+            SnackBar(
+              content: Text(errorMessage),
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
           );
         }
       } finally {
@@ -168,7 +168,6 @@ class _CustomerRegistrationScreenState
     }
   }
 
-  // Validation Logic
   String? _validateName(String? value) {
     if (value == null || value.trim().isEmpty) {
       return 'الرجاء إدخال هذا الحقل';
@@ -183,15 +182,12 @@ class _CustomerRegistrationScreenState
     if (value == null || value.isEmpty) {
       return 'الرجاء إدخال رقم الهاتف';
     }
-    // Validate exact constraint
     if (value.length > 10) {
       return 'رقم الهاتف يجب ألا يتجاوز 10 أرقام';
     }
-    // Check for any letters
     if (value.contains(RegExp(r'[a-zA-Z]'))) {
       return 'الرجاء إدخال رقم صالح';
     }
-    // Simple regex to validate phone form
     if (!RegExp(r'^[0-9]{9,10}$').hasMatch(value)) {
       return 'الرجاء إدخال رقم هاتف صالح (9 أو 10 أرقام)';
     }
@@ -237,14 +233,15 @@ class _CustomerRegistrationScreenState
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    
     return Scaffold(
       appBar: AppBar(title: const Text('تسجيل عميل جديد')),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 600),
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
+            padding: const EdgeInsets.all(AppSpacing.xl),
             child: Form(
               key: _formKey,
               child: Column(
@@ -260,7 +257,7 @@ class _CustomerRegistrationScreenState
                           validator: _validateName,
                         ),
                       ),
-                      const SizedBox(width: 16),
+                      const SizedBox(width: AppSpacing.md),
                       Expanded(
                         child: CustomTextField(
                           controller: _lastNameController,
@@ -270,7 +267,7 @@ class _CustomerRegistrationScreenState
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppSpacing.md),
                   CustomTextField(
                     controller: _phoneController,
                     hintText: 'رقم الهاتف',
@@ -281,29 +278,28 @@ class _CustomerRegistrationScreenState
                     ],
                     validator: _validatePhone,
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppSpacing.md),
                   CustomTextField(
                     controller: _emailController,
                     hintText: 'البريد الإلكتروني',
                     keyboardType: TextInputType.emailAddress,
                     validator: _validateEmail,
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppSpacing.md),
                   CustomTextField(
                     controller: _passwordController,
                     hintText: 'كلمة المرور',
                     isPassword: true,
                     validator: _validatePassword,
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppSpacing.md),
                   CustomTextField(
                     controller: _confirmPasswordController,
                     hintText: 'تأكيد كلمة المرور',
                     isPassword: true,
                     validator: _validateConfirmPassword,
                   ),
-                  const SizedBox(height: 16),
-                  // Gender Dropdown
+                  const SizedBox(height: AppSpacing.md),
                   DropdownButtonFormField<String>(
                     decoration: const InputDecoration(hintText: 'الجنس'),
                     initialValue: _selectedGender,
@@ -319,8 +315,7 @@ class _CustomerRegistrationScreenState
                     validator: (value) =>
                         value == null ? 'الرجاء اختيار الجنس' : null,
                   ),
-                  const SizedBox(height: 16),
-                  // DOB Picker (Read-only for typing, triggers picker on tap)
+                  const SizedBox(height: AppSpacing.md),
                   GestureDetector(
                     onTap: _selectDOB,
                     child: AbsorbPointer(
@@ -334,21 +329,20 @@ class _CustomerRegistrationScreenState
                       ),
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  // Map Location Integration
+                  const SizedBox(height: AppSpacing.md),
                   GestureDetector(
                     onTap: _selectLocation,
                     child: Container(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(AppSpacing.md),
                       width: double.infinity,
                       decoration: BoxDecoration(
-                        color: isDark ? Colors.grey.shade900 : AppColors.background,
+                        color: theme.colorScheme.surface,
                         border: Border.all(
                           color: _selectedAddress == null
-                              ? (isDark ? Colors.grey.shade700 : Colors.grey.shade300)
-                              : AppColors.primary,
+                              ? theme.colorScheme.onSurface.withValues(alpha: 0.2)
+                              : theme.colorScheme.primary,
                         ),
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: AppRadius.button,
                       ),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -357,18 +351,17 @@ class _CustomerRegistrationScreenState
                             Icons.map,
                             size: 40,
                             color: _selectedAddress == null
-                                ? (isDark ? Colors.white70 : Colors.grey)
-                                : (isDark ? AppColors.lightBlue : AppColors.primary),
+                                ? theme.colorScheme.onSurface.withValues(alpha: 0.4)
+                                : theme.colorScheme.primary,
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: AppSpacing.sm),
                           Text(
-                            _selectedAddress ??
-                                'اضغط لتحديد العنوان على الخريطة',
+                            _selectedAddress ?? 'اضغط لتحديد العنوان على الخريطة',
                             textAlign: TextAlign.center,
-                            style: TextStyle(
+                            style: theme.textTheme.bodyMedium?.copyWith(
                               color: _selectedAddress == null
-                                  ? (isDark ? Colors.white70 : Colors.grey)
-                                  : (isDark ? AppColors.lightBlue : AppColors.primary),
+                                  ? theme.colorScheme.onSurface.withValues(alpha: 0.6)
+                                  : theme.colorScheme.primary,
                               fontWeight: _selectedAddress == null
                                   ? FontWeight.normal
                                   : FontWeight.bold,
@@ -379,15 +372,14 @@ class _CustomerRegistrationScreenState
                     ),
                   ),
                   if (_hasAttemptedSubmit && _selectedAddress == null)
-                    const Padding(
-                      padding: EdgeInsets.only(top: 8, right: 12),
+                    Padding(
+                      padding: const EdgeInsets.only(top: AppSpacing.xs, right: AppSpacing.md),
                       child: Text(
                         'الرجاء تحديد الموقع',
-                        style: TextStyle(color: Colors.red, fontSize: 12),
+                        style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.error),
                       ),
                     ),
-                  const SizedBox(height: 16),
-                  // T&C
+                  const SizedBox(height: AppSpacing.md),
                   Row(
                     children: [
                       Checkbox(
@@ -398,10 +390,15 @@ class _CustomerRegistrationScreenState
                           });
                         },
                       ),
-                      const Expanded(child: Text('أوافق على الشروط والأحكام')),
+                      Expanded(
+                        child: Text(
+                          'أوافق على الشروط والأحكام',
+                          style: theme.textTheme.bodyMedium,
+                        ),
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: AppSpacing.xl),
                   SizedBox(
                     height: 50,
                     child: ElevatedButton(
@@ -412,7 +409,7 @@ class _CustomerRegistrationScreenState
                                 color: Colors.white,
                               ),
                             )
-                          : const Text('تسجيل', style: TextStyle(fontSize: 16)),
+                          : const Text('تسجيل'),
                     ),
                   ),
                 ],

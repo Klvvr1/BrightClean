@@ -4,6 +4,8 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/theme/app_styles.dart';
 import '../../../../core/widgets/custom_text_field.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
@@ -506,25 +508,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Widget _buildRevenueChart() {
     return Container(
       height: 250,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: AppStyles.surface(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text('نمو الإيرادات (أسبوعي)',
               style: TextStyle(
                   fontWeight: FontWeight.bold, color: AppColors.primary)),
-          const SizedBox(height: 20),
+          const SizedBox(height: AppSpacing.lg),
           Expanded(
             child: LineChart(
               LineChartData(
@@ -561,7 +553,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: AppColors.primary)),
-        const SizedBox(height: 12),
+        const SizedBox(height: AppSpacing.sm),
         SizedBox(
           height: 120,
           child: ListView.builder(
@@ -571,13 +563,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               final order = _liveOrders[index];
               return Container(
                 width: 200,
-                margin: const EdgeInsets.only(left: 12),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.white,
-                  borderRadius: BorderRadius.circular(15),
-                  border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
-                ),
+                margin: const EdgeInsets.only(left: AppSpacing.sm),
+                padding: const EdgeInsets.all(AppSpacing.sm),
+                decoration: AppStyles.surface(context),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -640,31 +628,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         );
       },
       child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Theme.of(context).cardColor,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: color.withValues(alpha: 0.1),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
+        padding: const EdgeInsets.all(AppSpacing.md),
+        decoration: AppStyles.surface(context).copyWith(
           border: Border.all(color: color.withValues(alpha: 0.1), width: 1),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(AppSpacing.sm),
               decoration: BoxDecoration(
                 color: color.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(icon, color: color, size: 28),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.sm),
             Text(
               title,
               style: TextStyle(
@@ -706,7 +685,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         _staffMembers.where((s) => s['type'] == 'مغسلة').length;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -717,9 +696,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 fontWeight: FontWeight.bold,
                 color: AppColors.primary),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: AppSpacing.lg),
           _buildRevenueChart(),
-          const SizedBox(height: 24),
+          const SizedBox(height: AppSpacing.xl),
           GridView.count(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -758,9 +737,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: AppSpacing.xl),
           _buildLiveOrdersSection(),
-          const SizedBox(height: 24),
+          const SizedBox(height: AppSpacing.xl),
           const Text(
             'الطلبات الأخيرة',
             style: TextStyle(
@@ -768,19 +747,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 fontWeight: FontWeight.bold,
                 color: AppColors.primary),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.sm),
           // Placeholder for recent orders list
           ListView.separated(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: 3,
-            separatorBuilder: (context, index) => const SizedBox(height: 12),
+            separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
             itemBuilder: (context, index) => Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.white,
-                borderRadius: BorderRadius.circular(15),
-              ),
+              padding: const EdgeInsets.all(AppSpacing.md),
+              decoration: AppStyles.surface(context),
               child: Row(
                 children: [
                   CircleAvatar(
@@ -788,7 +764,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     child: const Icon(Icons.receipt_long,
                         color: AppColors.primary),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: AppSpacing.md),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -810,9 +786,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: AppSpacing.xl),
           _buildOperationControlPanel(),
-          const SizedBox(height: 24),
+          const SizedBox(height: AppSpacing.xl),
           _buildAdminActivitiesSection(),
         ],
       ),
@@ -840,15 +816,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               ),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: AppSpacing.sm),
         if (_adminActivities.isEmpty)
           Container(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(AppSpacing.lg),
             width: double.infinity,
-            decoration: BoxDecoration(
-              color: AppColors.white,
-              borderRadius: BorderRadius.circular(15),
-            ),
+            decoration: AppStyles.surface(context),
             child: const Center(
               child: Text(
                 'لا توجد عمليات مسجلة حالياً',
@@ -861,14 +834,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: _adminActivities.take(5).length,
-            separatorBuilder: (context, index) => const SizedBox(height: 12),
+            separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
             itemBuilder: (context, index) {
               final activity = _adminActivities[index];
               return Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.white,
-                  borderRadius: BorderRadius.circular(15),
+                padding: const EdgeInsets.all(AppSpacing.sm),
+                decoration: AppStyles.surface(context).copyWith(
                   border: Border.all(color: Colors.grey.shade100),
                 ),
                 child: Row(
@@ -929,20 +900,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               fontWeight: FontWeight.bold,
               color: AppColors.primary),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: AppSpacing.sm),
         Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: AppColors.white,
-            borderRadius: BorderRadius.circular(15),
-          ),
+          padding: const EdgeInsets.all(AppSpacing.md),
+          decoration: AppStyles.surface(context),
           child: Column(
             children: [
               // Maintenance Mode Switch Tile
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(AppSpacing.xs),
                   decoration: BoxDecoration(
                     color: (_systemSuspended ? AppColors.error : AppColors.primary).withValues(alpha: 0.1),
                     shape: BoxShape.circle,
@@ -973,9 +941,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ),
               ),
               if (_systemSuspended) ...[
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.xs),
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(AppSpacing.sm),
                   decoration: BoxDecoration(
                     color: AppColors.error.withValues(alpha: 0.05),
                     borderRadius: BorderRadius.circular(10),
@@ -986,7 +954,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       const Row(
                         children: [
                           Icon(Icons.warning_amber_rounded, color: AppColors.error, size: 20),
-                          SizedBox(width: 8),
+                          SizedBox(width: AppSpacing.xs),
                           Expanded(
                             child: Text(
                               'تنبيه: تطبيق العملاء متوقف حالياً ولا يمكنهم تقديم طلبات.',
@@ -999,10 +967,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: AppSpacing.sm),
                       const CustomTextField(
                           hintText: 'رسالة الصيانة التي ستظهر للعملاء...'),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: AppSpacing.xs),
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
@@ -1030,7 +998,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(AppSpacing.xs),
                   decoration: BoxDecoration(
                     color: AppColors.primary.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
@@ -1092,7 +1060,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: AppSpacing.lg),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -1111,11 +1079,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               child: ListView.separated(
                 physics: const BouncingScrollPhysics(),
                 itemCount: _adminActivities.length,
-                separatorBuilder: (context, index) => const SizedBox(height: 12),
+                separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
                 itemBuilder: (context, index) {
                   final activity = _adminActivities[index];
                   return Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(AppSpacing.sm),
                     decoration: BoxDecoration(
                       color: AppColors.background,
                       borderRadius: BorderRadius.circular(15),
@@ -1203,21 +1171,21 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     final drivers = _pendingRequests.where((r) => r['type'] == 'سائق').toList();
 
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AppSpacing.md),
       children: [
         _buildSectionHeader('المغاسل'),
         if (laundries.isEmpty)
           const Center(
               child: Padding(
-                  padding: EdgeInsets.all(20),
+                  padding: EdgeInsets.all(AppSpacing.lg),
                   child: Text('لا توجد طلبات مغاسل حالياً'))),
         ...laundries.map((r) => _buildRegistrationItem(r)),
-        const SizedBox(height: 20),
+        const SizedBox(height: AppSpacing.lg),
         _buildSectionHeader('السائقين'),
         if (drivers.isEmpty)
           const Center(
               child: Padding(
-                  padding: EdgeInsets.all(20),
+                  padding: EdgeInsets.all(AppSpacing.lg),
                   child: Text('لا توجد طلبات مناديب حالياً'))),
         ...drivers.map((r) => _buildRegistrationItem(r)),
       ],
@@ -1249,7 +1217,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: AppSpacing.lg),
             Row(
               children: [
                 CircleAvatar(
@@ -1263,7 +1231,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     color: AppColors.primary,
                   ),
                 ),
-                const SizedBox(width: 20),
+                const SizedBox(width: AppSpacing.lg),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1298,7 +1266,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             const Divider(height: 40),
             const Text('المعلومات الشخصية والمهنية',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primary)),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.sm),
             Expanded(
               child: ListView(
                 physics: const BouncingScrollPhysics(),
@@ -1311,12 +1279,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     _buildDetailRow(Icons.location_on, 'الموقع', staff['location']),
                     _buildDetailRow(Icons.badge, 'رقم الهوية الوطنية للمدير', staff['nationalId'] ?? 'غير متوفر'),
                     _buildDetailRow(Icons.assignment, 'رقم السجل التجاري / الترخيص', staff['commercialRegister'] ?? 'غير متوفر'),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: AppSpacing.md),
                     const Text(
                       'المستندات والوثائق المرفوعة',
                       style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 14),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: AppSpacing.xs),
                     _buildDocumentRow('صورة السجل التجاري / الترخيص', staff['commercialRegisterImage']),
                     _buildDocumentRow('صورة الهوية الوطنية للمدير', staff['nationalIdImage']),
                     _buildDocumentRow('صورة واجهة/لوحة المغسلة', staff['storefrontImage']),
@@ -1329,20 +1297,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     _buildDetailRow(Icons.card_membership, 'رقم رخصة القيادة', staff['licenseNumber'] ?? 'غير متوفر'),
                     _buildDetailRow(Icons.directions_car, 'نوع مركبة التوصيل', staff['vehicleType'] ?? 'غير متوفر'),
                     _buildDetailRow(Icons.tag, 'رقم لوحة المركبة', staff['vehiclePlate'] ?? 'غير متوفر'),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: AppSpacing.md),
                     const Text(
                       'المستندات والوثائق المرفوعة',
                       style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 14),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: AppSpacing.xs),
                     _buildDocumentRow('صورة رخصة القيادة للمندوب', staff['licenseImage']),
                     _buildDocumentRow('صورة الهوية الوطنية للمندوب', staff['nationalIdImage']),
                     _buildDocumentRow('صورة المركبة الخاصة بالتوصيل', staff['vehicleImage']),
                   ],
-                  const SizedBox(height: 20),
+                  const SizedBox(height: AppSpacing.lg),
                   const Text('الطلبات الحالية/السابقة',
                       style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primary)),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: AppSpacing.sm),
                   if (staff['orders'] == null || staff['orders'].isEmpty)
                     const Text('لا توجد طلبات مسجلة حالياً', style: TextStyle(color: AppColors.textLight))
                   else
@@ -1354,7 +1322,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: AppSpacing.lg),
             Row(
               children: [
                 Expanded(
@@ -1376,7 +1344,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: ElevatedButton.icon(
                     onPressed: () {
@@ -1408,7 +1376,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       child: Row(
         children: [
           Icon(icon, color: AppColors.textLight, size: 20),
-          const SizedBox(width: 12),
+          const SizedBox(width: AppSpacing.sm),
           Text('$label: ', style: TextStyle(color: AppColors.textLight)),
           Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
         ],
@@ -1423,7 +1391,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         child: Row(
           children: [
             const Icon(Icons.broken_image, color: Colors.grey, size: 20),
-            const SizedBox(width: 12),
+            const SizedBox(width: AppSpacing.sm),
             Text('$label: ', style: TextStyle(color: AppColors.textLight)),
             const Text('غير متوفر', style: TextStyle(color: Colors.red)),
           ],
@@ -1473,13 +1441,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       context: context,
       builder: (context) => Dialog(
         backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.all(16),
+        insetPadding: const EdgeInsets.all(AppSpacing.md),
         child: Container(
-          decoration: BoxDecoration(
-            color: AppColors.white,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          padding: const EdgeInsets.all(16),
+          decoration: AppStyles.surface(context),
+          padding: const EdgeInsets.all(AppSpacing.md),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -1500,7 +1465,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.sm),
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: SizedBox(
@@ -1508,7 +1473,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   width: double.infinity,
                   child: InteractiveViewer(
                     panEnabled: true,
-                    boundaryMargin: const EdgeInsets.all(20),
+                    boundaryMargin: const EdgeInsets.all(AppSpacing.lg),
                     minScale: 0.5,
                     maxScale: 4.0,
                     child: Image.network(
@@ -1521,7 +1486,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.sm),
               const Text(
                 'استخدم إصبعين للتكبير والتحريك 🔎',
                 style: TextStyle(fontSize: 12, color: AppColors.textLight),
@@ -1567,7 +1532,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               ...filteredStaff.where((s) => s['type'] == 'مغسلة').map((s) =>
                   _buildStaffItem(s['name'], s['type'], s['rating'],
                       staffData: s)),
-              const SizedBox(height: 20),
+              const SizedBox(height: AppSpacing.lg),
               _buildSectionHeader('السائقين المعتمدين'),
               ...filteredStaff.where((s) => s['type'] == 'سائق').map((s) =>
                   _buildStaffItem(s['name'], s['type'], s['rating'],
@@ -1694,7 +1659,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: AppSpacing.lg),
             Row(
               children: [
                 CircleAvatar(
@@ -1708,7 +1673,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     color: AppColors.tertiary,
                   ),
                 ),
-                const SizedBox(width: 20),
+                const SizedBox(width: AppSpacing.lg),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1731,7 +1696,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               'بيانات الحساب الشخصية والتسجيل',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primary),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.md),
             Expanded(
               child: ListView(
                 physics: const BouncingScrollPhysics(),
@@ -1744,12 +1709,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     _buildDetailRow(Icons.location_on, 'عنوان المغسلة', request['location']),
                     _buildDetailRow(Icons.badge, 'رقم الهوية الوطنية للمدير', request['nationalId'] ?? 'غير متوفر'),
                     _buildDetailRow(Icons.assignment, 'رقم السجل التجاري / الترخيص', request['commercialRegister'] ?? 'غير متوفر'),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: AppSpacing.md),
                     const Text(
                       'المستندات والوثائق المرفوعة',
                       style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 14),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: AppSpacing.xs),
                     _buildDocumentRow('صورة السجل التجاري / الترخيص', request['commercialRegisterImage']),
                     _buildDocumentRow('صورة الهوية الوطنية للمدير', request['nationalIdImage']),
                     _buildDocumentRow('صورة واجهة/لوحة المغسلة', request['storefrontImage']),
@@ -1762,12 +1727,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     _buildDetailRow(Icons.card_membership, 'رقم رخصة القيادة', request['licenseNumber'] ?? 'غير متوفر'),
                     _buildDetailRow(Icons.directions_car, 'نوع مركبة التوصيل', request['vehicleType'] ?? 'غير متوفر'),
                     _buildDetailRow(Icons.tag, 'رقم لوحة المركبة', request['vehiclePlate'] ?? 'غير متوفر'),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: AppSpacing.md),
                     const Text(
                       'المستندات والوثائق المرفوعة',
                       style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 14),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: AppSpacing.xs),
                     _buildDocumentRow('صورة رخصة القيادة للمندوب', request['licenseImage']),
                     _buildDocumentRow('صورة الهوية الوطنية للمندوب', request['nationalIdImage']),
                     _buildDocumentRow('صورة المركبة الخاصة بالتوصيل', request['vehicleImage']),
@@ -1775,7 +1740,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: AppSpacing.lg),
             Row(
               children: [
                 Expanded(
@@ -1793,7 +1758,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: ElevatedButton.icon(
                     onPressed: () {
@@ -1893,7 +1858,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     final expiredCoupons = _coupons.where((c) => isCouponExpired(c)).toList();
 
     return ListView(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1909,7 +1874,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: AppSpacing.sm),
             Flexible(
               child: ElevatedButton.icon(
                 onPressed: _showCreateOfferDialog,
@@ -1929,7 +1894,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ),
           ],
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: AppSpacing.lg),
         _buildOfferActionCard(
           'إرسال إشعار ترويجي عام',
           'أرسل رسالة فورية لجميع العملاء عن تنبيه أو تحديث',
@@ -1937,12 +1902,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           AppColors.secondary,
           onTap: _showNotificationDialog,
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: AppSpacing.xl),
         const Text(
           'العروض النشطة حالياً',
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textMain),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: AppSpacing.sm),
         if (activeCoupons.isEmpty)
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 24),
@@ -1956,7 +1921,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         else
           ...activeCoupons.map((coupon) => Container(
                 margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(AppSpacing.md),
                 decoration: BoxDecoration(
                   color: AppColors.white,
                   borderRadius: BorderRadius.circular(15),
@@ -1987,7 +1952,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         color: coupon['target'] == 'الجميع' ? AppColors.primary : AppColors.warning,
                       ),
                     ),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: AppSpacing.md),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1998,7 +1963,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             children: [
                               Text('الكود: ', style: TextStyle(color: AppColors.textLight, fontSize: 12)),
                               Text(coupon['code'], style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.secondary, fontSize: 13)),
-                              const SizedBox(width: 12),
+                              const SizedBox(width: AppSpacing.sm),
                               Text('الخصم: ', style: TextStyle(color: AppColors.textLight, fontSize: 12)),
                               Text(coupon['discount'], style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.success, fontSize: 13)),
                             ],
@@ -2057,17 +2022,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               )),
 
         if (expiredCoupons.isNotEmpty) ...[
-          const SizedBox(height: 24),
+          const SizedBox(height: AppSpacing.xl),
           const Text(
             'العروض المنتهية الصلاحية ⚠️',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.error),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.sm),
           ...expiredCoupons.map((coupon) => Opacity(
                 opacity: 0.6,
                 child: Container(
                   margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(AppSpacing.md),
                   decoration: BoxDecoration(
                     color: AppColors.white,
                     borderRadius: BorderRadius.circular(15),
@@ -2095,7 +2060,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           color: Colors.grey,
                         ),
                       ),
-                      const SizedBox(width: 16),
+                      const SizedBox(width: AppSpacing.md),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -2103,7 +2068,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             Row(
                               children: [
                                 Text(coupon['title'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, decoration: TextDecoration.lineThrough)),
-                                const SizedBox(width: 8),
+                                const SizedBox(width: AppSpacing.xs),
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                   decoration: BoxDecoration(
@@ -2122,7 +2087,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                               children: [
                                 Text('الكود: ', style: TextStyle(color: AppColors.textLight, fontSize: 12)),
                                 Text(coupon['code'], style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.secondary, fontSize: 13)),
-                                const SizedBox(width: 12),
+                                const SizedBox(width: AppSpacing.sm),
                                 Text('الخصم: ', style: TextStyle(color: AppColors.textLight, fontSize: 12)),
                                 Text(coupon['discount'], style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.success, fontSize: 13)),
                               ],
@@ -2166,9 +2131,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   Widget _buildNotificationHistoryView() {
     return ListView.separated(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       itemCount: _notificationHistory.length,
-      separatorBuilder: (context, index) => const SizedBox(height: 12),
+      separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
       itemBuilder: (context, index) {
         final note = _notificationHistory[index];
         return Card(
@@ -2211,7 +2176,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               hintText: 'عنوان الإشعار',
               controller: titleController,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.sm),
             CustomTextField(
               hintText: 'نص الإشعار...',
               maxLines: 3,
@@ -2288,17 +2253,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   hintText: 'اسم العرض (مثال: خصم الصيف)',
                   controller: titleController,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: AppSpacing.sm),
                 CustomTextField(
                   hintText: 'كود الخصم (مثال: SUMMER25)',
                   controller: codeController,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: AppSpacing.sm),
                 CustomTextField(
                   hintText: 'قيمة الخصم (مثال: 20% أو 50 ريال)',
                   controller: discountController,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: AppSpacing.sm),
                 const Text(
                   'الفئة المستهدفة:',
                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textMain),
@@ -2331,12 +2296,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.md),
                 const Text(
                   'مدة العرض:',
                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textMain),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.xs),
                 Row(
                   children: [
                     Expanded(
@@ -2379,7 +2344,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: AppSpacing.xs),
                     Expanded(
                       child: InkWell(
                         onTap: () async {
@@ -2422,7 +2387,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: AppSpacing.sm),
                 SwitchListTile(
                   title: const Text(
                     'تفعيل شرط على العرض',
@@ -2441,7 +2406,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   },
                 ),
                 if (hasCondition) ...[
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppSpacing.xs),
                   CustomTextField(
                     hintText: 'الحد الأدنى لقيمة الطلب بالريال (مثال: 5000)',
                     controller: minAmountController,
@@ -2539,7 +2504,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       String title, String subtitle, IconData icon, Color color,
       {required VoidCallback onTap}) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(15),
@@ -2610,7 +2575,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       child: const Icon(Icons.admin_panel_settings,
                           color: AppColors.primary),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: AppSpacing.sm),
                     const Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
@@ -2641,7 +2606,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ),
               ),
         actions: const [
-          SizedBox(width: 8),
+          SizedBox(width: AppSpacing.xs),
         ],
       ),
       body: IndexedStack(

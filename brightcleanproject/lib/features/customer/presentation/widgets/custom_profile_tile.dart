@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../../../core/theme/app_colors.dart';
 
 class CustomProfileTile extends StatelessWidget {
   final IconData icon;
@@ -19,24 +18,25 @@ class CustomProfileTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final Color itemColor = isDestructive
-        ? AppColors.error
-        : (Theme.of(context).textTheme.bodyLarge?.color ?? AppColors.textMain);
+        ? theme.colorScheme.error
+        : theme.colorScheme.onSurface;
 
     return ListTile(
       leading: Icon(
         icon,
-        color: isDestructive ? AppColors.error : AppColors.primary,
+        color: isDestructive ? theme.colorScheme.error : theme.colorScheme.primary,
       ),
       title: Text(
         title,
-        style: TextStyle(color: itemColor, fontWeight: FontWeight.w500),
+        style: theme.textTheme.titleMedium?.copyWith(color: itemColor, fontWeight: FontWeight.w500),
       ),
       trailing: trailing ??
           (isDestructive
               ? null
-              : const Icon(Icons.arrow_forward_ios,
-                  size: 16, color: Colors.grey)),
+              : Icon(Icons.arrow_forward_ios,
+                  size: 16, color: theme.colorScheme.onSurface.withValues(alpha: 0.5))),
       onTap: onTap,
     );
   }
