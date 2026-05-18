@@ -90,6 +90,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
       await prefs.remove('user_email');
       await prefs.remove('wallet_balance');
       await prefs.remove('profile_image_path');
+      await prefs.remove('user_role');
       if (mounted) context.go('/login');
     }
   }

@@ -1,4 +1,5 @@
-import 'dart:io';
+import 'dart:io' if (dart.library.html) 'dart:html';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 class ProfileHeader extends StatelessWidget {
@@ -83,27 +84,43 @@ class ProfileHeader extends StatelessWidget {
       );
     }
 
-    final file = File(imagePath!);
-    if (!file.existsSync()) {
-      return Container(
-        color: theme.colorScheme.primaryContainer,
-        child: Center(
-          child: Icon(Icons.person, size: 50, color: theme.colorScheme.onPrimaryContainer),
-        ),
-      );
-    }
-
-    return Image.file(
-      file,
-      fit: BoxFit.cover,
-      errorBuilder: (context, error, stackTrace) {
+    if (!kIsWeb) {
+      final file = File(imagePath!);
+      if (!file.existsSync()) {
         return Container(
           color: theme.colorScheme.primaryContainer,
           child: Center(
             child: Icon(Icons.person, size: 50, color: theme.colorScheme.onPrimaryContainer),
           ),
         );
-      },
-    );
+      }
+
+      return Image.file(
+        file,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return Container(
+            color: theme.colorScheme.primaryContainer,
+            child: Center(
+              child: Icon(Icons.person, size: 50, color: theme.colorScheme.onPrimaryContainer),
+            ),
+          );
+        },
+      );
+    } else {
+      // Web-safe fallback: use Image.network or Image.asset
+      return Image.network(
+        imagePath!,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return Container(
+            color: theme.colorScheme.primaryContainer,
+            child: Center(
+              child: Icon(Icons.person, size: 50, color: theme.colorScheme.onPrimaryContainer),
+            ),
+          );
+        },
+      );
+    }
   }
 }

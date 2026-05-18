@@ -48,7 +48,8 @@
       width: 300px;
       height: 300px;
       border-radius: 50%;
-      background: rgba(255,255,255,0.0
+      background: rgba(255,255,255,0.05);
+    }
     .showcase-header h1 {
       font-size: 2.2rem;
       font-weight: 800;
@@ -77,6 +78,7 @@
       padding: 12px;
       box-shadow: 0 15px 50px rgba(15, 40, 84, 0.18), 0 0 0 1px rgba(200, 200, 200, 0.2);
       transition: transform 0.3s ease, box-shadow 0.3s ease;
+      position: relative;
     }
     .phone:hover {
       transform: translateY(-6px);
@@ -91,6 +93,7 @@
       background: var(--white);
       display: flex;
       flex-direction: column;
+      position: relative;
     }
 
     .notch {
@@ -156,6 +159,7 @@
       align-items: center;
       color: white;
       overflow: hidden;
+      position: relative;
     }
     .screen-splash .bubble {
       position: absolute;
@@ -278,6 +282,7 @@
       background: linear-gradient(120deg, #1C4D8D, #4988C4);
       padding: 40px 24px 50px;
       flex-shrink: 0;
+      position: relative;
     }
     .screen-login .login-header::after {
       content: '';
@@ -422,6 +427,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      position: relative;
     }
     .screen-home .notif-icon .dot {
       width: 8px;
@@ -569,6 +575,7 @@
       font-size: 0.55rem;
       color: var(--gray-text);
       cursor: pointer;
+      position: relative;
     }
     .screen-home .bottom-nav .nav-item.active {
       color: var(--primary-blue);
@@ -1050,6 +1057,7 @@
       display: flex;
       gap: 12px;
       padding-bottom: 20px;
+      position: relative;
     }
     .screen-tracking .tl-item:last-child { padding-bottom: 0; }
     .screen-tracking .tl-item::before {
@@ -1682,7 +1690,7 @@
               <div class="tl-dot">●</div>
               <div class="tl-info">
                 <h5>في التوصيل</h5>
-                <p>الطلاب في طريقه إليك | متوقع الوصول ٦:٠٠ م</p>
+                <p>الطلب في طريقه إليك | متوقع الوصول ٦:٠٠ م</p>
               </div>
             </div>
             <div class="tl-item">

@@ -35,15 +35,15 @@ class LogoutButton extends StatelessWidget {
     );
 
     if (confirm == true && context.mounted) {
-      await _clearUserSession();
-      if (context.mounted) {
+      final success = await _clearUserSession();
+      if (context.mounted && success) {
         onLogout?.call();
         context.go('/login');
       }
     }
   }
 
-  Future<void> _clearUserSession() async {
+  Future<bool> _clearUserSession() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('auth_token');
@@ -55,8 +55,10 @@ class LogoutButton extends StatelessWidget {
       await prefs.remove('wallet_balance');
       await prefs.remove('profile_image_path');
       await prefs.remove('user_role');
+      return true;
     } catch (e) {
       debugPrint('Error clearing session: $e');
+      return false;
     }
   }
 
