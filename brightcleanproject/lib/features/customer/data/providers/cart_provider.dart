@@ -39,13 +39,13 @@ class CartProvider with ChangeNotifier {
     return total;
   }
 
-  void addItem({
+  Future<void> addItem({
     required String serviceName,
     required String selectedType,
     required int quantity,
     required double pricePerUnit,
     required double totalPrice,
-  }) {
+  }) async {
     // Validate inputs
     if (quantity <= 0) {
       throw ArgumentError('Quantity must be greater than 0');
@@ -90,38 +90,40 @@ class CartProvider with ChangeNotifier {
     }
     
     // Persist to DB
-    _saveToDb();
+    await _saveToDb();
     notifyListeners();
   }
 
   Future<void> _saveToDb() async {
     try {
       final db = await DatabaseHelper.instance.database;
-      await db.delete('cart_items');
-      for (var item in _items) {
-        await db.insert('cart_items', {
-          'id': item.id,
-          'serviceName': item.serviceName,
-          'selectedType': item.selectedType,
-          'quantity': item.quantity,
-          'pricePerUnit': item.pricePerUnit,
-          'totalPrice': item.totalPrice,
-        });
-      }
+      await db.transaction((txn) async {
+        await txn.delete('cart_items');
+        for (var item in _items) {
+          await txn.insert('cart_items', {
+            'id': item.id,
+            'serviceName': item.serviceName,
+            'selectedType': item.selectedType,
+            'quantity': item.quantity,
+            'pricePerUnit': item.pricePerUnit,
+            'totalPrice': item.totalPrice,
+          });
+        }
+      });
     } catch (e) {
       debugPrint('Error saving cart items: $e');
     }
   }
 
-  void removeItem(String id) {
+  Future<void> removeItem(String id) async {
     _items.removeWhere((item) => item.id == id);
-    _saveToDb();
+    await _saveToDb();
     notifyListeners();
   }
 
-  void clearCart() {
+  Future<void> clearCart() async {
     _items.clear();
-    _saveToDb();
+    await _saveToDb();
     notifyListeners();
   }
 }
