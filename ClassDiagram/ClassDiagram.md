@@ -1,14 +1,20 @@
 # Laundry Platform — Class Diagram Documentation
 
-> **Version:** 6.2 — Final
+> **Version:** 6.3 — Final
 > **Last Updated:** May 2026
 > **Diagram Type:** UML Class Diagram
 > **Architecture Pattern:** Table Per Type (TPT) Inheritance + Rich Junction Entities
 >
 > **Changelog v6.2:**
->
 > - `SystemStatus.Reason` removed — `Message` is the sole public-facing explanation shown on the login screen
 > - `BookingRating` confirmed: `AgentComment` and `DeliveryComment` are the free-text note fields the client writes alongside their star ratings — no structural change required
+>
+> **Changelog v6.3:**
+> - `Draft` added to `BookingStatus` — enables cart functionality without any new entities
+> - `ExpiresAt` added to `Booking` — auto-cleanup of abandoned carts via background job
+> - `FinalTotal` default changed to `NULL` in Draft state — locked only on submit
+> - Cart business rules documented in Business Rules section
+> - Booking Status State Machine updated to include Draft stage
 
 ---
 
@@ -40,58 +46,58 @@ This platform is a **multi-service on-demand marketplace** that connects clients
 
 ### Platform Actors
 
-| Actor             | Role                                                         |
-| ----------------- | ------------------------------------------------------------ |
-| **Client**        | Browses agents, places bookings, makes payments              |
-| **LaundryAgent**  | Licensed provider offering one or more service categories    |
-| **DeliveryStaff** | Driver who claims and executes two-stage delivery tasks      |
-| **Admin**         | Sole platform supervisor managing catalog, offers, and users |
+| Actor | Role |
+|---|---|
+| **Client** | Browses agents, places bookings, makes payments |
+| **LaundryAgent** | Licensed provider offering one or more service categories |
+| **DeliveryStaff** | Driver who claims and executes two-stage delivery tasks |
+| **Admin** | Sole platform supervisor managing catalog, offers, and users |
 
 ### Service Categories
 
-| Category     | Delivery Model     | Examples                                                        |
-| ------------ | ------------------ | --------------------------------------------------------------- |
-| Laundry      | Two-Stage          | WashAndIron, DryClean, IronOnly                                 |
-| HomeWovens   | Two-Stage          | Curtains, Bedsheets, Blankets, Carpets                          |
+| Category | Delivery Model | Examples |
+|---|---|---|
+| Laundry | Two-Stage | WashAndIron, DryClean, IronOnly |
+| HomeWovens | Two-Stage | Curtains, Bedsheets, Blankets, Carpets |
 | HomeServices | TechnicianDispatch | HomeCleaning, ACCleaning, WaterTankCleaning, SolarPanelCleaning |
-| VehicleWash  | TechnicianDispatch | CarWash, MotorcycleWash                                         |
+| VehicleWash | TechnicianDispatch | CarWash, MotorcycleWash |
 
 ---
 
 ## 2. Schema Statistics
 
-| Metric                      | Count |
-| --------------------------- | ----- |
-| Total Classes               | 18    |
-| Total Enumerations          | 16    |
-| Total Relationships         | 27    |
-| Inheritance Relationships   | 4     |
-| One-to-One Relationships    | 1     |
-| One-to-Many Relationships   | 20    |
-| Composition Relationships   | 1     |
-| Many-to-Many (via Junction) | 1     |
+| Metric | Count |
+|---|---|
+| Total Classes | 18 |
+| Total Enumerations | 16 |
+| Total Relationships | 27 |
+| Inheritance Relationships | 4 |
+| One-to-One Relationships | 1 |
+| One-to-Many Relationships | 20 |
+| Composition Relationships | 1 |
+| Many-to-Many (via Junction) | 1 |
 
 ### All Classes at a Glance
 
-| #   | Class                | Type           | Description                                |
-| --- | -------------------- | -------------- | ------------------------------------------ |
-| 1   | `User`               | Abstract       | Base identity for all actors               |
-| 2   | `Client`             | Concrete       | Customer who places bookings               |
-| 3   | `DeliveryStaff`      | Concrete       | Driver executing delivery tasks            |
-| 4   | `LaundryAgent`       | Concrete       | Licensed service provider                  |
-| 5   | `Admin`              | Concrete       | Platform supervisor                        |
-| 6   | `Address`            | Entity         | Physical location for clients and agents   |
-| 7   | `UserDocument`       | Entity         | Uploaded verification documents            |
-| 8   | `ServiceCatalogItem` | Entity         | Platform-managed service catalog           |
-| 9   | `AgentService`       | Junction       | Agent-to-service subscription              |
-| 10  | `Offer`              | Entity         | Admin-created promotional discounts        |
-| 11  | `Booking`            | Aggregate Root | Unified service request                    |
-| 12  | `BookingItem`        | Entity         | Line items within a booking                |
-| 13  | `BookingRating`      | Entity         | Client star rating and comment per booking |
-| 14  | `DeliveryTask`       | Entity         | Single leg of two-stage logistics          |
-| 15  | `Payment`            | Entity         | Full payment record per booking            |
-| 16  | `AuditLog`           | Entity         | Immutable admin action trail               |
-| 17  | `SystemStatus`       | Entity         | Platform login on/off control              |
+| # | Class | Type | Description |
+|---|---|---|---|
+| 1 | `User` | Abstract | Base identity for all actors |
+| 2 | `Client` | Concrete | Customer who places bookings |
+| 3 | `DeliveryStaff` | Concrete | Driver executing delivery tasks |
+| 4 | `LaundryAgent` | Concrete | Licensed service provider |
+| 5 | `Admin` | Concrete | Platform supervisor |
+| 6 | `Address` | Entity | Physical location for clients and agents |
+| 7 | `UserDocument` | Entity | Uploaded verification documents |
+| 8 | `ServiceCatalogItem` | Entity | Platform-managed service catalog |
+| 9 | `AgentService` | Junction | Agent-to-service subscription |
+| 10 | `Offer` | Entity | Admin-created promotional discounts |
+| 11 | `Booking` | Aggregate Root | Unified service request |
+| 12 | `BookingItem` | Entity | Line items within a booking |
+| 13 | `BookingRating` | Entity | Client star rating and comment per booking |
+| 14 | `DeliveryTask` | Entity | Single leg of two-stage logistics |
+| 15 | `Payment` | Entity | Full payment record per booking |
+| 16 | `AuditLog` | Entity | Immutable admin action trail |
+| 17 | `SystemStatus` | Entity | Platform login on/off control |
 
 ---
 
@@ -141,12 +147,12 @@ A single `SystemStatus` entity controls whether login is enabled platform-wide. 
 
 Discriminator for the `User` inheritance hierarchy.
 
-| Value           | Description                     |
-| --------------- | ------------------------------- |
-| `Client`        | Customer placing bookings       |
+| Value | Description |
+|---|---|
+| `Client` | Customer placing bookings |
 | `DeliveryStaff` | Driver executing delivery tasks |
-| `LaundryAgent`  | Licensed service provider       |
-| `Admin`         | Platform supervisor             |
+| `LaundryAgent` | Licensed service provider |
+| `Admin` | Platform supervisor |
 
 **Used in:** `User.Role`
 
@@ -156,12 +162,12 @@ Discriminator for the `User` inheritance hierarchy.
 
 Governs the full lifecycle of a user account from registration through verification to potential suspension.
 
-| Value                 | Description                                     | Triggered By            |
-| --------------------- | ----------------------------------------------- | ----------------------- |
-| `PendingVerification` | Registered, awaiting admin review               | Registration submission |
-| `Active`              | Admin approved — account fully operational      | Admin action            |
-| `Suspended`           | Temporarily disabled — cannot log in or operate | Admin action            |
-| `Deactivated`         | Permanently closed                              | Admin action            |
+| Value | Description | Triggered By |
+|---|---|---|
+| `PendingVerification` | Registered, awaiting admin review | Registration submission |
+| `Active` | Admin approved — account fully operational | Admin action |
+| `Suspended` | Temporarily disabled — cannot log in or operate | Admin action |
+| `Deactivated` | Permanently closed | Admin action |
 
 **Used in:** `User.AccountStatus`
 **Logic:** While `AccountStatus = PendingVerification`, `AgentService.IsActive` is ignored — no services are visible to clients regardless of their value.
@@ -172,10 +178,10 @@ Governs the full lifecycle of a user account from registration through verificat
 
 Client gender selection at registration.
 
-| Value    | Description |
-| -------- | ----------- |
-| `Male`   | Male        |
-| `Female` | Female      |
+| Value | Description |
+|---|---|
+| `Male` | Male |
+| `Female` | Female |
 
 **Used in:** `Client.Gender`
 
@@ -185,11 +191,11 @@ Client gender selection at registration.
 
 Type of vehicle operated by a delivery staff member. Affects task assignment eligibility.
 
-| Value        | Description                                                   |
-| ------------ | ------------------------------------------------------------- |
-| `Car`        | Four-wheeled vehicle — suitable for large laundry loads       |
+| Value | Description |
+|---|---|
+| `Car` | Four-wheeled vehicle — suitable for large laundry loads |
 | `Motorcycle` | Two-wheeled — suitable for small loads, faster urban delivery |
-| `TukTuk`     | Three-wheeled — medium capacity                               |
+| `TukTuk` | Three-wheeled — medium capacity |
 
 **Used in:** `DeliveryStaff.VehicleType`
 
@@ -199,12 +205,12 @@ Type of vehicle operated by a delivery staff member. Affects task assignment eli
 
 Classifies uploaded verification documents per user role.
 
-| Value                    | Required By                 | Description                         |
-| ------------------------ | --------------------------- | ----------------------------------- |
-| `NationalID`             | DeliveryStaff, LaundryAgent | Government-issued identity document |
-| `DriverLicense`          | DeliveryStaff               | Valid driving license               |
-| `VehicleImage`           | DeliveryStaff               | Photo of registered vehicle         |
-| `CommercialRegistration` | LaundryAgent                | Business license document           |
+| Value | Required By | Description |
+|---|---|---|
+| `NationalID` | DeliveryStaff, LaundryAgent | Government-issued identity document |
+| `DriverLicense` | DeliveryStaff | Valid driving license |
+| `VehicleImage` | DeliveryStaff | Photo of registered vehicle |
+| `CommercialRegistration` | LaundryAgent | Business license document |
 
 **Used in:** `UserDocument.Type`
 
@@ -214,12 +220,12 @@ Classifies uploaded verification documents per user role.
 
 High-level grouping of all platform services. Used for UI filtering and agent profile classification.
 
-| Value          | Description                                     |
-| -------------- | ----------------------------------------------- |
-| `Laundry`      | Clothing-related washing and ironing            |
-| `HomeWovens`   | Large fabric items — curtains, carpets, bedding |
-| `HomeServices` | On-site home maintenance services               |
-| `VehicleWash`  | On-site car and motorcycle washing              |
+| Value | Description |
+|---|---|
+| `Laundry` | Clothing-related washing and ironing |
+| `HomeWovens` | Large fabric items — curtains, carpets, bedding |
+| `HomeServices` | On-site home maintenance services |
+| `VehicleWash` | On-site car and motorcycle washing |
 
 **Used in:** `ServiceCatalogItem.Category`
 
@@ -229,21 +235,21 @@ High-level grouping of all platform services. Used for UI filtering and agent pr
 
 Specific service type within its category. Every catalog item maps to exactly one type.
 
-| Value                | Category     | Description                            |
-| -------------------- | ------------ | -------------------------------------- |
-| `WashAndIron`        | Laundry      | Full wash and press of clothing        |
-| `DryClean`           | Laundry      | Chemical cleaning for delicate fabrics |
-| `IronOnly`           | Laundry      | Ironing service without washing        |
-| `Curtains`           | HomeWovens   | Curtain washing and finishing          |
-| `Bedsheets`          | HomeWovens   | Bed linen washing                      |
-| `Blankets`           | HomeWovens   | Blanket and duvet cleaning             |
-| `Carpets`            | HomeWovens   | Carpet deep cleaning                   |
-| `HomeCleaning`       | HomeServices | General residential cleaning           |
-| `ACCleaning`         | HomeServices | Air conditioner deep service           |
-| `WaterTankCleaning`  | HomeServices | Underground and overhead tank cleaning |
-| `SolarPanelCleaning` | HomeServices | Solar panel surface cleaning           |
-| `CarWash`            | VehicleWash  | Full car wash at client location       |
-| `MotorcycleWash`     | VehicleWash  | Motorcycle wash at client location     |
+| Value | Category | Description |
+|---|---|---|
+| `WashAndIron` | Laundry | Full wash and press of clothing |
+| `DryClean` | Laundry | Chemical cleaning for delicate fabrics |
+| `IronOnly` | Laundry | Ironing service without washing |
+| `Curtains` | HomeWovens | Curtain washing and finishing |
+| `Bedsheets` | HomeWovens | Bed linen washing |
+| `Blankets` | HomeWovens | Blanket and duvet cleaning |
+| `Carpets` | HomeWovens | Carpet deep cleaning |
+| `HomeCleaning` | HomeServices | General residential cleaning |
+| `ACCleaning` | HomeServices | Air conditioner deep service |
+| `WaterTankCleaning` | HomeServices | Underground and overhead tank cleaning |
+| `SolarPanelCleaning` | HomeServices | Solar panel surface cleaning |
+| `CarWash` | VehicleWash | Full car wash at client location |
+| `MotorcycleWash` | VehicleWash | Motorcycle wash at client location |
 
 **Used in:** `ServiceCatalogItem.Type`
 
@@ -253,9 +259,9 @@ Specific service type within its category. Every catalog item maps to exactly on
 
 Determines how `BookingItem.subTotal()` is computed.
 
-| Value     | Formula                                          | Example                       |
-| --------- | ------------------------------------------------ | ----------------------------- |
-| `PerItem` | `Quantity × UnitPriceAtTimeOfBooking`            | 3 shirts × 2.500 KWD          |
+| Value | Formula | Example |
+|---|---|---|
+| `PerItem` | `Quantity × UnitPriceAtTimeOfBooking` | 3 shirts × 2.500 KWD |
 | `FlatFee` | `UnitPriceAtTimeOfBooking` (quantity irrelevant) | AC cleaning = 15.000 KWD flat |
 
 **Used in:** `ServiceCatalogItem.PricingModel`
@@ -266,10 +272,10 @@ Determines how `BookingItem.subTotal()` is computed.
 
 The most operationally significant enum. Determines logistics behavior for each service type and drives whether `DeliveryTask` records are created.
 
-| Value                | Tasks Created | Who Goes Where                                                                 |
-| -------------------- | ------------- | ------------------------------------------------------------------------------ |
-| `TwoStage`           | 2 tasks       | Driver collects items from client → agent processes → driver returns to client |
-| `TechnicianDispatch` | 0 tasks       | Agent dispatches staff to client location; service performed on-site           |
+| Value | Tasks Created | Who Goes Where |
+|---|---|---|
+| `TwoStage` | 2 tasks | Driver collects items from client → agent processes → driver returns to client |
+| `TechnicianDispatch` | 0 tasks | Agent dispatches staff to client location; service performed on-site |
 
 **Used in:** `ServiceCatalogItem.DeliveryModel`
 
@@ -279,16 +285,27 @@ The most operationally significant enum. Determines logistics behavior for each 
 
 State machine governing the full lifecycle of every booking. Transitions are strictly sequential.
 
-| Value        | Description                                            | Triggered By    |
-| ------------ | ------------------------------------------------------ | --------------- |
-| `Pending`    | Submitted, awaiting agent acceptance                   | Client          |
-| `Accepted`   | Agent confirmed — delivery tasks created if applicable | LaundryAgent    |
-| `InProgress` | Work begun or technician dispatched                    | Agent / System  |
-| `Ready`      | Processing complete — items ready for Stage 2          | LaundryAgent    |
-| `Completed`  | Fully delivered or service performed                   | System          |
-| `Cancelled`  | Terminated before completion                           | Client or Admin |
+| Value | Description | Triggered By |
+|---|---|---|
+| `Draft` | Cart state — services being added, not yet confirmed | Client (on cart open) |
+| `Pending` | Submitted and confirmed — awaiting agent acceptance | Client (on submit) |
+| `Accepted` | Agent confirmed — delivery tasks created if applicable | LaundryAgent |
+| `InProgress` | Work begun or technician dispatched | Agent / System |
+| `Ready` | Processing complete — items ready for Stage 2 | LaundryAgent |
+| `Completed` | Fully delivered or service performed | System |
+| `Cancelled` | Terminated before completion | Client or Admin |
 
 **Used in:** `Booking.Status`
+
+**Cart Rules — `Draft` state:**
+
+| Operation | Allowed in Draft? |
+|---|---|
+| Add / remove `BookingItem` | ✅ Yes |
+| Apply `Offer` | ❌ No — `FinalTotal` not yet locked |
+| `Payment` | ❌ No — no confirmed order yet |
+| `DeliveryTask` creation | ❌ No — agent hasn't accepted |
+| Transition to `Pending` | ✅ On client submit — `FinalTotal` is locked |
 
 ---
 
@@ -296,10 +313,10 @@ State machine governing the full lifecycle of every booking. Transitions are str
 
 Identifies which stage of the two-stage delivery a task represents.
 
-| Value              | Stage | Route                                   |
-| ------------------ | ----- | --------------------------------------- |
-| `PickupFromClient` | 1     | Client Address → Agent Business Address |
-| `DeliveryToClient` | 2     | Agent Business Address → Client Address |
+| Value | Stage | Route |
+|---|---|---|
+| `PickupFromClient` | 1 | Client Address → Agent Business Address |
+| `DeliveryToClient` | 2 | Agent Business Address → Client Address |
 
 **Used in:** `DeliveryTask.Type`
 
@@ -309,12 +326,12 @@ Identifies which stage of the two-stage delivery a task represents.
 
 Tracks the independent lifecycle of each delivery leg.
 
-| Value        | `AssignedAt` | `DeliveryStaffID` | Description                    |
-| ------------ | ------------ | ----------------- | ------------------------------ |
-| `Unassigned` | null         | null              | In pool, no driver claimed yet |
-| `Assigned`   | Populated    | Populated         | Driver claimed the task        |
-| `InProgress` | Populated    | Populated         | Driver actively en route       |
-| `Completed`  | Populated    | Populated         | Leg finished successfully      |
+| Value | `AssignedAt` | `DeliveryStaffID` | Description |
+|---|---|---|---|
+| `Unassigned` | null | null | In pool, no driver claimed yet |
+| `Assigned` | Populated | Populated | Driver claimed the task |
+| `InProgress` | Populated | Populated | Driver actively en route |
+| `Completed` | Populated | Populated | Leg finished successfully |
 
 **Used in:** `DeliveryTask.Status`
 **Rule:** Stage 2 cannot leave `Unassigned` until Stage 1 reaches `Completed`.
@@ -325,11 +342,11 @@ Tracks the independent lifecycle of each delivery leg.
 
 Payment channel used by the client.
 
-| Value        | Pre-condition                      | Notes                            |
-| ------------ | ---------------------------------- | -------------------------------- |
-| `CreditCard` | `TransactionRef` must be populated | Processed via payment gateway    |
-| `Cash`       | None                               | Physical cash to agent or driver |
-| `Wallet`     | `Client.WalletBalance >= Amount`   | Deducted from platform wallet    |
+| Value | Pre-condition | Notes |
+|---|---|---|
+| `CreditCard` | `TransactionRef` must be populated | Processed via payment gateway |
+| `Cash` | None | Physical cash to agent or driver |
+| `Wallet` | `Client.WalletBalance >= Amount` | Deducted from platform wallet |
 
 **Used in:** `Payment.Method`
 
@@ -339,12 +356,12 @@ Payment channel used by the client.
 
 Outcome states of the single payment per booking.
 
-| Value      | Terminal | Description                                 |
-| ---------- | -------- | ------------------------------------------- |
-| `Pending`  | No       | Payment initiated, awaiting confirmation    |
-| `Success`  | Yes      | Payment confirmed and processed             |
-| `Failed`   | Yes      | Payment attempt rejected                    |
-| `Refunded` | Yes      | Successful payment reversed on cancellation |
+| Value | Terminal | Description |
+|---|---|---|
+| `Pending` | No | Payment initiated, awaiting confirmation |
+| `Success` | Yes | Payment confirmed and processed |
+| `Failed` | Yes | Payment attempt rejected |
+| `Refunded` | Yes | Successful payment reversed on cancellation |
 
 **Used in:** `Payment.Status`
 
@@ -354,10 +371,10 @@ Outcome states of the single payment per booking.
 
 Discount calculation method.
 
-| Value         | Formula                              |
-| ------------- | ------------------------------------ |
-| `Percentage`  | `FinalTotal × (DiscountValue / 100)` |
-| `FixedAmount` | `FinalTotal - DiscountValue`         |
+| Value | Formula |
+|---|---|
+| `Percentage` | `FinalTotal × (DiscountValue / 100)` |
+| `FixedAmount` | `FinalTotal - DiscountValue` |
 
 **Used in:** `Offer.Type`
 
@@ -367,10 +384,10 @@ Discount calculation method.
 
 Controls which bookings an offer can be applied to.
 
-| Value           | `LaundryAgentID` FK | Description                              |
-| --------------- | ------------------- | ---------------------------------------- |
-| `AllAgents`     | `NULL`              | Platform-wide — any booking qualifies    |
-| `SpecificAgent` | Populated           | Only bookings handled by the named agent |
+| Value | `LaundryAgentID` FK | Description |
+|---|---|---|
+| `AllAgents` | `NULL` | Platform-wide — any booking qualifies |
+| `SpecificAgent` | Populated | Only bookings handled by the named agent |
 
 **Used in:** `Offer.Scope`
 
@@ -382,24 +399,23 @@ Controls which bookings an offer can be applied to.
 
 Root identity table shared across all actors. No concrete `User` record exists independently — every user belongs to exactly one subtype.
 
-| Field             | Type          | Constraints                           | Description                           |
-| ----------------- | ------------- | ------------------------------------- | ------------------------------------- |
-| `UserID_PK`       | int           | PK, Auto-increment                    | Unique identifier across all subtypes |
-| `FirstName`       | string        | NOT NULL                              | Legal first name                      |
-| `LastName`        | string        | NOT NULL                              | Legal last (family) name              |
-| `Email`           | string        | NOT NULL, UNIQUE                      | Login identifier                      |
-| `PasswordHash`    | string        | NOT NULL                              | bcrypt/argon2 hash — never plaintext  |
-| `PhoneNo`         | string        | NOT NULL, 9–10 digits                 | Contact number                        |
-| `DateOfBirth`     | date          | NOT NULL                              | Used for age verification             |
-| `ProfilePhotoURL` | string?       | NULLABLE                              | CDN URL of profile photo              |
-| `TermsAccepted`   | boolean       | NOT NULL, DEFAULT false               | T&C acceptance at registration        |
-| `AccountStatus`   | AccountStatus | NOT NULL, DEFAULT PendingVerification | Account lifecycle state               |
-| `Role`            | UserRole      | NOT NULL                              | Inheritance discriminator             |
-| `VerifiedAt`      | datetime?     | NULLABLE                              | Stamped when admin approves account   |
-| `CreatedAt`       | datetime      | NOT NULL, DEFAULT NOW()               | Registration timestamp                |
+| Field | Type | Constraints | Description |
+|---|---|---|---|
+| `UserID_PK` | int | PK, Auto-increment | Unique identifier across all subtypes |
+| `FirstName` | string | NOT NULL | Legal first name |
+| `LastName` | string | NOT NULL | Legal last (family) name |
+| `Email` | string | NOT NULL, UNIQUE | Login identifier |
+| `PasswordHash` | string | NOT NULL | bcrypt/argon2 hash — never plaintext |
+| `PhoneNo` | string | NOT NULL, 9–10 digits | Contact number |
+| `DateOfBirth` | date | NOT NULL | Used for age verification |
+| `ProfilePhotoURL` | string? | NULLABLE | CDN URL of profile photo |
+| `TermsAccepted` | boolean | NOT NULL, DEFAULT false | T&C acceptance at registration |
+| `AccountStatus` | AccountStatus | NOT NULL, DEFAULT PendingVerification | Account lifecycle state |
+| `Role` | UserRole | NOT NULL | Inheritance discriminator |
+| `VerifiedAt` | datetime? | NULLABLE | Stamped when admin approves account |
+| `CreatedAt` | datetime | NOT NULL, DEFAULT NOW() | Registration timestamp |
 
 **Password Policy (enforced pre-hash at application layer):**
-
 - Minimum 8 characters
 - At least 1 uppercase letter
 - At least 1 numeric digit
@@ -410,14 +426,13 @@ Root identity table shared across all actors. No concrete `User` record exists i
 
 The customer actor. Owns addresses, places bookings, and holds a platform wallet.
 
-| Field            | Type    | Constraints                     | Description                                      |
-| ---------------- | ------- | ------------------------------- | ------------------------------------------------ |
-| `UserID_PK` (FK) | int     | PK, FK → User                   | Shared key under TPT                             |
-| `Gender`         | Gender  | NOT NULL                        | Required at registration                         |
-| `WalletBalance`  | decimal | NOT NULL, DEFAULT 0, CHECK >= 0 | Platform wallet — used for Wallet payment method |
+| Field | Type | Constraints | Description |
+|---|---|---|---|
+| `UserID_PK` (FK) | int | PK, FK → User | Shared key under TPT |
+| `Gender` | Gender | NOT NULL | Required at registration |
+| `WalletBalance` | decimal | NOT NULL, DEFAULT 0, CHECK >= 0 | Platform wallet — used for Wallet payment method |
 
 **Relationships:**
-
 - `Client "1" --> "0..*" Address` — owns delivery/service addresses
 - `Client "1" --> "0..*" Booking` — places service bookings
 
@@ -427,24 +442,23 @@ The customer actor. Owns addresses, places bookings, and holds a platform wallet
 
 The logistics executor. Claims and completes delivery tasks from an open pool.
 
-| Field              | Type        | Constraints      | Description                                  |
-| ------------------ | ----------- | ---------------- | -------------------------------------------- |
-| `UserID_PK` (FK)   | int         | PK, FK → User    | Shared key                                   |
-| `FatherName`       | string      | NOT NULL         | Four-part Arabic name                        |
-| `GrandfatherName`  | string      | NOT NULL         | Four-part Arabic name                        |
-| `NationalIDNumber` | string      | NOT NULL, UNIQUE | Government ID number                         |
-| `VehicleType`      | VehicleType | NOT NULL         | Car, Motorcycle, or TukTuk                   |
-| `VehicleMake`      | string      | NOT NULL         | Vehicle manufacturer (e.g. Toyota)           |
-| `VehicleModel`     | string      | NOT NULL         | Vehicle model (e.g. Corolla)                 |
-| `PlateNumber`      | string      | NOT NULL, UNIQUE | Vehicle registration plate                   |
-| `BankAcc`          | string      | NOT NULL         | Bank account for delivery fee payouts        |
-| `/averageRating()` | decimal     | Derived          | Computed from `BookingRating.DeliveryRating` |
-| `/totalRatings()`  | int         | Derived          | Count of non-null `DeliveryRating` records   |
+| Field | Type | Constraints | Description |
+|---|---|---|---|
+| `UserID_PK` (FK) | int | PK, FK → User | Shared key |
+| `FatherName` | string | NOT NULL | Four-part Arabic name |
+| `GrandfatherName` | string | NOT NULL | Four-part Arabic name |
+| `NationalIDNumber` | string | NOT NULL, UNIQUE | Government ID number |
+| `VehicleType` | VehicleType | NOT NULL | Car, Motorcycle, or TukTuk |
+| `VehicleMake` | string | NOT NULL | Vehicle manufacturer (e.g. Toyota) |
+| `VehicleModel` | string | NOT NULL | Vehicle model (e.g. Corolla) |
+| `PlateNumber` | string | NOT NULL, UNIQUE | Vehicle registration plate |
+| `BankAcc` | string | NOT NULL | Bank account for delivery fee payouts |
+| `/averageRating()` | decimal | Derived | Computed from `BookingRating.DeliveryRating` |
+| `/totalRatings()` | int | Derived | Count of non-null `DeliveryRating` records |
 
 **Required Documents:** `NationalID`, `DriverLicense`, `VehicleImage`
 
 **Relationships:**
-
 - `DeliveryStaff "1" --> "0..*" DeliveryTask` — claims and executes tasks
 - `User "1" --> "0..*" UserDocument` — uploads verification documents
 
@@ -454,22 +468,21 @@ The logistics executor. Claims and completes delivery tasks from an open pool.
 
 The central service provider. Offers a platform-admin-approved subset of the service catalog across any combination of categories.
 
-| Field                | Type    | Constraints      | Description                               |
-| -------------------- | ------- | ---------------- | ----------------------------------------- |
-| `UserID_PK` (FK)     | int     | PK, FK → User    | Shared key                                |
-| `FatherName`         | string  | NOT NULL         | Four-part Arabic name                     |
-| `GrandfatherName`    | string  | NOT NULL         | Four-part Arabic name                     |
-| `NationalIDNumber`   | string  | NOT NULL, UNIQUE | Government ID number                      |
-| `BusinessName`       | string  | NOT NULL         | Trading name of the business              |
-| `CommercialRegister` | string  | NOT NULL, UNIQUE | Government business license number        |
-| `BankAcc`            | string  | NOT NULL         | Bank account for service revenue          |
-| `/averageRating()`   | decimal | Derived          | Computed from `BookingRating.AgentRating` |
-| `/totalRatings()`    | int     | Derived          | Count of non-null `AgentRating` records   |
+| Field | Type | Constraints | Description |
+|---|---|---|---|
+| `UserID_PK` (FK) | int | PK, FK → User | Shared key |
+| `FatherName` | string | NOT NULL | Four-part Arabic name |
+| `GrandfatherName` | string | NOT NULL | Four-part Arabic name |
+| `NationalIDNumber` | string | NOT NULL, UNIQUE | Government ID number |
+| `BusinessName` | string | NOT NULL | Trading name of the business |
+| `CommercialRegister` | string | NOT NULL, UNIQUE | Government business license number |
+| `BankAcc` | string | NOT NULL | Bank account for service revenue |
+| `/averageRating()` | decimal | Derived | Computed from `BookingRating.AgentRating` |
+| `/totalRatings()` | int | Derived | Count of non-null `AgentRating` records |
 
 **Required Documents:** `NationalID`, `CommercialRegistration`
 
 **Relationships:**
-
 - `LaundryAgent "1" --> "1" Address` — mandatory business location with GPS coordinates
 - `LaundryAgent "1" --> "0..*" AgentService` — service subscriptions
 - `Booking "0..*" --> "1" LaundryAgent` — receives bookings
@@ -481,13 +494,12 @@ The central service provider. Offers a platform-admin-approved subset of the ser
 
 The sole platform supervisor. One instance. Manages all catalog, offers, users, and generates the audit trail.
 
-| Field            | Type     | Constraints   | Description                   |
-| ---------------- | -------- | ------------- | ----------------------------- |
-| `UserID_PK` (FK) | int      | PK, FK → User | Shared key                    |
-| `LastLoginAt`    | datetime | NULLABLE      | Security monitoring timestamp |
+| Field | Type | Constraints | Description |
+|---|---|---|---|
+| `UserID_PK` (FK) | int | PK, FK → User | Shared key |
+| `LastLoginAt` | datetime | NULLABLE | Security monitoring timestamp |
 
 **Capabilities:**
-
 - Create, update, and deactivate `ServiceCatalogItem` records
 - Create and scope `Offer` records
 - Approve or reject user registrations via `AccountStatus`
@@ -502,17 +514,16 @@ The sole platform supervisor. One instance. Manages all catalog, offers, users, 
 
 Physical location entity. Used for client delivery addresses, agent business premises, and delivery task routing.
 
-| Field          | Type    | Constraints             | Description                                  |
-| -------------- | ------- | ----------------------- | -------------------------------------------- |
-| `AddressID_PK` | int     | PK, Auto-increment      | Unique identifier                            |
-| `Area`         | string  | NOT NULL                | Neighborhood or district                     |
-| `Street`       | string  | NOT NULL                | Street name and number                       |
-| `Latitude`     | decimal | NOT NULL                | GPS latitude — from map picker               |
-| `Longitude`    | decimal | NOT NULL                | GPS longitude — from map picker              |
-| `IsArchived`   | boolean | NOT NULL, DEFAULT false | Soft delete — hides address without deleting |
+| Field | Type | Constraints | Description |
+|---|---|---|---|
+| `AddressID_PK` | int | PK, Auto-increment | Unique identifier |
+| `Area` | string | NOT NULL | Neighborhood or district |
+| `Street` | string | NOT NULL | Street name and number |
+| `Latitude` | decimal | NOT NULL | GPS latitude — from map picker |
+| `Longitude` | decimal | NOT NULL | GPS longitude — from map picker |
+| `IsArchived` | boolean | NOT NULL, DEFAULT false | Soft delete — hides address without deleting |
 
 **Relationships:**
-
 - `Client "1" --> "0..*" Address` — client delivery addresses
 - `LaundryAgent "1" --> "1" Address` — mandatory agent business location
 - `Booking "0..*" --> "1" Address` — service or delivery location
@@ -520,7 +531,6 @@ Physical location entity. Used for client delivery addresses, agent business pre
 - `DeliveryTask "0..*" --> "1" Address : dropoff to`
 
 **Constraints:**
-
 - Archived addresses cannot be selected for new bookings
 - Cannot be hard-deleted if referenced by any existing booking or delivery task
 - `Latitude` range: −90.0 to 90.0
@@ -532,24 +542,23 @@ Physical location entity. Used for client delivery addresses, agent business pre
 
 Stores uploaded verification document references for `DeliveryStaff` and `LaundryAgent`. Documents are reviewed holistically as part of the full registration review — not individually.
 
-| Field           | Type         | Constraints             | Description                                                     |
-| --------------- | ------------ | ----------------------- | --------------------------------------------------------------- |
-| `DocumentID_PK` | int          | PK, Auto-increment      | Unique identifier                                               |
-| `UserID_FK`     | int          | FK → User, NOT NULL     | Document owner                                                  |
-| `Type`          | DocumentType | NOT NULL                | NationalID, DriverLicense, VehicleImage, CommercialRegistration |
-| `FileURL`       | string       | NOT NULL                | CDN or storage URL of the uploaded file                         |
-| `UploadedAt`    | datetime     | NOT NULL, DEFAULT NOW() | Upload timestamp                                                |
+| Field | Type | Constraints | Description |
+|---|---|---|---|
+| `DocumentID_PK` | int | PK, Auto-increment | Unique identifier |
+| `UserID_FK` | int | FK → User, NOT NULL | Document owner |
+| `Type` | DocumentType | NOT NULL | NationalID, DriverLicense, VehicleImage, CommercialRegistration |
+| `FileURL` | string | NOT NULL | CDN or storage URL of the uploaded file |
+| `UploadedAt` | datetime | NOT NULL, DEFAULT NOW() | Upload timestamp |
 
 **Relationships:**
-
 - `User "1" --> "0..*" UserDocument` — one user can have multiple documents
 
 **Document Requirements by Role:**
 
-| Role            | Required Documents                      |
-| --------------- | --------------------------------------- |
+| Role | Required Documents |
+|---|---|
 | `DeliveryStaff` | NationalID, DriverLicense, VehicleImage |
-| `LaundryAgent`  | NationalID, CommercialRegistration      |
+| `LaundryAgent` | NationalID, CommercialRegistration |
 
 **Note:** Document approval is determined by the overall `User.AccountStatus` transition — the admin reviews all documents together and approves or rejects the entire registration.
 
@@ -561,19 +570,18 @@ Stores uploaded verification document references for `DeliveryStaff` and `Laundr
 
 The platform-wide service catalog. Every service across all categories exists as a row here. Admin-managed. Prices are fixed and uniform — no agent-level pricing.
 
-| Field           | Type            | Constraints            | Description                                      |
-| --------------- | --------------- | ---------------------- | ------------------------------------------------ |
-| `ServiceID_PK`  | int             | PK, Auto-increment     | Unique identifier                                |
-| `ServiceName`   | string          | NOT NULL               | Display name (e.g. "Air Conditioner Deep Clean") |
-| `Category`      | ServiceCategory | NOT NULL               | Laundry, HomeWovens, HomeServices, VehicleWash   |
-| `Type`          | ServiceType     | NOT NULL               | Specific service type                            |
-| `Price`         | decimal         | NOT NULL, CHECK > 0    | Platform-fixed price — same for all agents       |
-| `PricingModel`  | PricingModel    | NOT NULL               | PerItem or FlatFee                               |
-| `DeliveryModel` | DeliveryModel   | NOT NULL               | TwoStage or TechnicianDispatch                   |
-| `IsAvailable`   | boolean         | NOT NULL, DEFAULT true | Admin can disable platform-wide                  |
+| Field | Type | Constraints | Description |
+|---|---|---|---|
+| `ServiceID_PK` | int | PK, Auto-increment | Unique identifier |
+| `ServiceName` | string | NOT NULL | Display name (e.g. "Air Conditioner Deep Clean") |
+| `Category` | ServiceCategory | NOT NULL | Laundry, HomeWovens, HomeServices, VehicleWash |
+| `Type` | ServiceType | NOT NULL | Specific service type |
+| `Price` | decimal | NOT NULL, CHECK > 0 | Platform-fixed price — same for all agents |
+| `PricingModel` | PricingModel | NOT NULL | PerItem or FlatFee |
+| `DeliveryModel` | DeliveryModel | NOT NULL | TwoStage or TechnicianDispatch |
+| `IsAvailable` | boolean | NOT NULL, DEFAULT true | Admin can disable platform-wide |
 
 **Relationships:**
-
 - `Admin "1" --> "0..*" ServiceCatalogItem` — admin is sole owner
 - `ServiceCatalogItem "1" --> "0..*" AgentService` — subscribed to by agents
 - `BookingItem "0..*" --> "1" ServiceCatalogItem` — referenced by booking line items
@@ -584,33 +592,33 @@ The platform-wide service catalog. Every service across all categories exists as
 
 Resolves the many-to-many relationship between `LaundryAgent` and `ServiceCatalogItem`. Enables flexible agent profiles — each agent activates only the services they are approved to offer.
 
-| Field                 | Type     | Constraints                       | Description                                    |
-| --------------------- | -------- | --------------------------------- | ---------------------------------------------- |
-| `AgentServiceID_PK`   | int      | PK, Auto-increment                | Unique identifier                              |
-| `LaundryAgentID` (FK) | int      | FK → LaundryAgent, NOT NULL       | The subscribing agent                          |
-| `ServiceID` (FK)      | int      | FK → ServiceCatalogItem, NOT NULL | The catalog service                            |
-| `IsActive`            | boolean  | NOT NULL, DEFAULT false           | false = pending/suspended, true = live         |
-| `ActivatedAt`         | datetime | NULLABLE                          | Stamped when admin sets IsActive = true        |
-| `Notes`               | string?  | NULLABLE                          | Optional scope notes (e.g. "Residential only") |
+| Field | Type | Constraints | Description |
+|---|---|---|---|
+| `AgentServiceID_PK` | int | PK, Auto-increment | Unique identifier |
+| `LaundryAgentID` (FK) | int | FK → LaundryAgent, NOT NULL | The subscribing agent |
+| `ServiceID` (FK) | int | FK → ServiceCatalogItem, NOT NULL | The catalog service |
+| `IsActive` | boolean | NOT NULL, DEFAULT false | false = pending/suspended, true = live |
+| `ActivatedAt` | datetime | NULLABLE | Stamped when admin sets IsActive = true |
+| `Notes` | string? | NULLABLE | Optional scope notes (e.g. "Residential only") |
 
 **Unique Constraint:** `(LaundryAgentID, ServiceID)` — an agent cannot subscribe to the same service twice.
 
 **State Logic:**
 
-| `User.AccountStatus`  | `AgentService.IsActive` | Client Visibility    |
-| --------------------- | ----------------------- | -------------------- |
-| `PendingVerification` | `false`                 | Not visible          |
-| `Active`              | `true`                  | Visible and bookable |
-| `Active`              | `false`                 | Not visible          |
-| `Suspended`           | Any                     | Not visible          |
+| `User.AccountStatus` | `AgentService.IsActive` | Client Visibility |
+|---|---|---|
+| `PendingVerification` | `false` | Not visible |
+| `Active` | `true` | Visible and bookable |
+| `Active` | `false` | Not visible |
+| `Suspended` | Any | Not visible |
 
 **Agent Profile Examples:**
 
-| Agent Type         | Active AgentService Records                   |
-| ------------------ | --------------------------------------------- |
-| Laundry Only       | WashAndIron, DryClean, IronOnly               |
-| Full Service       | WashAndIron + HomeCleaning + ACCleaning + ... |
-| Vehicle Specialist | CarWash, MotorcycleWash                       |
+| Agent Type | Active AgentService Records |
+|---|---|
+| Laundry Only | WashAndIron, DryClean, IronOnly |
+| Full Service | WashAndIron + HomeCleaning + ACCleaning + ... |
+| Vehicle Specialist | CarWash, MotorcycleWash |
 
 ---
 
@@ -620,23 +628,22 @@ Resolves the many-to-many relationship between `LaundryAgent` and `ServiceCatalo
 
 Admin-created promotional discounts. Validity is fully derived — no manual activation needed.
 
-| Field                 | Type       | Constraints                 | Description                                                                                     |
-| --------------------- | ---------- | --------------------------- | ----------------------------------------------------------------------------------------------- |
-| `OfferID_PK`          | int        | PK, Auto-increment          | Unique identifier                                                                               |
-| `OfferCode`           | string     | NOT NULL, UNIQUE            | Alphanumeric code entered by client                                                             |
-| `Type`                | OfferType  | NOT NULL                    | Percentage or FixedAmount                                                                       |
-| `Scope`               | OfferScope | NOT NULL                    | AllAgents or SpecificAgent                                                                      |
-| `DiscountValue`       | decimal    | NOT NULL, CHECK > 0         | Magnitude of discount                                                                           |
-| `StartDate`           | datetime   | NOT NULL                    | Offer becomes valid from this moment                                                            |
-| `EndDate`             | datetime   | NOT NULL                    | Offer expires after this moment                                                                 |
-| `MinOrderValue`       | decimal?   | NULLABLE, CHECK > 0         | Minimum booking total required                                                                  |
-| `MaxUsageCount`       | int?       | NULLABLE, CHECK > 0         | Usage cap — null means unlimited                                                                |
-| `UsageCount`          | int        | NOT NULL, DEFAULT 0         | Running counter — incremented atomically                                                        |
-| `LaundryAgentID` (FK) | int?       | NULLABLE, FK → LaundryAgent | Null when Scope = AllAgents                                                                     |
-| `/isValid()`          | bool       | Derived                     | `now >= StartDate AND now <= EndDate AND (MaxUsageCount IS NULL OR UsageCount < MaxUsageCount)` |
+| Field | Type | Constraints | Description |
+|---|---|---|---|
+| `OfferID_PK` | int | PK, Auto-increment | Unique identifier |
+| `OfferCode` | string | NOT NULL, UNIQUE | Alphanumeric code entered by client |
+| `Type` | OfferType | NOT NULL | Percentage or FixedAmount |
+| `Scope` | OfferScope | NOT NULL | AllAgents or SpecificAgent |
+| `DiscountValue` | decimal | NOT NULL, CHECK > 0 | Magnitude of discount |
+| `StartDate` | datetime | NOT NULL | Offer becomes valid from this moment |
+| `EndDate` | datetime | NOT NULL | Offer expires after this moment |
+| `MinOrderValue` | decimal? | NULLABLE, CHECK > 0 | Minimum booking total required |
+| `MaxUsageCount` | int? | NULLABLE, CHECK > 0 | Usage cap — null means unlimited |
+| `UsageCount` | int | NOT NULL, DEFAULT 0 | Running counter — incremented atomically |
+| `LaundryAgentID` (FK) | int? | NULLABLE, FK → LaundryAgent | Null when Scope = AllAgents |
+| `/isValid()` | bool | Derived | `now >= StartDate AND now <= EndDate AND (MaxUsageCount IS NULL OR UsageCount < MaxUsageCount)` |
 
 **Constraints:**
-
 - `DiscountValue` must be between 1–100 when `Type = Percentage`
 - A `SpecificAgent` offer cannot be applied to a booking handled by a different agent
 - `UsageCount` incremented atomically to prevent race conditions
@@ -647,25 +654,28 @@ Admin-created promotional discounts. Validity is fully derived — no manual act
 
 The aggregate root of the platform. Every service request — regardless of category — is a `Booking`. Connects all transactional entities.
 
-| Field                 | Type          | Constraints                 | Description                                      |
-| --------------------- | ------------- | --------------------------- | ------------------------------------------------ |
-| `BookingID_PK`        | int           | PK, Auto-increment          | Unique identifier                                |
-| `ClientID` (FK)       | int           | FK → Client, NOT NULL       | The placing client                               |
-| `LaundryAgentID` (FK) | int           | FK → LaundryAgent, NOT NULL | The handling agent                               |
-| `AddressID` (FK)      | int           | FK → Address, NOT NULL      | Service or delivery location                     |
-| `OfferID` (FK)        | int?          | NULLABLE, FK → Offer        | Applied discount if any                          |
-| `Status`              | BookingStatus | NOT NULL, DEFAULT Pending   | Lifecycle state                                  |
-| `FinalTotal`          | decimal       | NOT NULL, CHECK >= 0        | Locked at creation — never recalculated          |
-| `CreatedAt`           | datetime      | NOT NULL, DEFAULT NOW()     | Booking creation timestamp                       |
-| `ScheduledAt`         | datetime?     | NULLABLE                    | Required when DeliveryModel = TechnicianDispatch |
-| `SpecialInstructions` | string?       | NULLABLE                    | Access codes, notes for agent staff              |
+| Field | Type | Constraints | Description |
+|---|---|---|---|
+| `BookingID_PK` | int | PK, Auto-increment | Unique identifier |
+| `ClientID` (FK) | int | FK → Client, NOT NULL | The placing client |
+| `LaundryAgentID` (FK) | int | FK → LaundryAgent, NOT NULL | The handling agent |
+| `AddressID` (FK) | int | FK → Address, NOT NULL | Service or delivery location |
+| `OfferID` (FK) | int? | NULLABLE, FK → Offer | Applied discount if any |
+| `Status` | BookingStatus | NOT NULL, DEFAULT Draft | Lifecycle state — starts as cart |
+| `FinalTotal` | decimal? | NULLABLE, CHECK >= 0 | NULL during Draft — locked on submit to Pending |
+| `CreatedAt` | datetime | NOT NULL, DEFAULT NOW() | Booking creation timestamp |
+| `ExpiresAt` | datetime? | NULLABLE | Auto-cleanup deadline for abandoned Draft bookings |
+| `ScheduledAt` | datetime? | NULLABLE | Required when DeliveryModel = TechnicianDispatch |
+| `SpecialInstructions` | string? | NULLABLE | Access codes, notes for agent staff |
 
 **Constraints:**
-
-- `FinalTotal` is computed and locked at creation — immune to future price changes
+- `FinalTotal` is NULL during `Draft` — computed and locked when client submits (transition to `Pending`)
+- `FinalTotal` is immune to future price changes once locked
+- `ExpiresAt` is set at Draft creation — a background job deletes expired Draft bookings automatically
 - `ScheduledAt` is mandatory for all `TechnicianDispatch` service bookings
 - Status transitions are strictly sequential — no skipping or reversal except to `Cancelled`
 - Cancellation must reverse `Offer.UsageCount` if an offer was applied
+- No `Payment`, `DeliveryTask`, or `Offer` can be attached while `Status = Draft`
 
 ---
 
@@ -673,17 +683,16 @@ The aggregate root of the platform. Every service request — regardless of cate
 
 Individual line items within a booking. Cannot exist without their parent booking (composition).
 
-| Field                      | Type    | Constraints                       | Description                                            |
-| -------------------------- | ------- | --------------------------------- | ------------------------------------------------------ |
-| `BookingItemID_PK`         | int     | PK, Auto-increment                | Unique identifier                                      |
-| `BookingID` (FK)           | int     | FK → Booking, NOT NULL            | Parent booking (composition)                           |
-| `ServiceID` (FK)           | int     | FK → ServiceCatalogItem, NOT NULL | Referenced catalog service                             |
-| `Quantity`                 | int     | NOT NULL, CHECK >= 1              | Units requested                                        |
-| `UnitPriceAtTimeOfBooking` | decimal | NOT NULL, CHECK > 0               | Price snapshot — never updated                         |
-| `/subTotal()`              | decimal | Derived                           | `PerItem: Quantity × UnitPrice` / `FlatFee: UnitPrice` |
+| Field | Type | Constraints | Description |
+|---|---|---|---|
+| `BookingItemID_PK` | int | PK, Auto-increment | Unique identifier |
+| `BookingID` (FK) | int | FK → Booking, NOT NULL | Parent booking (composition) |
+| `ServiceID` (FK) | int | FK → ServiceCatalogItem, NOT NULL | Referenced catalog service |
+| `Quantity` | int | NOT NULL, CHECK >= 1 | Units requested |
+| `UnitPriceAtTimeOfBooking` | decimal | NOT NULL, CHECK > 0 | Price snapshot — never updated |
+| `/subTotal()` | decimal | Derived | `PerItem: Quantity × UnitPrice` / `FlatFee: UnitPrice` |
 
 **Constraints:**
-
 - `UnitPriceAtTimeOfBooking` copied from `ServiceCatalogItem.Price` at booking creation — never modified
 - `subTotal()` is always computed, never stored
 - All items must reference services in the agent's active `AgentService` subscriptions
@@ -696,29 +705,28 @@ Individual line items within a booking. Cannot exist without their parent bookin
 
 Represents one leg of the two-stage physical logistics chain. Only created for bookings containing `TwoStage` services. Exactly two tasks per qualifying booking — Stage 1 and Stage 2.
 
-| Field                   | Type               | Constraints                  | Description                          |
-| ----------------------- | ------------------ | ---------------------------- | ------------------------------------ |
-| `TaskID_PK`             | int                | PK, Auto-increment           | Unique identifier                    |
-| `BookingID` (FK)        | int                | FK → Booking, NOT NULL       | Parent booking                       |
-| `DeliveryStaffID` (FK)  | int?               | NULLABLE, FK → DeliveryStaff | Null until driver claims task        |
-| `PickupAddressID` (FK)  | int                | FK → Address, NOT NULL       | Origin of this leg                   |
-| `DropoffAddressID` (FK) | int                | FK → Address, NOT NULL       | Destination of this leg              |
-| `StageNumber`           | int                | NOT NULL, CHECK IN (1, 2)    | 1 = Pickup, 2 = Delivery             |
-| `Type`                  | TaskType           | NOT NULL                     | PickupFromClient or DeliveryToClient |
-| `Status`                | DeliveryTaskStatus | NOT NULL, DEFAULT Unassigned | Task lifecycle state                 |
-| `DeliveryFee`           | decimal            | NOT NULL, CHECK >= 0         | Fee paid to driver for this leg      |
-| `AssignedAt`            | datetime?          | NULLABLE                     | Stamped when driver claims task      |
-| `CompletedAt`           | datetime?          | NULLABLE                     | Stamped when driver marks complete   |
+| Field | Type | Constraints | Description |
+|---|---|---|---|
+| `TaskID_PK` | int | PK, Auto-increment | Unique identifier |
+| `BookingID` (FK) | int | FK → Booking, NOT NULL | Parent booking |
+| `DeliveryStaffID` (FK) | int? | NULLABLE, FK → DeliveryStaff | Null until driver claims task |
+| `PickupAddressID` (FK) | int | FK → Address, NOT NULL | Origin of this leg |
+| `DropoffAddressID` (FK) | int | FK → Address, NOT NULL | Destination of this leg |
+| `StageNumber` | int | NOT NULL, CHECK IN (1, 2) | 1 = Pickup, 2 = Delivery |
+| `Type` | TaskType | NOT NULL | PickupFromClient or DeliveryToClient |
+| `Status` | DeliveryTaskStatus | NOT NULL, DEFAULT Unassigned | Task lifecycle state |
+| `DeliveryFee` | decimal | NOT NULL, CHECK >= 0 | Fee paid to driver for this leg |
+| `AssignedAt` | datetime? | NULLABLE | Stamped when driver claims task |
+| `CompletedAt` | datetime? | NULLABLE | Stamped when driver marks complete |
 
 **Address Mapping per Stage:**
 
-| Stage                        | `PickupAddressID`       | `DropoffAddressID`      |
-| ---------------------------- | ----------------------- | ----------------------- |
-| Stage 1 — `PickupFromClient` | Client `Address`        | Agent `BusinessAddress` |
-| Stage 2 — `DeliveryToClient` | Agent `BusinessAddress` | Client `Address`        |
+| Stage | `PickupAddressID` | `DropoffAddressID` |
+|---|---|---|
+| Stage 1 — `PickupFromClient` | Client `Address` | Agent `BusinessAddress` |
+| Stage 2 — `DeliveryToClient` | Agent `BusinessAddress` | Client `Address` |
 
 **Constraints:**
-
 - Stage 2 `Status` cannot leave `Unassigned` until Stage 1 `Status = Completed`
 - `DeliveryStaffID` is null at creation — set atomically when driver claims from pool
 - One driver can only have one `InProgress` task at a time (application-layer enforcement)
@@ -731,18 +739,17 @@ Represents one leg of the two-stage physical logistics chain. Only created for b
 
 Records the single full payment for a booking. The `UNIQUE` constraint on `BookingID` enforces the one-payment-per-booking policy at the database level.
 
-| Field            | Type          | Constraints                    | Description                                  |
-| ---------------- | ------------- | ------------------------------ | -------------------------------------------- |
-| `PaymentID_PK`   | int           | PK, Auto-increment             | Unique identifier                            |
-| `BookingID` (FK) | int           | FK → Booking, NOT NULL, UNIQUE | Enforces one payment per booking             |
-| `Amount`         | decimal       | NOT NULL, CHECK > 0            | Must equal `Booking.FinalTotal`              |
-| `Method`         | PaymentMethod | NOT NULL                       | CreditCard, Cash, or Wallet                  |
-| `Status`         | PaymentStatus | NOT NULL, DEFAULT Pending      | Payment outcome state                        |
-| `TransactionRef` | string        | NULLABLE                       | Gateway reference — mandatory for CreditCard |
-| `PaidAt`         | datetime      | NULLABLE                       | Stamped on Status = Success                  |
+| Field | Type | Constraints | Description |
+|---|---|---|---|
+| `PaymentID_PK` | int | PK, Auto-increment | Unique identifier |
+| `BookingID` (FK) | int | FK → Booking, NOT NULL, UNIQUE | Enforces one payment per booking |
+| `Amount` | decimal | NOT NULL, CHECK > 0 | Must equal `Booking.FinalTotal` |
+| `Method` | PaymentMethod | NOT NULL | CreditCard, Cash, or Wallet |
+| `Status` | PaymentStatus | NOT NULL, DEFAULT Pending | Payment outcome state |
+| `TransactionRef` | string | NULLABLE | Gateway reference — mandatory for CreditCard |
+| `PaidAt` | datetime | NULLABLE | Stamped on Status = Success |
 
 **Business Rules:**
-
 - Full payment only — no installments or partial payments
 - `Amount` validated against `Booking.FinalTotal` before record creation
 - `Wallet` payment requires `Client.WalletBalance >= Amount`
@@ -757,24 +764,22 @@ Records the single full payment for a booking. The `UNIQUE` constraint on `Booki
 
 Records the client's star rating and optional written note for a completed booking. Covers both the agent's service quality and the driver's delivery experience independently. Each star rating can be accompanied by a free-text note written by the client.
 
-| Field             | Type     | Constraints                    | Description                                                                              |
-| ----------------- | -------- | ------------------------------ | ---------------------------------------------------------------------------------------- |
-| `RatingID_PK`     | int      | PK, Auto-increment             | Unique identifier                                                                        |
-| `BookingID` (FK)  | int      | FK → Booking, NOT NULL, UNIQUE | One rating per booking                                                                   |
-| `AgentRating`     | int?     | NULLABLE, CHECK 1–5            | Star rating for the agent's service quality                                              |
-| `AgentComment`    | string?  | NULLABLE                       | Free-text note the client writes about the agent — submitted alongside `AgentRating`     |
-| `DeliveryRating`  | int?     | NULLABLE, CHECK 1–5            | Star rating for the driver's delivery experience                                         |
-| `DeliveryComment` | string?  | NULLABLE                       | Free-text note the client writes about the driver — submitted alongside `DeliveryRating` |
-| `RatedAt`         | datetime | NOT NULL, DEFAULT NOW()        | Submission timestamp                                                                     |
+| Field | Type | Constraints | Description |
+|---|---|---|---|
+| `RatingID_PK` | int | PK, Auto-increment | Unique identifier |
+| `BookingID` (FK) | int | FK → Booking, NOT NULL, UNIQUE | One rating per booking |
+| `AgentRating` | int? | NULLABLE, CHECK 1–5 | Star rating for the agent's service quality |
+| `AgentComment` | string? | NULLABLE | Free-text note the client writes about the agent — submitted alongside `AgentRating` |
+| `DeliveryRating` | int? | NULLABLE, CHECK 1–5 | Star rating for the driver's delivery experience |
+| `DeliveryComment` | string? | NULLABLE | Free-text note the client writes about the driver — submitted alongside `DeliveryRating` |
+| `RatedAt` | datetime | NOT NULL, DEFAULT NOW() | Submission timestamp |
 
 > `AgentComment` and `DeliveryComment` are the note fields. The client writes them alongside their star ratings — they are optional free-text companions to each rating, not separate submissions. No additional entity or field is needed to support rating notes.
 
 **Relationships:**
-
 - `Booking "1" --> "0..1" BookingRating` — one rating per booking maximum
 
 **Constraints:**
-
 - Rating only submittable when `Booking.Status = Completed`
 - `UNIQUE` on `BookingID` — one rating per booking enforced at DB level
 - `DeliveryRating` and `DeliveryComment` must be null for `TechnicianDispatch` bookings — no driver to rate
@@ -787,17 +792,17 @@ Agent and driver ratings are never stored as fields — always computed live fro
 
 **On `LaundryAgent`:**
 
-| Derived Method     | Formula                                                                   |
-| ------------------ | ------------------------------------------------------------------------- |
+| Derived Method | Formula |
+|---|---|
 | `/averageRating()` | `AVG(BookingRating.AgentRating)` for all completed bookings of this agent |
-| `/totalRatings()`  | `COUNT(BookingRating.AgentRating)` where not null                         |
+| `/totalRatings()` | `COUNT(BookingRating.AgentRating)` where not null |
 
 **On `DeliveryStaff`:**
 
-| Derived Method     | Formula                                                                  |
-| ------------------ | ------------------------------------------------------------------------ |
+| Derived Method | Formula |
+|---|---|
 | `/averageRating()` | `AVG(BookingRating.DeliveryRating)` for all tasks handled by this driver |
-| `/totalRatings()`  | `COUNT(BookingRating.DeliveryRating)` where not null                     |
+| `/totalRatings()` | `COUNT(BookingRating.DeliveryRating)` where not null |
 
 **Why computed and not stored:** Storing an average risks it becoming stale if a rating is updated or deleted. Computing it at query time guarantees it is always accurate.
 
@@ -809,17 +814,16 @@ Agent and driver ratings are never stored as fields — always computed live fro
 
 Immutable record of every privileged admin action. Append-only — no UPDATE or DELETE operations permitted on this table.
 
-| Field          | Type     | Constraints             | Description                                        |
-| -------------- | -------- | ----------------------- | -------------------------------------------------- |
-| `LogID_PK`     | int      | PK, Auto-increment      | Unique identifier                                  |
-| `AdminID` (FK) | int      | FK → Admin, NOT NULL    | Performing admin                                   |
-| `Action`       | string   | NOT NULL                | Action key (e.g. `ACTIVATE_AGENT`, `CREATE_OFFER`) |
-| `TargetEntity` | string   | NOT NULL                | Affected table (e.g. `User`, `Offer`)              |
-| `TargetID`     | int      | NOT NULL                | PK of the affected record                          |
-| `PerformedAt`  | datetime | NOT NULL, DEFAULT NOW() | Server-side timestamp — not application clock      |
+| Field | Type | Constraints | Description |
+|---|---|---|---|
+| `LogID_PK` | int | PK, Auto-increment | Unique identifier |
+| `AdminID` (FK) | int | FK → Admin, NOT NULL | Performing admin |
+| `Action` | string | NOT NULL | Action key (e.g. `ACTIVATE_AGENT`, `CREATE_OFFER`) |
+| `TargetEntity` | string | NOT NULL | Affected table (e.g. `User`, `Offer`) |
+| `TargetID` | int | NOT NULL | PK of the affected record |
+| `PerformedAt` | datetime | NOT NULL, DEFAULT NOW() | Server-side timestamp — not application clock |
 
 **Constraints:**
-
 - No UPDATE or DELETE on this table — insert only
 - `PerformedAt` set by database server clock — not application layer
 - `TargetEntity + TargetID` form a soft polymorphic reference — no hard FK
@@ -828,21 +832,19 @@ Immutable record of every privileged admin action. Append-only — no UPDATE or 
 
 Controls whether login is enabled across the entire platform. Used by the admin to pause the system during maintenance or to address critical issues. Every state change appends a new row — full history is preserved.
 
-| Field          | Type     | Constraints             | Description                                                                                                                                 |
-| -------------- | -------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `StatusID_PK`  | int      | PK, Auto-increment      | Unique identifier — new row on every change                                                                                                 |
-| `LoginEnabled` | boolean  | NOT NULL                | `true` = login open, `false` = all logins blocked                                                                                           |
-| `Message`      | string?  | NULLABLE                | Public-facing message shown to users on the login screen — explains the purpose of the pause (e.g. "النظام في صيانة مؤقتة، نعود قريباً 🛠️") |
-| `ChangedAt`    | datetime | NOT NULL, DEFAULT NOW() | When the admin triggered the change                                                                                                         |
+| Field | Type | Constraints | Description |
+|---|---|---|---|
+| `StatusID_PK` | int | PK, Auto-increment | Unique identifier — new row on every change |
+| `LoginEnabled` | boolean | NOT NULL | `true` = login open, `false` = all logins blocked |
+| `Message` | string? | NULLABLE | Public-facing message shown to users on the login screen — explains the purpose of the pause (e.g. "النظام في صيانة مؤقتة، نعود قريباً 🛠️") |
+| `ChangedAt` | datetime | NOT NULL, DEFAULT NOW() | When the admin triggered the change |
 
 > `Reason` was removed. `Message` is the sole field — it serves both as the internal record and the public-facing explanation shown directly to users on the login screen. No separate internal note is needed.
 
 **Relationships:**
-
 - `Admin "1" --> "0..*" SystemStatus` — admin controls all system status entries
 
 **How the current state is read:**
-
 ```sql
 SELECT * FROM SystemStatus
 ORDER BY ChangedAt DESC
@@ -850,7 +852,6 @@ LIMIT 1
 ```
 
 **Constraints:**
-
 - Append-only — no UPDATE or DELETE on existing rows
 - `ChangedAt` set by DB server clock
 - Admin is always exempt from `LoginEnabled = false` — the admin must always be able to log in to restore the system
@@ -858,88 +859,89 @@ LIMIT 1
 
 **Behavior:**
 
-| `LoginEnabled` | Effect                                           |
-| -------------- | ------------------------------------------------ |
-| `true`         | Platform running normally — all users can log in |
-| `false`        | All user logins blocked — only admin can log in  |
+| `LoginEnabled` | Effect |
+|---|---|
+| `true` | Platform running normally — all users can log in |
+| `false` | All user logins blocked — only admin can log in |
 
 ---
 
 ## 12. Relationship Map
 
-| #   | From                 | Cardinality    | To                   | Label         | Type        |
-| --- | -------------------- | -------------- | -------------------- | ------------- | ----------- |
-| 1   | `User`               | 1 ◄──          | `Client`             | is-a          | Inheritance |
-| 2   | `User`               | 1 ◄──          | `DeliveryStaff`      | is-a          | Inheritance |
-| 3   | `User`               | 1 ◄──          | `LaundryAgent`       | is-a          | Inheritance |
-| 4   | `User`               | 1 ◄──          | `Admin`              | is-a          | Inheritance |
-| 5   | `User`               | 1 ──► 0..\*    | `UserDocument`       | uploads       | One-to-Many |
-| 6   | `Client`             | 1 ──► 0..\*    | `Address`            | has           | One-to-Many |
-| 7   | `Client`             | 1 ──► 0..\*    | `Booking`            | places        | One-to-Many |
-| 8   | `LaundryAgent`       | 1 ──► 1        | `Address`            | located at    | One-to-One  |
-| 9   | `LaundryAgent`       | 1 ──► 0..\*    | `AgentService`       | subscribes to | One-to-Many |
-| 10  | `ServiceCatalogItem` | 1 ──► 0..\*    | `AgentService`       | offered by    | One-to-Many |
-| 11  | `Admin`              | 1 ──► 0..\*    | `ServiceCatalogItem` | manages       | One-to-Many |
-| 12  | `Admin`              | 1 ──► 0..\*    | `Offer`              | creates       | One-to-Many |
-| 13  | `Admin`              | 1 ──► 0..\*    | `AuditLog`           | generates     | One-to-Many |
-| 14  | `Offer`              | 0..\* ──► 0..1 | `LaundryAgent`       | scoped to     | One-to-Many |
-| 15  | `Booking`            | 0..\* ──► 1    | `LaundryAgent`       | handled by    | One-to-Many |
-| 16  | `Booking`            | 0..\* ──► 1    | `Address`            | located at    | One-to-Many |
-| 17  | `Booking`            | 1 ──►◆ 1..\*   | `BookingItem`        | contains      | Composition |
-| 18  | `Booking`            | 0..\* ──► 0..1 | `Offer`              | applies       | One-to-Many |
-| 19  | `Booking`            | 1 ──► 0..1     | `Payment`            | paid by       | One-to-One  |
-| 20  | `Booking`            | 1 ──► 0..2     | `DeliveryTask`       | may require   | One-to-Many |
-| 21  | `BookingItem`        | 0..\* ──► 1    | `ServiceCatalogItem` | references    | One-to-Many |
-| 22  | `DeliveryStaff`      | 1 ──► 0..\*    | `DeliveryTask`       | assigned to   | One-to-Many |
-| 23  | `DeliveryTask`       | 0..\* ──► 1    | `Address`            | pickup from   | One-to-Many |
-| 24  | `DeliveryTask`       | 0..\* ──► 1    | `Address`            | dropoff to    | One-to-Many |
+| # | From | Cardinality | To | Label | Type |
+|---|---|---|---|---|---|
+| 1 | `User` | 1 ◄── | `Client` | is-a | Inheritance |
+| 2 | `User` | 1 ◄── | `DeliveryStaff` | is-a | Inheritance |
+| 3 | `User` | 1 ◄── | `LaundryAgent` | is-a | Inheritance |
+| 4 | `User` | 1 ◄── | `Admin` | is-a | Inheritance |
+| 5 | `User` | 1 ──► 0..* | `UserDocument` | uploads | One-to-Many |
+| 6 | `Client` | 1 ──► 0..* | `Address` | has | One-to-Many |
+| 7 | `Client` | 1 ──► 0..* | `Booking` | places | One-to-Many |
+| 8 | `LaundryAgent` | 1 ──► 1 | `Address` | located at | One-to-One |
+| 9 | `LaundryAgent` | 1 ──► 0..* | `AgentService` | subscribes to | One-to-Many |
+| 10 | `ServiceCatalogItem` | 1 ──► 0..* | `AgentService` | offered by | One-to-Many |
+| 11 | `Admin` | 1 ──► 0..* | `ServiceCatalogItem` | manages | One-to-Many |
+| 12 | `Admin` | 1 ──► 0..* | `Offer` | creates | One-to-Many |
+| 13 | `Admin` | 1 ──► 0..* | `AuditLog` | generates | One-to-Many |
+| 14 | `Offer` | 0..* ──► 0..1 | `LaundryAgent` | scoped to | One-to-Many |
+| 15 | `Booking` | 0..* ──► 1 | `LaundryAgent` | handled by | One-to-Many |
+| 16 | `Booking` | 0..* ──► 1 | `Address` | located at | One-to-Many |
+| 17 | `Booking` | 1 ──►◆ 1..* | `BookingItem` | contains | Composition |
+| 18 | `Booking` | 0..* ──► 0..1 | `Offer` | applies | One-to-Many |
+| 19 | `Booking` | 1 ──► 0..1 | `Payment` | paid by | One-to-One |
+| 20 | `Booking` | 1 ──► 0..2 | `DeliveryTask` | may require | One-to-Many |
+| 21 | `BookingItem` | 0..* ──► 1 | `ServiceCatalogItem` | references | One-to-Many |
+| 22 | `DeliveryStaff` | 1 ──► 0..* | `DeliveryTask` | assigned to | One-to-Many |
+| 23 | `DeliveryTask` | 0..* ──► 1 | `Address` | pickup from | One-to-Many |
+| 24 | `DeliveryTask` | 0..* ──► 1 | `Address` | dropoff to | One-to-Many |
 
 ---
 
 ## 13. Business Rules
 
-### Payment Rules
+### Cart Rules
+- A `Draft` booking is created automatically when the client opens the cart — no explicit action needed
+- `BookingItem` records can be freely added or removed while `Status = Draft`
+- `FinalTotal` is `NULL` during `Draft` — computed and locked only when the client submits the order
+- No `Payment`, `Offer`, or `DeliveryTask` can be attached while `Status = Draft`
+- `ExpiresAt` is set at Draft creation — a background job hard-deletes expired Draft bookings and their items automatically
+- Transition from `Draft` → `Pending` locks `FinalTotal` and opens the order for agent acceptance
 
+### Payment Rules
 - One payment per booking — enforced by `UNIQUE` constraint on `Payment.BookingID`
 - Full payment only — no installments or partial amounts
 - `Amount` must equal `Booking.FinalTotal` before payment record is created
 - Wallet payment requires sufficient `Client.WalletBalance`
 
 ### Delivery Rules
-
 - `TwoStage` bookings generate exactly 2 `DeliveryTask` records at `Booking.Status = Accepted`
 - `TechnicianDispatch` bookings generate 0 `DeliveryTask` records
 - Stage 2 remains `Unassigned` until Stage 1 is `Completed`
 - Different drivers may handle Stage 1 and Stage 2 of the same booking
 
 ### Pricing Rules
-
 - All prices are set by the admin — agents have no pricing authority
 - Prices are uniform across all agents for the same service
 - `UnitPriceAtTimeOfBooking` is locked at creation — immune to catalog updates
 
 ### Offer Rules
-
 - Only the admin can create offers
 - `SpecificAgent` offers apply only to bookings handled by the named agent
 - `isValid()` is always derived — never a stored field
 - `UsageCount` is incremented atomically on successful application
 
 ### Registration Rules
-
 - All new accounts start as `AccountStatus = PendingVerification`
 - Admin reviews all submitted documents holistically before approving
 - `AgentService.IsActive` is ignored while account is `PendingVerification`
 - `TermsAccepted` must be `true` before registration can be submitted
 
 ### Agent Service Rules
-
 - Only admin can activate or deactivate `AgentService` records
 - Clients only see services where both `AccountStatus = Active` and `AgentService.IsActive = true`
 - All `BookingItem` records must reference services in the agent's active subscriptions
 
 ### Rating Rules
-
 - Rating only submittable when `Booking.Status = Completed`
 - One rating per booking — enforced by `UNIQUE` on `BookingRating.BookingID`
 - `AgentComment` and `DeliveryComment` are optional free-text notes written alongside their respective star ratings
@@ -948,7 +950,6 @@ LIMIT 1
 - Average ratings for agents and drivers are always computed at query time — never stored
 
 ### System Status Rules
-
 - Only the admin can change `SystemStatus`
 - Every change appends a new row — history is never overwritten
 - `LoginEnabled = false` blocks all user logins — admin is always exempt
@@ -958,32 +959,39 @@ LIMIT 1
 
 ## 14. Delivery Model Matrix
 
-| Service            | Category     | DeliveryModel      | Tasks | ScheduledAt  | Agent Action        |
-| ------------------ | ------------ | ------------------ | ----- | ------------ | ------------------- |
-| WashAndIron        | Laundry      | TwoStage           | 2     | Not required | Process clothes     |
-| DryClean           | Laundry      | TwoStage           | 2     | Not required | Process clothes     |
-| IronOnly           | Laundry      | TwoStage           | 2     | Not required | Iron clothes        |
-| Curtains           | HomeWovens   | TwoStage           | 2     | Not required | Wash curtains       |
-| Bedsheets          | HomeWovens   | TwoStage           | 2     | Not required | Wash bedding        |
-| Blankets           | HomeWovens   | TwoStage           | 2     | Not required | Wash blankets       |
-| Carpets            | HomeWovens   | TwoStage           | 2     | Not required | Clean carpets       |
-| HomeCleaning       | HomeServices | TechnicianDispatch | 0     | **Required** | Dispatch cleaner    |
-| ACCleaning         | HomeServices | TechnicianDispatch | 0     | **Required** | Dispatch technician |
-| WaterTankCleaning  | HomeServices | TechnicianDispatch | 0     | **Required** | Dispatch technician |
-| SolarPanelCleaning | HomeServices | TechnicianDispatch | 0     | **Required** | Dispatch technician |
-| CarWash            | VehicleWash  | TechnicianDispatch | 0     | **Required** | Dispatch washer     |
-| MotorcycleWash     | VehicleWash  | TechnicianDispatch | 0     | **Required** | Dispatch washer     |
+| Service | Category | DeliveryModel | Tasks | ScheduledAt | Agent Action |
+|---|---|---|---|---|---|
+| WashAndIron | Laundry | TwoStage | 2 | Not required | Process clothes |
+| DryClean | Laundry | TwoStage | 2 | Not required | Process clothes |
+| IronOnly | Laundry | TwoStage | 2 | Not required | Iron clothes |
+| Curtains | HomeWovens | TwoStage | 2 | Not required | Wash curtains |
+| Bedsheets | HomeWovens | TwoStage | 2 | Not required | Wash bedding |
+| Blankets | HomeWovens | TwoStage | 2 | Not required | Wash blankets |
+| Carpets | HomeWovens | TwoStage | 2 | Not required | Clean carpets |
+| HomeCleaning | HomeServices | TechnicianDispatch | 0 | **Required** | Dispatch cleaner |
+| ACCleaning | HomeServices | TechnicianDispatch | 0 | **Required** | Dispatch technician |
+| WaterTankCleaning | HomeServices | TechnicianDispatch | 0 | **Required** | Dispatch technician |
+| SolarPanelCleaning | HomeServices | TechnicianDispatch | 0 | **Required** | Dispatch technician |
+| CarWash | VehicleWash | TechnicianDispatch | 0 | **Required** | Dispatch washer |
+| MotorcycleWash | VehicleWash | TechnicianDispatch | 0 | **Required** | Dispatch washer |
 
 ---
 
 ## 15. Booking Status State Machine
 
 ```
-                    ┌─────────┐
-                    │ Pending │  ◄── Client places booking
-                    └────┬────┘
-                         │ Agent accepts
-                         ▼
+                   ┌───────┐
+                   │ Draft │  ◄── Client opens cart — Booking created
+                   └───┬───┘     FinalTotal = NULL
+                       │         ExpiresAt set for auto-cleanup
+                       │ Client submits order
+                       │ FinalTotal locked
+                       ▼
+                   ┌─────────┐
+                   │ Pending │  ◄── Awaiting agent acceptance
+                   └────┬────┘
+                        │ Agent accepts
+                        ▼
                    ┌──────────┐
                    │ Accepted │  ◄── DeliveryTasks created (if TwoStage)
                    └────┬─────┘
@@ -1003,7 +1011,8 @@ LIMIT 1
                   │ Completed │  ◄── Terminal success state
                   └───────────┘
 
-         ──────── Cancelled ◄── Available from any non-terminal state
+    Cancelled ◄── Available from Pending, Accepted, InProgress, Ready
+    Draft ──── Auto-deleted when ExpiresAt is reached (abandoned cart)
 ```
 
 ---
@@ -1014,27 +1023,27 @@ LIMIT 1
 
 ### Field Coverage by Role
 
-| Field               | Client                          | DeliveryStaff                       | LaundryAgent                               |
-| ------------------- | ------------------------------- | ----------------------------------- | ------------------------------------------ |
-| First Name          | ✅ `User.FirstName`             | ✅ `User.FirstName`                 | ✅ `User.FirstName`                        |
-| Last Name           | ✅ `User.LastName`              | ✅ `User.LastName`                  | ✅ `User.LastName`                         |
-| Father Name         | —                               | ✅ `DeliveryStaff.FatherName`       | ✅ `LaundryAgent.FatherName`               |
-| Grandfather Name    | —                               | ✅ `DeliveryStaff.GrandfatherName`  | ✅ `LaundryAgent.GrandfatherName`          |
-| Email               | ✅ `User.Email`                 | ✅ `User.Email`                     | ✅ `User.Email`                            |
-| Phone               | ✅ `User.PhoneNo`               | ✅ `User.PhoneNo`                   | ✅ `User.PhoneNo`                          |
-| Password            | ✅ `User.PasswordHash`          | ✅ `User.PasswordHash`              | ✅ `User.PasswordHash`                     |
-| Date of Birth       | ✅ `User.DateOfBirth`           | ✅ `User.DateOfBirth`               | ✅ `User.DateOfBirth`                      |
-| Gender              | ✅ `Client.Gender`              | —                                   | —                                          |
-| GPS Location        | ✅ `Address.Latitude/Longitude` | —                                   | ✅ `Address.Latitude/Longitude`            |
-| Address String      | ✅ `Address.Area + Street`      | —                                   | ✅ `Address.Area + Street`                 |
-| Terms Accepted      | ✅ `User.TermsAccepted`         | ✅ `User.TermsAccepted`             | ✅ `User.TermsAccepted`                    |
-| Vehicle Type        | —                               | ✅ `DeliveryStaff.VehicleType`      | —                                          |
-| Plate Number        | —                               | ✅ `DeliveryStaff.PlateNumber`      | —                                          |
-| National ID Number  | —                               | ✅ `DeliveryStaff.NationalIDNumber` | ✅ `LaundryAgent.NationalIDNumber`         |
-| ID Image            | —                               | ✅ `UserDocument (NationalID)`      | ✅ `UserDocument (NationalID)`             |
-| License Image       | —                               | ✅ `UserDocument (DriverLicense)`   | —                                          |
-| Vehicle Image       | —                               | ✅ `UserDocument (VehicleImage)`    | —                                          |
-| Business Name       | —                               | —                                   | ✅ `LaundryAgent.BusinessName`             |
-| Commercial Register | —                               | —                                   | ✅ `LaundryAgent.CommercialRegister`       |
-| Reg. Document Image | —                               | —                                   | ✅ `UserDocument (CommercialRegistration)` |
-| Service Selection   | —                               | —                                   | ✅ `AgentService` junction                 |
+| Field | Client | DeliveryStaff | LaundryAgent |
+|---|---|---|---|
+| First Name | ✅ `User.FirstName` | ✅ `User.FirstName` | ✅ `User.FirstName` |
+| Last Name | ✅ `User.LastName` | ✅ `User.LastName` | ✅ `User.LastName` |
+| Father Name | — | ✅ `DeliveryStaff.FatherName` | ✅ `LaundryAgent.FatherName` |
+| Grandfather Name | — | ✅ `DeliveryStaff.GrandfatherName` | ✅ `LaundryAgent.GrandfatherName` |
+| Email | ✅ `User.Email` | ✅ `User.Email` | ✅ `User.Email` |
+| Phone | ✅ `User.PhoneNo` | ✅ `User.PhoneNo` | ✅ `User.PhoneNo` |
+| Password | ✅ `User.PasswordHash` | ✅ `User.PasswordHash` | ✅ `User.PasswordHash` |
+| Date of Birth | ✅ `User.DateOfBirth` | ✅ `User.DateOfBirth` | ✅ `User.DateOfBirth` |
+| Gender | ✅ `Client.Gender` | — | — |
+| GPS Location | ✅ `Address.Latitude/Longitude` | — | ✅ `Address.Latitude/Longitude` |
+| Address String | ✅ `Address.Area + Street` | — | ✅ `Address.Area + Street` |
+| Terms Accepted | ✅ `User.TermsAccepted` | ✅ `User.TermsAccepted` | ✅ `User.TermsAccepted` |
+| Vehicle Type | — | ✅ `DeliveryStaff.VehicleType` | — |
+| Plate Number | — | ✅ `DeliveryStaff.PlateNumber` | — |
+| National ID Number | — | ✅ `DeliveryStaff.NationalIDNumber` | ✅ `LaundryAgent.NationalIDNumber` |
+| ID Image | — | ✅ `UserDocument (NationalID)` | ✅ `UserDocument (NationalID)` |
+| License Image | — | ✅ `UserDocument (DriverLicense)` | — |
+| Vehicle Image | — | ✅ `UserDocument (VehicleImage)` | — |
+| Business Name | — | — | ✅ `LaundryAgent.BusinessName` |
+| Commercial Register | — | — | ✅ `LaundryAgent.CommercialRegister` |
+| Reg. Document Image | — | — | ✅ `UserDocument (CommercialRegistration)` |
+| Service Selection | — | — | ✅ `AgentService` junction |
