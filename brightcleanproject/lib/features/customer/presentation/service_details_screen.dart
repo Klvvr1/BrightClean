@@ -827,12 +827,12 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               final isCartService = widget.serviceType == 'الملابس' || widget.serviceType == 'السجاد والمفروشات';
-              
+
               if (isCartService) {
                 final cart = Provider.of<CartProvider>(context, listen: false);
-                
+
                 if (widget.serviceType.contains('لابس')) {
                   if (totalClothingPieces == 0) {
                     ScaffoldMessenger.of(context).clearSnackBars();
@@ -844,19 +844,19 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
                     );
                     return;
                   }
-                  
+
                   // Add all selected clothing items to the cart
-                  _clothingQuantities.forEach((item, qty) {
-                    if (qty > 0) {
-                      cart.addItem(
+                  for (var entry in _clothingQuantities.entries) {
+                    if (entry.value > 0) {
+                      await cart.addItem(
                         serviceName: widget.serviceType,
-                        selectedType: '$item - ${selectedOption.displayName}',
-                        quantity: qty,
+                        selectedType: '${entry.key} - ${selectedOption.displayName}',
+                        quantity: entry.value,
                         pricePerUnit: basePrice * selectedOption.priceMultiplier,
-                        totalPrice: basePrice * selectedOption.priceMultiplier * qty,
+                        totalPrice: basePrice * selectedOption.priceMultiplier * entry.value,
                       );
                     }
-                  });
+                  }
                   
                   // Reset clothing item quantities
                   setState(() {
@@ -897,27 +897,27 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
                   }
                   
                   // Add all selected carpet pieces with their dimensions to the cart
-                  _carpetQuantities.forEach((item, qty) {
-                    if (qty > 0) {
-                      final lengthList = _carpetLengthControllers[item]!;
-                      final widthList = _carpetWidthControllers[item]!;
-                      double itemBaseMultiplier = (item == 'غسيل سجاد عادي') ? 1.0 : 1.5;
-                      for (int i = 0; i < qty; i++) {
+                  for (var entry in _carpetQuantities.entries) {
+                    if (entry.value > 0) {
+                      final lengthList = _carpetLengthControllers[entry.key]!;
+                      final widthList = _carpetWidthControllers[entry.key]!;
+                      double itemBaseMultiplier = (entry.key == 'غسيل سجاد عادي') ? 1.0 : 1.5;
+                      for (int i = 0; i < entry.value; i++) {
                         double l = double.tryParse(lengthList[i].text) ?? 1.0;
                         double w = double.tryParse(widthList[i].text) ?? 1.0;
                         if (l <= 0) l = 1.0;
                         if (w <= 0) w = 1.0;
                         double itemPrice = basePrice * selectedOption.priceMultiplier * itemBaseMultiplier * (l * w);
-                        cart.addItem(
+                        await cart.addItem(
                           serviceName: widget.serviceType,
-                          selectedType: '$item (القطعة ${i + 1}: ${l.toStringAsFixed(1)}م x ${w.toStringAsFixed(1)}م)',
+                          selectedType: '${entry.key} (القطعة ${i + 1}: ${l.toStringAsFixed(1)}م x ${w.toStringAsFixed(1)}م)',
                           quantity: 1,
                           pricePerUnit: itemPrice,
                           totalPrice: itemPrice,
                         );
                       }
                     }
-                  });
+                  }
                   
                   setState(() {
                     for (final key in _carpetQuantities.keys.toList()) {
