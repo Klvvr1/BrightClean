@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/theme/app_radius.dart';
 import '../../../../core/widgets/custom_text_field.dart';
 
 class EditAccountScreen extends StatefulWidget {
@@ -71,20 +73,22 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
       final phone = _phoneController.text.trim();
 
       if (name.isEmpty) {
+        final theme = Theme.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('الرجاء إدخال الاسم'),
-            backgroundColor: AppColors.error,
+          SnackBar(
+            content: const Text('الرجاء إدخال الاسم'),
+            backgroundColor: theme.colorScheme.error,
           ),
         );
         return;
       }
 
       if (phone.isEmpty || phone.length < 9) {
+        final theme = Theme.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('الرجاء إدخال رقم هاتف صالح'),
-            backgroundColor: AppColors.error,
+          SnackBar(
+            content: const Text('الرجاء إدخال رقم هاتف صالح'),
+            backgroundColor: theme.colorScheme.error,
           ),
         );
         return;
@@ -124,18 +128,20 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
+      backgroundColor: theme.colorScheme.surface,
       appBar: AppBar(
         title: const Text('تعديل الحساب'),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
+        padding: const EdgeInsets.all(AppSpacing.xxl),
         child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.md),
               // Profile Picture Component
               Center(
                 child: Stack(
@@ -143,27 +149,27 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
                   children: [
                     CircleAvatar(
                       radius: 60,
-                      backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                      backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
                       backgroundImage: _selectedImage != null ? FileImage(_selectedImage!) : null,
                       child: _selectedImage == null
-                          ? const Icon(Icons.person, size: 60, color: AppColors.primary)
+                          ? Icon(Icons.person, size: 60, color: theme.colorScheme.primary)
                           : null,
                     ),
                     GestureDetector(
                       onTap: _pickImage,
                       child: Container(
                         padding: const EdgeInsets.all(8),
-                        decoration: const BoxDecoration(
-                          color: AppColors.primary,
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primary,
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.camera_alt, color: AppColors.white, size: 20),
+                        child: Icon(Icons.camera_alt, color: theme.colorScheme.onPrimary, size: 20),
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: AppSpacing.xxxl),
               
               // Name Field
               CustomTextField(
@@ -177,7 +183,7 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
                   return null;
                 },
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.md),
               
               // Phone Field
               CustomTextField(
@@ -200,25 +206,25 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
                 },
               ),
               
-              const SizedBox(height: 48),
+              const SizedBox(height: AppSpacing.xxxxl),
               
               // Save Button
               ElevatedButton(
                 onPressed: _isLoading ? null : _saveChanges,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  backgroundColor: theme.colorScheme.primary,
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                  shape: RoundedRectangleBorder(borderRadius: AppRadius.button),
                 ),
                 child: _isLoading
-                    ? const SizedBox(
+                    ? SizedBox(
                         height: 24,
                         width: 24,
-                        child: CircularProgressIndicator(color: AppColors.white, strokeWidth: 2.5),
+                        child: CircularProgressIndicator(color: theme.colorScheme.onPrimary, strokeWidth: 2.5),
                       )
-                    : const Text(
+                    : Text(
                         'حفظ التغييرات',
-                        style: TextStyle(fontSize: 16, color: AppColors.white, fontWeight: FontWeight.bold),
+                        style: TextStyle(fontSize: 16, color: theme.colorScheme.onPrimary, fontWeight: FontWeight.bold),
                       ),
               ),
             ],

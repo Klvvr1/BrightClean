@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import '../../../../../core/theme/app_colors.dart';
+import '../../../../../core/theme/app_spacing.dart';
 import '../models/user_profile.dart';
 
 class ProfileHeaderSection extends StatelessWidget {
@@ -15,12 +15,14 @@ class ProfileHeaderSection extends StatelessWidget {
     this.onEditAvatarPressed,
   });
 
-  Widget _buildAvatarContent() {
+  Widget _buildAvatarContent(BuildContext context) {
+    final theme = Theme.of(context);
+    
     if (user.imagePath == null || user.imagePath!.isEmpty) {
       return Container(
-        color: AppColors.lightBlue,
-        child: const Center(
-          child: Icon(Icons.person, size: 50, color: AppColors.white),
+        color: theme.colorScheme.primaryContainer,
+        child: Center(
+          child: Icon(Icons.person, size: 50, color: theme.colorScheme.onPrimaryContainer),
         ),
       );
     }
@@ -28,9 +30,9 @@ class ProfileHeaderSection extends StatelessWidget {
     final file = File(user.imagePath!);
     if (!file.existsSync()) {
       return Container(
-        color: AppColors.lightBlue,
-        child: const Center(
-          child: Icon(Icons.person, size: 50, color: AppColors.white),
+        color: theme.colorScheme.primaryContainer,
+        child: Center(
+          child: Icon(Icons.person, size: 50, color: theme.colorScheme.onPrimaryContainer),
         ),
       );
     }
@@ -40,9 +42,9 @@ class ProfileHeaderSection extends StatelessWidget {
       fit: BoxFit.cover,
       errorBuilder: (context, error, stackTrace) {
         return Container(
-          color: AppColors.lightBlue,
-          child: const Center(
-            child: Icon(Icons.person, size: 50, color: AppColors.white),
+          color: theme.colorScheme.primaryContainer,
+          child: Center(
+            child: Icon(Icons.person, size: 50, color: theme.colorScheme.onPrimaryContainer),
           ),
         );
       },
@@ -51,6 +53,7 @@ class ProfileHeaderSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Column(
       children: [
         Stack(
@@ -60,36 +63,32 @@ class ProfileHeaderSection extends StatelessWidget {
               child: SizedBox(
                 width: 100,
                 height: 100,
-                child: _buildAvatarContent(),
+                child: _buildAvatarContent(context),
               ),
             ),
             if (isEditMode)
               Container(
-                decoration: const BoxDecoration(
-                  color: AppColors.primary,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary,
                   shape: BoxShape.circle,
                 ),
                 child: IconButton(
-                  icon: const Icon(Icons.camera_alt,
-                      size: 18, color: AppColors.white),
+                  icon: Icon(Icons.camera_alt, size: 18, color: theme.colorScheme.onPrimary),
                   onPressed: onEditAvatarPressed,
                 ),
               ),
           ],
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: AppSpacing.md),
         Text(
           user.name,
-          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+          style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: AppSpacing.xs),
         Text(
           user.phone,
-          style: TextStyle(
-            color: Theme.of(context).brightness == Brightness.dark
-                ? Colors.white70
-                : AppColors.textLight,
-            fontSize: 16,
+          style: theme.textTheme.bodyLarge?.copyWith(
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
           ),
         ),
       ],

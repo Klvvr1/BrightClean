@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../../../../core/theme/app_colors.dart';
+import '../../../../../core/theme/app_spacing.dart';
+import '../../../../../core/theme/app_radius.dart';
 
 class HelpCenterBottomSheet extends StatelessWidget {
   const HelpCenterBottomSheet({super.key});
@@ -37,11 +38,12 @@ class HelpCenterBottomSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
-      decoration: const BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24.0)),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl, vertical: AppSpacing.xxl),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: AppRadius.bottomSheet,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -50,63 +52,59 @@ class HelpCenterBottomSheet extends StatelessWidget {
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-              color: Colors.grey[400],
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(4),
             ),
           ),
-          const SizedBox(height: 24),
-          const Text(
+          const SizedBox(height: AppSpacing.xl),
+          Text(
             'مركز المساعدة',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textMain,
-            ),
+            style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
           ),
-          const SizedBox(height: 8),
-          const Text(
+          const SizedBox(height: AppSpacing.sm),
+          Text(
             'كيف تفضل التواصل معنا؟',
-            style: TextStyle(color: AppColors.textLight),
+            style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.7)),
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: AppSpacing.xxl),
           ListTile(
             leading: Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(AppSpacing.sm),
               decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.1),
+                color: theme.colorScheme.primary.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.email, color: AppColors.primary),
+              child: Icon(Icons.email, color: theme.colorScheme.primary),
             ),
-            title: const Text('البريد الإلكتروني', style: TextStyle(fontWeight: FontWeight.w600)),
-            subtitle: const Text('support@brightclean.com'),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            title: Text('البريد الإلكتروني', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+            subtitle: Text('support@brightclean.com', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.6))),
+            trailing: Icon(Icons.arrow_forward_ios, size: 16, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
             onTap: () {
               final messenger = ScaffoldMessenger.of(context);
               Navigator.pop(context);
               _launchEmail(messenger);
             },
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.md),
           ListTile(
             leading: Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(AppSpacing.sm),
               decoration: BoxDecoration(
                 color: Colors.green.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.chat, color: Colors.green),
             ),
-            title: const Text('واتساب', style: TextStyle(fontWeight: FontWeight.w600)),
-            subtitle: const Text('محادثة فورية مع الدعم'),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            title: Text('واتساب', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+            subtitle: Text('محادثة فورية مع الدعم', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.6))),
+            trailing: Icon(Icons.arrow_forward_ios, size: 16, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
             onTap: () {
               final messenger = ScaffoldMessenger.of(context);
               Navigator.pop(context);
               _launchWhatsApp(messenger);
             },
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.md),
         ],
       ),
     );

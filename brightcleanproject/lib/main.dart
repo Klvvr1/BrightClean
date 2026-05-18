@@ -47,8 +47,8 @@ class BrightCleanApp extends StatelessWidget {
             return MaterialApp.router(
               title: 'BrightClean',
               debugShowCheckedModeBanner: false,
-              theme: AppTheme.lightTheme,
-              darkTheme: AppTheme.darkTheme,
+              theme: AppTheme.getLightTheme(context),
+              darkTheme: AppTheme.getDarkTheme(context),
               themeMode: themeMode,
               routerConfig: AppRouter.router,
               localizationsDelegates: const [

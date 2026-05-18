@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/theme/app_radius.dart';
+import '../../../../core/theme/app_styles.dart';
 import 'package:file_picker/file_picker.dart';
 
 class WalletDetailsScreen extends StatelessWidget {
@@ -9,41 +12,46 @@ class WalletDetailsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
+      backgroundColor: theme.colorScheme.surface,
       appBar: AppBar(
         title: const Text('محفظتي'),
         centerTitle: true,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(AppSpacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // Balance Card
-            Card(
-              elevation: 4,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16)),
-              color: AppColors.primary,
+            Container(
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary,
+                borderRadius: AppRadius.card,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
               child: Padding(
-                padding: const EdgeInsets.symmetric(
-                    vertical: 32.0, horizontal: 16.0),
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxl, horizontal: AppSpacing.md),
                 child: Column(
                   children: [
-                    const Text(
+                    Text(
                       'الرصيد الحالي',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w500,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: theme.colorScheme.onPrimary.withValues(alpha: 0.8),
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: AppSpacing.sm),
                     Text(
                       balance,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 32,
+                      style: theme.textTheme.headlineMedium?.copyWith(
+                        color: theme.colorScheme.onPrimary,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -51,25 +59,19 @@ class WalletDetailsScreen extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 32),
-            const Text(
+            const SizedBox(height: AppSpacing.xxl),
+            Text(
               'شحن الرصيد',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
+              style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
               textAlign: TextAlign.right,
             ),
-            const SizedBox(height: 16),
-            const Text(
+            const SizedBox(height: AppSpacing.md),
+            Text(
               'اختر وسيلة الإيداع المناسبة لك:',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey,
-              ),
+              style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
               textAlign: TextAlign.right,
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: AppSpacing.xl),
 
             // Deposit Methods
             _buildDepositMethod(
@@ -108,17 +110,19 @@ class WalletDetailsScreen extends StatelessWidget {
     required IconData icon,
     required VoidCallback onTap,
   }) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    final theme = Theme.of(context);
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+      decoration: AppStyles.surface(context),
+      clipBehavior: Clip.hardEdge,
       child: ListTile(
-        leading: Icon(icon, color: AppColors.primary),
+        leading: Icon(icon, color: theme.colorScheme.primary),
         title: Text(
           title,
-          style: const TextStyle(fontWeight: FontWeight.w600),
+          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
           textAlign: TextAlign.right,
         ),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+        trailing: Icon(Icons.arrow_forward_ios, size: 16, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
         onTap: onTap,
       ),
     );
@@ -135,24 +139,26 @@ class WalletDetailsScreen extends StatelessWidget {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) {
+          final theme = Theme.of(context);
           return Directionality(
             textDirection: TextDirection.rtl,
             child: AlertDialog(
               title: Text('إيداع عبر $method'),
+              shape: RoundedRectangleBorder(borderRadius: AppRadius.card),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('يرجى تحويل المبلغ إلى الحساب التالي:'),
-                    const SizedBox(height: 8),
-                    const SelectableText(
+                    Text('يرجى تحويل المبلغ إلى الحساب التالي:', style: theme.textTheme.bodyMedium),
+                    const SizedBox(height: AppSpacing.sm),
+                    SelectableText(
                       '123456789',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                      style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                     ),
-                    const SizedBox(height: 16),
-                    const Text('يجب إرفاق صورة السند أو ملف PDF/DOC لتأكيد العملية.'),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: AppSpacing.md),
+                    Text('يجب إرفاق صورة السند أو ملف PDF/DOC لتأكيد العملية.', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.7))),
+                    const SizedBox(height: AppSpacing.md),
                     ElevatedButton.icon(
                       onPressed: () async {
                         if (isPicking) return;
@@ -182,9 +188,9 @@ class WalletDetailsScreen extends StatelessWidget {
                               });
                               if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('يرجى اختيار صورة، ملف PDF، أو مستند DOC.'),
-                                    backgroundColor: Colors.red,
+                                  SnackBar(
+                                    content: const Text('يرجى اختيار صورة، ملف PDF، أو مستند DOC.'),
+                                    backgroundColor: theme.colorScheme.error,
                                   ),
                                 );
                               }
@@ -199,29 +205,28 @@ class WalletDetailsScreen extends StatelessWidget {
                       icon: isPicking 
                           ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) 
                           : const Icon(Icons.attach_file),
-                      label: const Text('إرفاق ملف (صورة، PDF، أو DOC)'),
+                      label: const Text('إرفاق ملف'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.lightBlue,
-                        foregroundColor: AppColors.primary,
+                        backgroundColor: theme.colorScheme.primaryContainer,
+                        foregroundColor: theme.colorScheme.onPrimaryContainer,
                       ),
                     ),
                     if (selectedFileName != null) ...[
-                      const SizedBox(height: 8),
+                      const SizedBox(height: AppSpacing.sm),
                       Text(
                         'الملف المرفق: $selectedFileName',
-                        style: const TextStyle(
+                        style: theme.textTheme.labelSmall?.copyWith(
                           color: AppColors.success, 
                           fontWeight: FontWeight.bold, 
-                          fontSize: 12
                         ),
                       ),
                     ],
-                    const SizedBox(height: 16),
+                    const SizedBox(height: AppSpacing.md),
                     TextField(
                       controller: operationNumberController,
                       decoration: InputDecoration(
                         hintText: 'رقم العملية (اختياري)',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                        border: OutlineInputBorder(borderRadius: AppRadius.button),
                       ),
                       keyboardType: TextInputType.number,
                     ),
@@ -234,16 +239,16 @@ class WalletDetailsScreen extends StatelessWidget {
                     operationNumberController.dispose();
                     Navigator.pop(context);
                   },
-                  child: const Text('إلغاء'),
+                  child: Text('إلغاء', style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.6))),
                 ),
                 ElevatedButton(
                   onPressed: () {
                     if (selectedFileName == null) {
                       if (!context.mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('يجب إرفاق صورة السند أو ملف PDF/DOC أولاً.'),
-                          backgroundColor: Colors.red,
+                        SnackBar(
+                          content: const Text('يجب إرفاق صورة السند أو ملف PDF/DOC أولاً.'),
+                          backgroundColor: theme.colorScheme.error,
                         ),
                       );
                       return;
@@ -258,7 +263,7 @@ class WalletDetailsScreen extends StatelessWidget {
                     if (!context.mounted) return;
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('تم إرسال طلب الإيداع بنجاح، سيتم التأكد قريباً.')),
+                      SnackBar(content: const Text('تم إرسال طلب الإيداع بنجاح، سيتم التأكد قريباً.'), backgroundColor: theme.colorScheme.primary),
                     );
                   },
                   child: const Text('إرسال'),

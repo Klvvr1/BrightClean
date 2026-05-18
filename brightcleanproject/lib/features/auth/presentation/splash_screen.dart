@@ -2,6 +2,8 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/theme/app_radius.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -148,7 +150,7 @@ class _SplashScreenState extends State<SplashScreen>
                 // Logo with scale + fade + pulsing glow
                 _buildAnimatedLogo(),
 
-                const SizedBox(height: 32),
+                const SizedBox(height: AppSpacing.xl),
 
                 // App title
                 SlideTransition(
@@ -174,7 +176,7 @@ class _SplashScreenState extends State<SplashScreen>
                   ),
                 ),
 
-                const SizedBox(height: 12),
+                const SizedBox(height: AppSpacing.sm),
 
                 // Subtitle
                 SlideTransition(
@@ -197,10 +199,10 @@ class _SplashScreenState extends State<SplashScreen>
                 // Loading indicator
                 FadeTransition(
                   opacity: _loaderOpacity,
-                  child: _buildShimmerLoader(),
+                  child: _buildShimmerLoader(context),
                 ),
 
-                const SizedBox(height: 48),
+                const SizedBox(height: AppSpacing.xxl),
               ],
             ),
           ),
@@ -309,14 +311,14 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   // --- Custom shimmer-style loading bar ---
-  Widget _buildShimmerLoader() {
+  Widget _buildShimmerLoader(BuildContext context) {
     return SizedBox(
       width: 180,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           ClipRRect(
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(AppRadius.xs),
             child: SizedBox(
               height: 3,
               child: AnimatedBuilder(
@@ -333,15 +335,13 @@ class _SplashScreenState extends State<SplashScreen>
               ),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.md),
           Text(
             'جارٍ التحميل...',
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.5),
-              fontSize: 12,
-              fontWeight: FontWeight.w300,
-              letterSpacing: 1,
-            ),
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: Colors.white.withValues(alpha: 0.5),
+                  letterSpacing: 1,
+                ),
           ),
         ],
       ),

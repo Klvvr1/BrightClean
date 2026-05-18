@@ -1,9 +1,14 @@
 # Laundry Platform — Class Diagram Documentation
 
-> **Version:** 5.0 — Final (Registration Complete)
+> **Version:** 6.2 — Final
 > **Last Updated:** May 2026
 > **Diagram Type:** UML Class Diagram
 > **Architecture Pattern:** Table Per Type (TPT) Inheritance + Rich Junction Entities
+>
+> **Changelog v6.2:**
+>
+> - `SystemStatus.Reason` removed — `Message` is the sole public-facing explanation shown on the login screen
+> - `BookingRating` confirmed: `AgentComment` and `DeliveryComment` are the free-text note fields the client writes alongside their star ratings — no structural change required
 
 ---
 
@@ -19,12 +24,13 @@
 8. [Booking System](#8-booking-system)
 9. [Delivery System](#9-delivery-system)
 10. [Payment System](#10-payment-system)
-11. [Administration & Audit](#11-administration--audit)
-12. [Relationship Map](#12-relationship-map)
-13. [Business Rules](#13-business-rules)
-14. [Delivery Model Matrix](#14-delivery-model-matrix)
-15. [Booking Status State Machine](#15-booking-status-state-machine)
-16. [Registration Compatibility](#16-registration-compatibility)
+11. [Rating System](#11-rating-system)
+12. [Administration & Audit](#12-administration--audit)
+13. [Relationship Map](#13-relationship-map)
+14. [Business Rules](#14-business-rules)
+15. [Delivery Model Matrix](#15-delivery-model-matrix)
+16. [Booking Status State Machine](#16-booking-status-state-machine)
+17. [Registration Compatibility](#17-registration-compatibility)
 
 ---
 
@@ -56,34 +62,36 @@ This platform is a **multi-service on-demand marketplace** that connects clients
 
 | Metric                      | Count |
 | --------------------------- | ----- |
-| Total Classes               | 15    |
+| Total Classes               | 18    |
 | Total Enumerations          | 16    |
-| Total Relationships         | 24    |
+| Total Relationships         | 27    |
 | Inheritance Relationships   | 4     |
 | One-to-One Relationships    | 1     |
-| One-to-Many Relationships   | 17    |
+| One-to-Many Relationships   | 20    |
 | Composition Relationships   | 1     |
 | Many-to-Many (via Junction) | 1     |
 
 ### All Classes at a Glance
 
-| #   | Class                | Type           | Description                              |
-| --- | -------------------- | -------------- | ---------------------------------------- |
-| 1   | `User`               | Abstract       | Base identity for all actors             |
-| 2   | `Client`             | Concrete       | Customer who places bookings             |
-| 3   | `DeliveryStaff`      | Concrete       | Driver executing delivery tasks          |
-| 4   | `LaundryAgent`       | Concrete       | Licensed service provider                |
-| 5   | `Admin`              | Concrete       | Platform supervisor                      |
-| 6   | `Address`            | Entity         | Physical location for clients and agents |
-| 7   | `UserDocument`       | Entity         | Uploaded verification documents          |
-| 8   | `ServiceCatalogItem` | Entity         | Platform-managed service catalog         |
-| 9   | `AgentService`       | Junction       | Agent-to-service subscription            |
-| 10  | `Offer`              | Entity         | Admin-created promotional discounts      |
-| 11  | `Booking`            | Aggregate Root | Unified service request                  |
-| 12  | `BookingItem`        | Entity         | Line items within a booking              |
-| 13  | `DeliveryTask`       | Entity         | Single leg of two-stage logistics        |
-| 14  | `Payment`            | Entity         | Full payment record per booking          |
-| 15  | `AuditLog`           | Entity         | Immutable admin action trail             |
+| #   | Class                | Type           | Description                                |
+| --- | -------------------- | -------------- | ------------------------------------------ |
+| 1   | `User`               | Abstract       | Base identity for all actors               |
+| 2   | `Client`             | Concrete       | Customer who places bookings               |
+| 3   | `DeliveryStaff`      | Concrete       | Driver executing delivery tasks            |
+| 4   | `LaundryAgent`       | Concrete       | Licensed service provider                  |
+| 5   | `Admin`              | Concrete       | Platform supervisor                        |
+| 6   | `Address`            | Entity         | Physical location for clients and agents   |
+| 7   | `UserDocument`       | Entity         | Uploaded verification documents            |
+| 8   | `ServiceCatalogItem` | Entity         | Platform-managed service catalog           |
+| 9   | `AgentService`       | Junction       | Agent-to-service subscription              |
+| 10  | `Offer`              | Entity         | Admin-created promotional discounts        |
+| 11  | `Booking`            | Aggregate Root | Unified service request                    |
+| 12  | `BookingItem`        | Entity         | Line items within a booking                |
+| 13  | `BookingRating`      | Entity         | Client star rating and comment per booking |
+| 14  | `DeliveryTask`       | Entity         | Single leg of two-stage logistics          |
+| 15  | `Payment`            | Entity         | Full payment record per booking            |
+| 16  | `AuditLog`           | Entity         | Immutable admin action trail               |
+| 17  | `SystemStatus`       | Entity         | Platform login on/off control              |
 
 ---
 
@@ -116,6 +124,14 @@ Delivery tasks are created in `Unassigned` state. Drivers claim tasks from an op
 ### 3.5 Price Snapshot on BookingItem
 
 `UnitPriceAtTimeOfBooking` captures the service price at booking creation time. Future catalog price changes never affect historical booking records.
+
+### 3.6 Derived Performance Ratings
+
+Agent and driver average ratings are computed at query time from `BookingRating` records — never stored as fields. This eliminates stale data risk. Both `LaundryAgent` and `DeliveryStaff` expose `/averageRating()` and `/totalRatings()` as derived methods.
+
+### 3.7 System Login Control
+
+A single `SystemStatus` entity controls whether login is enabled platform-wide. Every state change appends a new row — history is preserved. The admin is always exempt from the login block to ensure the system can always be restored.
 
 ---
 
@@ -411,17 +427,19 @@ The customer actor. Owns addresses, places bookings, and holds a platform wallet
 
 The logistics executor. Claims and completes delivery tasks from an open pool.
 
-| Field              | Type        | Constraints      | Description                           |
-| ------------------ | ----------- | ---------------- | ------------------------------------- |
-| `UserID_PK` (FK)   | int         | PK, FK → User    | Shared key                            |
-| `FatherName`       | string      | NOT NULL         | Four-part Arabic name                 |
-| `GrandfatherName`  | string      | NOT NULL         | Four-part Arabic name                 |
-| `NationalIDNumber` | string      | NOT NULL, UNIQUE | Government ID number                  |
-| `VehicleType`      | VehicleType | NOT NULL         | Car, Motorcycle, or TukTuk            |
-| `VehicleMake`      | string      | NOT NULL         | Vehicle manufacturer (e.g. Toyota)    |
-| `VehicleModel`     | string      | NOT NULL         | Vehicle model (e.g. Corolla)          |
-| `PlateNumber`      | string      | NOT NULL, UNIQUE | Vehicle registration plate            |
-| `BankAcc`          | string      | NOT NULL         | Bank account for delivery fee payouts |
+| Field              | Type        | Constraints      | Description                                  |
+| ------------------ | ----------- | ---------------- | -------------------------------------------- |
+| `UserID_PK` (FK)   | int         | PK, FK → User    | Shared key                                   |
+| `FatherName`       | string      | NOT NULL         | Four-part Arabic name                        |
+| `GrandfatherName`  | string      | NOT NULL         | Four-part Arabic name                        |
+| `NationalIDNumber` | string      | NOT NULL, UNIQUE | Government ID number                         |
+| `VehicleType`      | VehicleType | NOT NULL         | Car, Motorcycle, or TukTuk                   |
+| `VehicleMake`      | string      | NOT NULL         | Vehicle manufacturer (e.g. Toyota)           |
+| `VehicleModel`     | string      | NOT NULL         | Vehicle model (e.g. Corolla)                 |
+| `PlateNumber`      | string      | NOT NULL, UNIQUE | Vehicle registration plate                   |
+| `BankAcc`          | string      | NOT NULL         | Bank account for delivery fee payouts        |
+| `/averageRating()` | decimal     | Derived          | Computed from `BookingRating.DeliveryRating` |
+| `/totalRatings()`  | int         | Derived          | Count of non-null `DeliveryRating` records   |
 
 **Required Documents:** `NationalID`, `DriverLicense`, `VehicleImage`
 
@@ -436,15 +454,17 @@ The logistics executor. Claims and completes delivery tasks from an open pool.
 
 The central service provider. Offers a platform-admin-approved subset of the service catalog across any combination of categories.
 
-| Field                | Type   | Constraints      | Description                        |
-| -------------------- | ------ | ---------------- | ---------------------------------- |
-| `UserID_PK` (FK)     | int    | PK, FK → User    | Shared key                         |
-| `FatherName`         | string | NOT NULL         | Four-part Arabic name              |
-| `GrandfatherName`    | string | NOT NULL         | Four-part Arabic name              |
-| `NationalIDNumber`   | string | NOT NULL, UNIQUE | Government ID number               |
-| `BusinessName`       | string | NOT NULL         | Trading name of the business       |
-| `CommercialRegister` | string | NOT NULL, UNIQUE | Government business license number |
-| `BankAcc`            | string | NOT NULL         | Bank account for service revenue   |
+| Field                | Type    | Constraints      | Description                               |
+| -------------------- | ------- | ---------------- | ----------------------------------------- |
+| `UserID_PK` (FK)     | int     | PK, FK → User    | Shared key                                |
+| `FatherName`         | string  | NOT NULL         | Four-part Arabic name                     |
+| `GrandfatherName`    | string  | NOT NULL         | Four-part Arabic name                     |
+| `NationalIDNumber`   | string  | NOT NULL, UNIQUE | Government ID number                      |
+| `BusinessName`       | string  | NOT NULL         | Trading name of the business              |
+| `CommercialRegister` | string  | NOT NULL, UNIQUE | Government business license number        |
+| `BankAcc`            | string  | NOT NULL         | Bank account for service revenue          |
+| `/averageRating()`   | decimal | Derived          | Computed from `BookingRating.AgentRating` |
+| `/totalRatings()`    | int     | Derived          | Count of non-null `AgentRating` records   |
 
 **Required Documents:** `NationalID`, `CommercialRegistration`
 
@@ -720,8 +740,6 @@ Records the single full payment for a booking. The `UNIQUE` constraint on `Booki
 | `Status`         | PaymentStatus | NOT NULL, DEFAULT Pending      | Payment outcome state                        |
 | `TransactionRef` | string        | NULLABLE                       | Gateway reference — mandatory for CreditCard |
 | `PaidAt`         | datetime      | NULLABLE                       | Stamped on Status = Success                  |
-| `AttemptCount`   | int           | NOT NULL, DEFAULT 1            | Number of payment attempts                   |
-| `LastAttemptAt`  | datetime      | NOT NULL, DEFAULT NOW()        | Timestamp of most recent attempt             |
 
 **Business Rules:**
 
@@ -729,14 +747,65 @@ Records the single full payment for a booking. The `UNIQUE` constraint on `Booki
 - `Amount` validated against `Booking.FinalTotal` before record creation
 - `Wallet` payment requires `Client.WalletBalance >= Amount`
 - `Refunded` is a terminal state — no further transitions permitted
-- Payment retries update the existing Payment record (no new Payment rows created)
-- `AttemptCount` is incremented and `LastAttemptAt` is updated on each retry attempt
+- A `Failed` payment allows retry — a new `Payment` record is created only if no `Success` record exists
 
 ---
 
-## 11. Administration & Audit
+## 11. Rating System
 
-### 11.1 `AuditLog`
+### 11.1 `BookingRating`
+
+Records the client's star rating and optional written note for a completed booking. Covers both the agent's service quality and the driver's delivery experience independently. Each star rating can be accompanied by a free-text note written by the client.
+
+| Field             | Type     | Constraints                    | Description                                                                              |
+| ----------------- | -------- | ------------------------------ | ---------------------------------------------------------------------------------------- |
+| `RatingID_PK`     | int      | PK, Auto-increment             | Unique identifier                                                                        |
+| `BookingID` (FK)  | int      | FK → Booking, NOT NULL, UNIQUE | One rating per booking                                                                   |
+| `AgentRating`     | int?     | NULLABLE, CHECK 1–5            | Star rating for the agent's service quality                                              |
+| `AgentComment`    | string?  | NULLABLE                       | Free-text note the client writes about the agent — submitted alongside `AgentRating`     |
+| `DeliveryRating`  | int?     | NULLABLE, CHECK 1–5            | Star rating for the driver's delivery experience                                         |
+| `DeliveryComment` | string?  | NULLABLE                       | Free-text note the client writes about the driver — submitted alongside `DeliveryRating` |
+| `RatedAt`         | datetime | NOT NULL, DEFAULT NOW()        | Submission timestamp                                                                     |
+
+> `AgentComment` and `DeliveryComment` are the note fields. The client writes them alongside their star ratings — they are optional free-text companions to each rating, not separate submissions. No additional entity or field is needed to support rating notes.
+
+**Relationships:**
+
+- `Booking "1" --> "0..1" BookingRating` — one rating per booking maximum
+
+**Constraints:**
+
+- Rating only submittable when `Booking.Status = Completed`
+- `UNIQUE` on `BookingID` — one rating per booking enforced at DB level
+- `DeliveryRating` and `DeliveryComment` must be null for `TechnicianDispatch` bookings — no driver to rate
+- Both `AgentRating` and `DeliveryRating` are independently nullable — client can rate one without the other
+- A comment without its corresponding star rating is not permitted — `AgentComment` requires `AgentRating`, `DeliveryComment` requires `DeliveryRating`
+
+### 11.2 Derived Performance Fields
+
+Agent and driver ratings are never stored as fields — always computed live from `BookingRating`:
+
+**On `LaundryAgent`:**
+
+| Derived Method     | Formula                                                                   |
+| ------------------ | ------------------------------------------------------------------------- |
+| `/averageRating()` | `AVG(BookingRating.AgentRating)` for all completed bookings of this agent |
+| `/totalRatings()`  | `COUNT(BookingRating.AgentRating)` where not null                         |
+
+**On `DeliveryStaff`:**
+
+| Derived Method     | Formula                                                                  |
+| ------------------ | ------------------------------------------------------------------------ |
+| `/averageRating()` | `AVG(BookingRating.DeliveryRating)` for all tasks handled by this driver |
+| `/totalRatings()`  | `COUNT(BookingRating.DeliveryRating)` where not null                     |
+
+**Why computed and not stored:** Storing an average risks it becoming stale if a rating is updated or deleted. Computing it at query time guarantees it is always accurate.
+
+---
+
+## 12. Administration & Audit
+
+### 12.1 `AuditLog`
 
 Immutable record of every privileged admin action. Append-only — no UPDATE or DELETE operations permitted on this table.
 
@@ -754,6 +823,45 @@ Immutable record of every privileged admin action. Append-only — no UPDATE or 
 - No UPDATE or DELETE on this table — insert only
 - `PerformedAt` set by database server clock — not application layer
 - `TargetEntity + TargetID` form a soft polymorphic reference — no hard FK
+
+### 12.2 `SystemStatus`
+
+Controls whether login is enabled across the entire platform. Used by the admin to pause the system during maintenance or to address critical issues. Every state change appends a new row — full history is preserved.
+
+| Field          | Type     | Constraints             | Description                                                                                                                                 |
+| -------------- | -------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `StatusID_PK`  | int      | PK, Auto-increment      | Unique identifier — new row on every change                                                                                                 |
+| `LoginEnabled` | boolean  | NOT NULL                | `true` = login open, `false` = all logins blocked                                                                                           |
+| `Message`      | string?  | NULLABLE                | Public-facing message shown to users on the login screen — explains the purpose of the pause (e.g. "النظام في صيانة مؤقتة، نعود قريباً 🛠️") |
+| `ChangedAt`    | datetime | NOT NULL, DEFAULT NOW() | When the admin triggered the change                                                                                                         |
+
+> `Reason` was removed. `Message` is the sole field — it serves both as the internal record and the public-facing explanation shown directly to users on the login screen. No separate internal note is needed.
+
+**Relationships:**
+
+- `Admin "1" --> "0..*" SystemStatus` — admin controls all system status entries
+
+**How the current state is read:**
+
+```sql
+SELECT * FROM SystemStatus
+ORDER BY ChangedAt DESC
+LIMIT 1
+```
+
+**Constraints:**
+
+- Append-only — no UPDATE or DELETE on existing rows
+- `ChangedAt` set by DB server clock
+- Admin is always exempt from `LoginEnabled = false` — the admin must always be able to log in to restore the system
+- `Message` is the sole user-facing explanation shown on the login screen during a pause (e.g. "النظام في صيانة مؤقتة، نعود قريباً 🛠️")
+
+**Behavior:**
+
+| `LoginEnabled` | Effect                                           |
+| -------------- | ------------------------------------------------ |
+| `true`         | Platform running normally — all users can log in |
+| `false`        | All user logins blocked — only admin can log in  |
 
 ---
 
@@ -796,7 +904,6 @@ Immutable record of every privileged admin action. Append-only — no UPDATE or 
 - Full payment only — no installments or partial amounts
 - `Amount` must equal `Booking.FinalTotal` before payment record is created
 - Wallet payment requires sufficient `Client.WalletBalance`
-- Payment retries update the existing Payment record with incremented `AttemptCount` and refreshed `LastAttemptAt`
 
 ### Delivery Rules
 
@@ -830,6 +937,22 @@ Immutable record of every privileged admin action. Append-only — no UPDATE or 
 - Only admin can activate or deactivate `AgentService` records
 - Clients only see services where both `AccountStatus = Active` and `AgentService.IsActive = true`
 - All `BookingItem` records must reference services in the agent's active subscriptions
+
+### Rating Rules
+
+- Rating only submittable when `Booking.Status = Completed`
+- One rating per booking — enforced by `UNIQUE` on `BookingRating.BookingID`
+- `AgentComment` and `DeliveryComment` are optional free-text notes written alongside their respective star ratings
+- A comment cannot be submitted without its corresponding star rating
+- `DeliveryRating` and `DeliveryComment` must be null for `TechnicianDispatch` bookings — no driver was involved
+- Average ratings for agents and drivers are always computed at query time — never stored
+
+### System Status Rules
+
+- Only the admin can change `SystemStatus`
+- Every change appends a new row — history is never overwritten
+- `LoginEnabled = false` blocks all user logins — admin is always exempt
+- `Message` is the only explanation field — shown directly to users on the login screen during a pause
 
 ---
 

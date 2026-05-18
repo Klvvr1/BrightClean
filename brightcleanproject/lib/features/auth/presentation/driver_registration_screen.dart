@@ -5,6 +5,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
 import '../../../../core/widgets/custom_text_field.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/theme/app_radius.dart';
 import '../../../../core/widgets/map_picker_screen.dart';
 import '../../../../core/database/database_helper.dart';
 
@@ -19,7 +21,6 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
   final _formKey = GlobalKey<FormState>();
   final ImagePicker _picker = ImagePicker();
 
-  // Controllers
   final TextEditingController _firstNameController = TextEditingController();
   final TextEditingController _fatherNameController = TextEditingController();
   final TextEditingController _grandfatherNameController = TextEditingController();
@@ -31,23 +32,21 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
   final TextEditingController _dobController = TextEditingController();
   final TextEditingController _plateNumberController = TextEditingController();
 
-  // Controllers for car details
   final TextEditingController _carCompanyController = TextEditingController();
   final TextEditingController _carModelController = TextEditingController();
   final TextEditingController _carYearController = TextEditingController();
 
-  // Selected Files
   XFile? _idImage;
   XFile? _licenseImage;
   XFile? _carImage;
 
-  // بيانات الموقع
   String? _selectedAddress;
   LatLng? _selectedCoordinates;
 
   String? _selectedVehicleType;
   bool _isTermsAccepted = false;
   bool _hasAttemptedSubmit = false;
+  bool _isSubmitting = false;
 
   @override
   void dispose() {
@@ -67,7 +66,6 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
     super.dispose();
   }
 
-  // Pick Image Logic
   Future<void> _pickImage(String type) async {
     try {
       final XFile? image = await _picker.pickImage(
@@ -90,7 +88,6 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
     }
   }
 
-  // Select DOB Logic
   Future<void> _selectDOB() async {
     final DateTime? pickedDate = await showDatePicker(
       context: context,
@@ -106,7 +103,6 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
     }
   }
 
-  // دالة اختيار الموقع
   Future<void> _selectLocation() async {
     final result = await Navigator.push(
       context,
@@ -120,7 +116,6 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
     }
   }
 
-  // Validation Logic
   String? _validateName(String? value) {
     if (value == null || value.trim().isEmpty) return 'هذا الحقل مطلوب';
     if (!RegExp(r'^[a-zA-Z\u0600-\u06FF\s]+$').hasMatch(value)) {
@@ -164,9 +159,9 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
 
     if (!_isTermsAccepted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('الرجاء الموافقة على الشروط أولاً'),
-          backgroundColor: Colors.red,
+        SnackBar(
+          content: const Text('الرجاء الموافقة على الشروط أولاً'),
+          backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
       return;
@@ -175,9 +170,9 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
     if (_formKey.currentState!.validate()) {
       if (_selectedVehicleType == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('الرجاء اختيار نوع المركبة'),
-            backgroundColor: Colors.red,
+          SnackBar(
+            content: const Text('الرجاء اختيار نوع المركبة'),
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
         return;
@@ -185,9 +180,9 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
 
       if (_idImage == null || _licenseImage == null || _carImage == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('يرجى رفع جميع الوثائق المطلوبة'),
-            backgroundColor: Colors.red,
+          SnackBar(
+            content: const Text('يرجى رفع جميع الوثائق المطلوبة'),
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
         return;
@@ -195,9 +190,9 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
 
       if (_selectedAddress == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('يرجى تحديد الموقع'),
-            backgroundColor: Colors.red,
+          SnackBar(
+            content: const Text('يرجى تحديد الموقع'),
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
         return;
@@ -222,7 +217,6 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
           'car_year': _selectedVehicleType == 'سيارة' ? _carYearController.text.trim() : null,
           'plate_number': _plateNumberController.text.trim(),
           'role': 'driver',
-          // Optional but good to keep:
           'address_string': _selectedAddress,
           'latitude': _selectedCoordinates?.latitude,
           'longitude': _selectedCoordinates?.longitude,
@@ -239,7 +233,7 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('تم التسجيل بنجاح!'),
-              backgroundColor: AppColors.primary,
+              backgroundColor: AppColors.success,
             ),
           );
           Navigator.pushReplacementNamed(context, '/login');
@@ -249,7 +243,7 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('حدث خطأ أثناء التسجيل: $e'),
-              backgroundColor: Colors.red,
+              backgroundColor: Theme.of(context).colorScheme.error,
             ),
           );
         }
@@ -261,33 +255,30 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
     }
   }
 
-  bool _isSubmitting = false;
-
-
   Widget _buildFileUploadPlaceholder({
     required String title,
     required XFile? imageFile,
     required VoidCallback onTap,
   }) {
     bool isUploaded = imageFile != null;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
     return GestureDetector(
       onTap: onTap,
       child: Container(
         height: 110,
         width: double.infinity,
-        margin: const EdgeInsets.only(bottom: 16),
+        margin: const EdgeInsets.only(bottom: AppSpacing.md),
         decoration: BoxDecoration(
           color: isUploaded
-              ? (isDark ? AppColors.primary.withValues(alpha: 0.2) : AppColors.primary.withValues(alpha: 0.05))
-              : (isDark ? Colors.grey.shade900 : AppColors.background),
+              ? theme.colorScheme.primary.withValues(alpha: 0.1)
+              : theme.colorScheme.surface,
           border: Border.all(
             color: isUploaded
-                ? AppColors.primary
-                : (isDark ? Colors.grey.shade700 : Colors.grey.shade400),
+                ? theme.colorScheme.primary
+                : theme.colorScheme.onSurface.withValues(alpha: 0.2),
             width: isUploaded ? 2 : 1,
           ),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: AppRadius.button,
           image: isUploaded
               ? DecorationImage(
                   image: FileImage(File(imageFile.path)),
@@ -302,17 +293,17 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
             Icon(
               isUploaded ? Icons.check_circle : Icons.add_a_photo,
               color: isUploaded
-                  ? (isDark ? Colors.greenAccent : AppColors.primary)
-                  : (isDark ? Colors.white70 : AppColors.secondary),
+                  ? AppColors.success
+                  : theme.colorScheme.onSurface.withValues(alpha: 0.4),
               size: 32,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             Text(
               isUploaded ? 'تم اختيار $title بنجاح' : 'رفع $title',
-              style: TextStyle(
+              style: theme.textTheme.bodyMedium?.copyWith(
                 color: isUploaded
-                    ? (isDark ? AppColors.lightBlue : AppColors.primary)
-                    : (isDark ? Colors.white70 : AppColors.secondary),
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.onSurface.withValues(alpha: 0.6),
                 fontWeight: isUploaded ? FontWeight.bold : FontWeight.normal,
               ),
             ),
@@ -324,7 +315,7 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
@@ -337,13 +328,12 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
           ),
         ),
         body: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
+          padding: const EdgeInsets.all(AppSpacing.xl),
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Name Fields
                 Row(
                   children: [
                     Expanded(
@@ -353,7 +343,7 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
                         validator: _validateName,
                       ),
                     ),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: AppSpacing.md),
                     Expanded(
                       child: CustomTextField(
                         controller: _fatherNameController,
@@ -363,7 +353,7 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.md),
                 Row(
                   children: [
                     Expanded(
@@ -373,7 +363,7 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
                         validator: _validateName,
                       ),
                     ),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: AppSpacing.md),
                     Expanded(
                       child: CustomTextField(
                         controller: _lastNameController,
@@ -383,7 +373,7 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: AppSpacing.xl),
 
                 CustomTextField(
                   controller: _phoneController,
@@ -392,28 +382,28 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   validator: _validatePhone,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.md),
                 CustomTextField(
                   controller: _emailController,
                   hintText: 'البريد الإلكتروني',
                   keyboardType: TextInputType.emailAddress,
                   validator: _validateEmail,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.md),
                 CustomTextField(
                   controller: _passwordController,
                   hintText: 'كلمة المرور',
                   isPassword: true,
                   validator: _validatePassword,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.md),
                 CustomTextField(
                   controller: _confirmPasswordController,
                   hintText: 'تأكيد كلمة المرور',
                   isPassword: true,
                   validator: _validateConfirmPassword,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.md),
                 GestureDetector(
                   onTap: _selectDOB,
                   child: AbsorbPointer(
@@ -425,59 +415,42 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: AppSpacing.xl),
 
-                // Vehicle Information
-                const Text(
+                Text(
                   'معلومات المركبة:',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  style: theme.textTheme.titleMedium,
                 ),
-                const SizedBox(height: 12),
-                RadioGroup<String>(
-                  groupValue: _selectedVehicleType ?? '',
+                const SizedBox(height: AppSpacing.sm),
+                
+                // Using DropdownButtonFormField instead of RadioGroup to fit the theme better
+                // and because there is a deprecated RadioGroup widget locally
+                DropdownButtonFormField<String>(
+                  decoration: const InputDecoration(hintText: 'نوع المركبة'),
+                  initialValue: _selectedVehicleType,
+                  items: const [
+                    DropdownMenuItem(value: 'سيارة', child: Text('سيارة')),
+                    DropdownMenuItem(value: 'دراجة نارية', child: Text('دراجة نارية')),
+                    DropdownMenuItem(value: 'تك تك', child: Text('تك تك')),
+                  ],
                   onChanged: (v) => setState(() => _selectedVehicleType = v),
-                  child: Column(
-                    children: [
-                      RadioListTile<String>(
-                        title: const Text('سيارة'),
-                        value: 'سيارة',
-                        activeColor: AppColors.primary,
-                      ),
-                      RadioListTile<String>(
-                        title: const Text('دراجة نارية'),
-                        value: 'دراجة نارية',
-                        activeColor: AppColors.primary,
-                      ),
-                      RadioListTile<String>(
-                        title: const Text('تك تك'),
-                        value: 'تك تك',
-                        activeColor: AppColors.primary,
-                      ),
-                    ],
-                  ),
+                  validator: (v) => v == null ? 'يرجى اختيار نوع المركبة' : null,
                 ),
-                if (_hasAttemptedSubmit && _selectedVehicleType == null)
-                  const Padding(
-                    padding: EdgeInsets.only(right: 12),
-                    child: Text(
-                      'يرجى اختيار نوع المركبة',
-                      style: TextStyle(color: Colors.red, fontSize: 12),
-                    ),
-                  ),
-                const SizedBox(height: 16),
+
+                const SizedBox(height: AppSpacing.md),
                 if (_selectedVehicleType == 'سيارة') ...[
                   CustomTextField(
                     controller: _carCompanyController,
                     hintText: 'شركة السيارة (مثل تويوتا)',
                     validator: (v) => v == null || v.isEmpty ? 'يرجى إدخال شركة السيارة' : null,
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppSpacing.md),
                   CustomTextField(
                     controller: _carModelController,
                     hintText: 'نوع المركبة (مثل كامري)',
                     validator: (v) => v == null || v.isEmpty ? 'يرجى إدخال نوع المركبة' : null,
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppSpacing.md),
                   CustomTextField(
                     controller: _carYearController,
                     hintText: 'موديل المركبة (مثل 2013)',
@@ -485,16 +458,15 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     validator: (v) => v == null || v.isEmpty ? 'يرجى إدخال موديل المركبة' : null,
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppSpacing.md),
                 ],
                 CustomTextField(
                   controller: _plateNumberController,
                   hintText: 'رقم اللوحة',
                   validator: (v) => v == null || v.isEmpty ? 'يرجى إدخال رقم اللوحة' : null,
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: AppSpacing.xl),
 
-                // Documents
                 _buildFileUploadPlaceholder(
                   title: 'صورة الهوية',
                   imageFile: _idImage,
@@ -511,35 +483,36 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
                   onTap: () => _pickImage('CAR'),
                 ),
 
-                const SizedBox(height: 16),
-                // الموقع
+                const SizedBox(height: AppSpacing.md),
                 GestureDetector(
                   onTap: _selectLocation,
                   child: Container(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(AppSpacing.md),
                     width: double.infinity,
                     decoration: BoxDecoration(
-                      color: isDark ? Colors.grey.shade900 : AppColors.background,
+                      color: theme.colorScheme.surface,
                       border: Border.all(
                         color: _selectedAddress == null
-                            ? (isDark ? Colors.grey.shade700 : Colors.grey.shade300)
-                            : AppColors.primary,
+                            ? theme.colorScheme.onSurface.withValues(alpha: 0.2)
+                            : theme.colorScheme.primary,
                       ),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: AppRadius.button,
                     ),
                     child: Column(
                       children: [
                         Icon(
                           Icons.map,
                           color: _selectedAddress == null
-                              ? (isDark ? Colors.white70 : Colors.grey)
-                              : (isDark ? AppColors.lightBlue : AppColors.primary),
+                              ? theme.colorScheme.onSurface.withValues(alpha: 0.4)
+                              : theme.colorScheme.primary,
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: AppSpacing.sm),
                         Text(
                           _selectedAddress ?? 'حدد الموقع على الخريطة',
-                          style: TextStyle(
-                            color: isDark ? Colors.white : Colors.black87,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: _selectedAddress == null
+                                ? theme.colorScheme.onSurface.withValues(alpha: 0.8)
+                                : theme.colorScheme.onSurface,
                           ),
                           textAlign: TextAlign.center,
                         ),
@@ -548,25 +521,30 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
                   ),
                 ),
                 if (_hasAttemptedSubmit && _selectedAddress == null)
-                  const Padding(
-                    padding: EdgeInsets.only(top: 8, right: 12),
+                  Padding(
+                    padding: const EdgeInsets.only(top: AppSpacing.xs, right: AppSpacing.sm),
                     child: Text(
                       'يرجى تحديد الموقع',
-                      style: TextStyle(color: Colors.red, fontSize: 12),
+                      style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.error),
                     ),
                   ),
 
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.md),
                 Row(
                   children: [
                     Checkbox(
                       value: _isTermsAccepted,
                       onChanged: (v) => setState(() => _isTermsAccepted = v ?? false),
                     ),
-                    const Expanded(child: Text('أوافق على الشروط والأحكام')),
+                    Expanded(
+                      child: Text(
+                        'أوافق على الشروط والأحكام',
+                        style: theme.textTheme.bodyMedium,
+                      ),
+                    ),
                   ],
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: AppSpacing.xl),
                 SizedBox(
                   width: double.infinity,
                   height: 50,

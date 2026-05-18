@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/theme/app_radius.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
   const ChangePasswordScreen({super.key});
@@ -71,11 +73,12 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       });
 
       if (!isOldPasswordCorrect) {
+        final theme = Theme.of(context);
         // 2. Display a clear error if it doesn't match
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('كلمة المرور الحالية غير صحيحة. يرجى المحاولة مرة أخرى.'),
-            backgroundColor: AppColors.error,
+          SnackBar(
+            content: const Text('كلمة المرور الحالية غير صحيحة. يرجى المحاولة مرة أخرى.'),
+            backgroundColor: theme.colorScheme.error,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -96,18 +99,19 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
 
       if (isPasswordUpdated) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('تم تغيير كلمة المرور بنجاح'),
+          SnackBar(
+            content: const Text('تم تغيير كلمة المرور بنجاح'),
             backgroundColor: AppColors.success,
             behavior: SnackBarBehavior.floating,
           ),
         );
         Navigator.of(context).pop();
       } else {
+        final theme = Theme.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('فشل تحديث كلمة المرور. يرجى المحاولة مرة أخرى.'),
-            backgroundColor: AppColors.error,
+          SnackBar(
+            content: const Text('فشل تحديث كلمة المرور. يرجى المحاولة مرة أخرى.'),
+            backgroundColor: theme.colorScheme.error,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -117,12 +121,14 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
+      backgroundColor: theme.colorScheme.surface,
       appBar: AppBar(
         title: const Text('تغيير كلمة المرور'),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
+        padding: const EdgeInsets.all(AppSpacing.xxl),
         child: Form(
           key: _formKey,
           child: Column(
@@ -144,7 +150,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                   return null;
                 },
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.md),
               _buildPasswordField(
                 controller: _newPasswordController,
                 label: 'كلمة المرور الجديدة',
@@ -164,7 +170,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                   return null;
                 },
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.md),
               _buildPasswordField(
                 controller: _confirmPasswordController,
                 label: 'تأكيد كلمة المرور الجديدة',
@@ -184,28 +190,28 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                   return null;
                 },
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: AppSpacing.xxxl),
               ElevatedButton(
                 onPressed: _isLoading ? null : _handleSave,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  backgroundColor: theme.colorScheme.primary,
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: AppRadius.button,
                   ),
                 ),
                 child: _isLoading
-                    ? const SizedBox(
+                    ? SizedBox(
                         height: 24,
                         width: 24,
                         child: CircularProgressIndicator(
-                          color: AppColors.white,
+                          color: theme.colorScheme.onPrimary,
                           strokeWidth: 2.5,
                         ),
                       )
-                    : const Text(
+                    : Text(
                         'حفظ التغييرات',
-                        style: TextStyle(fontSize: 16, color: AppColors.white),
+                        style: TextStyle(fontSize: 16, color: theme.colorScheme.onPrimary),
                       ),
               ),
             ],
@@ -222,19 +228,20 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     required VoidCallback onToggleVisibility,
     required String? Function(String?) validator,
   }) {
+    final theme = Theme.of(context);
     return TextFormField(
       controller: controller,
       obscureText: obscureText,
       decoration: InputDecoration(
         labelText: label,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: AppRadius.button,
         ),
-        prefixIcon: const Icon(Icons.lock_outline),
+        prefixIcon: Icon(Icons.lock_outline, color: theme.colorScheme.primary),
         suffixIcon: IconButton(
           icon: Icon(
             obscureText ? Icons.visibility_off : Icons.visibility,
-            color: Colors.grey,
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
           ),
           onPressed: onToggleVisibility,
         ),

@@ -10,6 +10,9 @@ import 'widgets/profile_header_section.dart';
 import 'widgets/wallet_section.dart';
 import 'widgets/help_center_bottom_sheet.dart';
 import 'package:brightcleanproject/core/controllers/theme_controller.dart';
+import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/theme/app_radius.dart';
+import '../../../../core/theme/app_styles.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -127,21 +130,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final bool? confirm = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) {
+        final theme = Theme.of(context);
         return AlertDialog(
-          title:
-              const Text('تسجيل الخروج', style: TextStyle(color: Colors.red)),
+          title: Text('تسجيل الخروج', style: TextStyle(color: theme.colorScheme.error)),
           content: const Text('هل أنت متأكد أنك تريد تسجيل الخروج من التطبيق؟'),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(borderRadius: AppRadius.dialog),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('إلغاء', style: TextStyle(color: Colors.grey)),
+              child: Text('إلغاء', style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.6))),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: theme.colorScheme.error,
+                foregroundColor: theme.colorScheme.onError,
+              ),
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('تأكيد', style: TextStyle(color: Colors.white)),
+              child: const Text('تأكيد'),
             ),
           ],
         );
@@ -179,16 +184,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(AppSpacing.md),
         children: [
           ProfileHeaderSection(
             user: _currentUser,
             isEditMode: _isEditMode,
             onEditAvatarPressed: _isEditMode ? _handleEditAvatar : null,
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: AppSpacing.xxl),
           WalletSection(balance: _currentUser.walletBalance),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.md),
           _buildSettingsSection(),
         ],
       ),
@@ -196,9 +201,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildSettingsSection() {
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      elevation: 2,
+    return Container(
+      decoration: AppStyles.surface(context),
+      clipBehavior: Clip.hardEdge,
       child: Column(
         children: [
           CustomProfileTile(

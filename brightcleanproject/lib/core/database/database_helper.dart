@@ -88,6 +88,44 @@ CREATE TABLE IF NOT EXISTS users (
 )
 ''');
 
+    await db.execute('''
+CREATE TABLE IF NOT EXISTS orders (
+  orderId TEXT PRIMARY KEY,
+  date TEXT NOT NULL,
+  details TEXT NOT NULL,
+  status TEXT NOT NULL,
+  activeStepIndex INTEGER NOT NULL,
+  locationDescription TEXT,
+  paymentMethod TEXT,
+  isRated INTEGER NOT NULL DEFAULT 0,
+  pickupDate TEXT,
+  pickupTimeSlot TEXT
+)
+''');
+
+    await db.execute('''
+CREATE TABLE IF NOT EXISTS cart_items (
+  id TEXT PRIMARY KEY,
+  serviceName TEXT NOT NULL,
+  selectedType TEXT NOT NULL,
+  quantity INTEGER NOT NULL,
+  pricePerUnit REAL NOT NULL,
+  totalPrice REAL NOT NULL
+)
+''');
+
+    await db.execute('''
+CREATE TABLE IF NOT EXISTS reviews (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  userName TEXT NOT NULL,
+  comment TEXT NOT NULL,
+  rating REAL NOT NULL,
+  serviceRating REAL,
+  driverRating REAL,
+  date TEXT NOT NULL
+)
+''');
+
     // Insert seed data for testing with hashed passwords if they don't already exist
     final testUsers = [
       {

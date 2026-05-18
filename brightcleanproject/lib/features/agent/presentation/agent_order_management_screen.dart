@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:brightcleanproject/core/theme/app_spacing.dart';
+
 import 'package:go_router/go_router.dart';
 import 'package:brightcleanproject/core/enums/order_status.dart';
 import 'package:brightcleanproject/core/theme/app_colors.dart';
@@ -302,7 +304,7 @@ class _AgentOrderManagementScreenState extends State<AgentOrderManagementScreen>
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             _buildSectionHeader(isArabic ? 'تفاصيل الطلب' : 'Order Details', theme),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: AppSpacing.md),
                             // Order Card showing simplified operational data
                             Container(
                               decoration: BoxDecoration(
@@ -320,7 +322,7 @@ class _AgentOrderManagementScreenState extends State<AgentOrderManagementScreen>
                               child: Column(
                                 children: [
                                   Container(
-                                    padding: const EdgeInsets.all(20),
+                                    padding: const EdgeInsets.all(AppSpacing.lg),
                                     decoration: BoxDecoration(
                                       gradient: LinearGradient(
                                         colors: isDark 
@@ -338,7 +340,7 @@ class _AgentOrderManagementScreenState extends State<AgentOrderManagementScreen>
                                           backgroundColor: isDark ? AppColors.lightBlue.withValues(alpha: 0.2) : AppColors.primary.withValues(alpha: 0.1), 
                                           child: Icon(Icons.person_rounded, size: 24, color: isDark ? AppColors.lightBlue : AppColors.primary)
                                         ),
-                                        const SizedBox(width: 16),
+                                        const SizedBox(width: AppSpacing.md),
                                         Expanded(
                                           child: Column(
                                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -360,11 +362,11 @@ class _AgentOrderManagementScreenState extends State<AgentOrderManagementScreen>
                                         Row(
                                           children: [
                                             Icon(Icons.inventory_2_outlined, size: 16, color: isDark ? AppColors.lightBlue : AppColors.primary),
-                                            const SizedBox(width: 8),
+                                            const SizedBox(width: AppSpacing.xs),
                                             Text(isArabic ? 'محتويات الطلب' : 'Order Contents', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                                           ],
                                         ),
-                                        const SizedBox(height: 16),
+                                        const SizedBox(height: AppSpacing.md),
                                         ...widget.order.items.map((item) => _buildItemRow(item, isArabic, isDark)),
                                         _buildNotesRow(isArabic, isDark, widget.order.notes),
                                       ],
@@ -378,7 +380,7 @@ class _AgentOrderManagementScreenState extends State<AgentOrderManagementScreen>
                             
                             if (!isReadOnly && widget.initialStatus != OrderStatus.pending) ...[
                               _buildSectionHeader(isArabic ? 'تحديث حالة الغسيل' : 'Update Laundry Status', theme),
-                              const SizedBox(height: 16),
+                              const SizedBox(height: AppSpacing.md),
                               DropdownButtonFormField<OrderStatus>(
                                 initialValue: _currentStatus,
                                 decoration: InputDecoration(
@@ -443,7 +445,7 @@ class _AgentOrderManagementScreenState extends State<AgentOrderManagementScreen>
                                     child: Text(isArabic ? 'رفض' : 'Reject', style: const TextStyle(fontWeight: FontWeight.bold)),
                                   ),
                                 ),
-                                const SizedBox(width: 16),
+                                const SizedBox(width: AppSpacing.md),
                                 Expanded(
                                   child: ElevatedButton(
                                     onPressed: _isLoading ? null : () => _handleAccept(isArabic),
@@ -520,7 +522,7 @@ class _AgentOrderManagementScreenState extends State<AgentOrderManagementScreen>
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(AppSpacing.sm),
             decoration: BoxDecoration(
               color: isDark ? Colors.white.withValues(alpha: 0.05) : AppColors.background,
               borderRadius: BorderRadius.circular(16),
@@ -528,7 +530,7 @@ class _AgentOrderManagementScreenState extends State<AgentOrderManagementScreen>
             ),
             child: Icon(item.icon, color: isDark ? AppColors.lightBlue : AppColors.primary, size: 22),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -558,7 +560,7 @@ class _AgentOrderManagementScreenState extends State<AgentOrderManagementScreen>
   Widget _buildNotesRow(bool isArabic, bool isDark, String note) {
     return Container(
       margin: const EdgeInsets.only(top: 8),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(AppSpacing.sm),
       decoration: BoxDecoration(
         color: Colors.orange.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
@@ -568,7 +570,7 @@ class _AgentOrderManagementScreenState extends State<AgentOrderManagementScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Icon(Icons.info_outline, color: Colors.orange, size: 18),
-          const SizedBox(width: 8),
+          const SizedBox(width: AppSpacing.xs),
           Expanded(
             child: Text(
               note,

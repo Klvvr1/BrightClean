@@ -1,8 +1,31 @@
 import 'package:flutter/foundation.dart';
+import '../../../../core/database/database_helper.dart';
 import '../../domain/models/cart_item.dart';
 
 class CartProvider with ChangeNotifier {
-  final List<CartItem> _items = [];
+  List<CartItem> _items = [];
+
+  CartProvider() {
+    _loadCartItems();
+  }
+
+  Future<void> _loadCartItems() async {
+    try {
+      final db = await DatabaseHelper.instance.database;
+      final maps = await db.query('cart_items');
+      _items = maps.map((map) => CartItem(
+        id: map['id'] as String,
+        serviceName: map['serviceName'] as String,
+        selectedType: map['selectedType'] as String,
+        quantity: map['quantity'] as int,
+        pricePerUnit: map['pricePerUnit'] as double,
+        totalPrice: map['totalPrice'] as double,
+      )).toList();
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error loading cart items: $e');
+    }
+  }
 
   List<CartItem> get items => [..._items];
 
@@ -16,13 +39,13 @@ class CartProvider with ChangeNotifier {
     return total;
   }
 
-  void addItem({
+  Future<void> addItem({
     required String serviceName,
     required String selectedType,
     required int quantity,
     required double pricePerUnit,
     required double totalPrice,
-  }) {
+  }) async {
     // Validate inputs
     if (quantity <= 0) {
       throw ArgumentError('Quantity must be greater than 0');
@@ -65,16 +88,42 @@ class CartProvider with ChangeNotifier {
         ),
       );
     }
+    
+    // Persist to DB
+    await _saveToDb();
     notifyListeners();
   }
 
-  void removeItem(String id) {
+  Future<void> _saveToDb() async {
+    try {
+      final db = await DatabaseHelper.instance.database;
+      await db.transaction((txn) async {
+        await txn.delete('cart_items');
+        for (var item in _items) {
+          await txn.insert('cart_items', {
+            'id': item.id,
+            'serviceName': item.serviceName,
+            'selectedType': item.selectedType,
+            'quantity': item.quantity,
+            'pricePerUnit': item.pricePerUnit,
+            'totalPrice': item.totalPrice,
+          });
+        }
+      });
+    } catch (e) {
+      debugPrint('Error saving cart items: $e');
+    }
+  }
+
+  Future<void> removeItem(String id) async {
     _items.removeWhere((item) => item.id == id);
+    await _saveToDb();
     notifyListeners();
   }
 
-  void clearCart() {
+  Future<void> clearCart() async {
     _items.clear();
+    await _saveToDb();
     notifyListeners();
   }
 }

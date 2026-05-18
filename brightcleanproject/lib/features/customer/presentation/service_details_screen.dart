@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/theme/app_radius.dart';
+import '../../../../core/theme/app_styles.dart';
 import '../data/providers/cart_provider.dart';
 import 'package:brightcleanproject/features/customer/domain/models/service_option.dart';
 import 'package:brightcleanproject/features/customer/domain/models/cart_item.dart';
@@ -367,32 +370,33 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
 
   Widget _buildCheckboxOption(ServiceOption option) {
     bool isSelected = selectedOption.id == option.id;
+    final theme = Theme.of(context);
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
       decoration: BoxDecoration(
-        color: isSelected ? AppColors.primary.withValues(alpha: 0.05) : Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        color: isSelected ? theme.colorScheme.primary.withValues(alpha: 0.1) : theme.colorScheme.surface,
+        borderRadius: AppRadius.button,
         border: Border.all(
-          color: isSelected ? AppColors.primary : Colors.grey.shade300,
+          color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurface.withValues(alpha: 0.2),
           width: isSelected ? 2 : 1,
         ),
       ),
       child: Theme(
-        data: Theme.of(context).copyWith(
-          unselectedWidgetColor: Colors.grey.shade400,
+        data: theme.copyWith(
+          unselectedWidgetColor: theme.colorScheme.onSurface.withValues(alpha: 0.5),
         ),
         child: CheckboxListTile(
           title: Text(
             option.displayName,
-            style: TextStyle(
+            style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              color: isSelected ? AppColors.primary : Colors.black87,
+              color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurface,
             )
           ),
           value: isSelected,
-          activeColor: AppColors.primary,
-          checkColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          activeColor: theme.colorScheme.primary,
+          checkColor: theme.colorScheme.onPrimary,
+          shape: RoundedRectangleBorder(borderRadius: AppRadius.button),
           onChanged: (bool? value) {
             if (value == true) {
               setState(() {
@@ -412,20 +416,16 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
     required VoidCallback onIncrement,
     String? subtitle,
   }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardBg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
-    final borderCol = isDark ? Colors.white12 : Colors.grey.shade300;
-    final textCol = isDark ? Colors.white : Colors.black87;
-    final counterBg = isDark ? Colors.white10 : Colors.grey.shade100;
+    final theme = Theme.of(context);
     
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
       decoration: BoxDecoration(
-        color: quantity > 0 ? AppColors.primary.withValues(alpha: 0.05) : cardBg,
-        borderRadius: BorderRadius.circular(12),
+        color: quantity > 0 ? theme.colorScheme.primary.withValues(alpha: 0.05) : theme.colorScheme.surface,
+        borderRadius: AppRadius.button,
         border: Border.all(
-          color: quantity > 0 ? AppColors.primary : borderCol,
+          color: quantity > 0 ? theme.colorScheme.primary : theme.colorScheme.onSurface.withValues(alpha: 0.2),
           width: quantity > 0 ? 2 : 1,
         ),
       ),
@@ -438,17 +438,16 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
               children: [
                 Text(
                   title,
-                  style: TextStyle(
-                    fontSize: 16,
+                  style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: quantity > 0 ? FontWeight.bold : FontWeight.normal,
-                    color: quantity > 0 ? AppColors.primary : textCol,
+                    color: quantity > 0 ? theme.colorScheme.primary : theme.colorScheme.onSurface,
                   ),
                 ),
                 if (subtitle != null) ...[
                   const SizedBox(height: 4),
                   Text(
                     subtitle,
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
                   ),
                 ],
               ],
@@ -456,30 +455,29 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
           ),
           Container(
             decoration: BoxDecoration(
-              color: counterBg,
-              borderRadius: BorderRadius.circular(8),
+              color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+              borderRadius: AppRadius.button,
             ),
             child: Row(
               children: [
                 IconButton(
                   icon: const Icon(Icons.remove, size: 18),
-                  color: quantity > 0 ? AppColors.primary : Colors.grey,
+                  color: quantity > 0 ? theme.colorScheme.primary : theme.colorScheme.onSurface.withValues(alpha: 0.5),
                   onPressed: onDecrement,
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
                   child: Text(
                     '$quantity',
-                    style: TextStyle(
-                      fontSize: 16,
+                    style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
-                      color: quantity > 0 ? AppColors.primary : textCol,
+                      color: quantity > 0 ? theme.colorScheme.primary : theme.colorScheme.onSurface,
                     ),
                   ),
                 ),
                 IconButton(
                   icon: const Icon(Icons.add, size: 18),
-                  color: AppColors.primary,
+                  color: theme.colorScheme.primary,
                   onPressed: onIncrement,
                 ),
               ],
@@ -492,21 +490,14 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardBg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
-    final borderCol = isDark ? Colors.white12 : Colors.grey.shade300;
-    final textCol = isDark ? Colors.white : Colors.black87;
+    final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF121212) : Colors.grey.shade50,
       appBar: AppBar(
         title: Text(widget.serviceType, style: const TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-        foregroundColor: isDark ? Colors.white : AppColors.primary,
-        elevation: 0,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
+        padding: const EdgeInsets.all(AppSpacing.xl),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -713,19 +704,8 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
             ..._serviceOptions.map((option) => _buildCheckboxOption(option)),
             const SizedBox(height: 32),
             Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: cardBg,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: borderCol),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
+              padding: const EdgeInsets.all(AppSpacing.md),
+              decoration: AppStyles.surface(context),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -755,20 +735,22 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
                                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
                                       decoration: InputDecoration(
                                         labelText: 'الطول (بالمتر)',
-                                        border: const OutlineInputBorder(),
-                                        fillColor: isDark ? const Color(0xFF2A2A2A) : Colors.white,
+                                        border: OutlineInputBorder(borderRadius: AppRadius.button),
+                                        fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                                        filled: true,
                                       ),
                                     ),
                                   ),
-                                  const SizedBox(width: 16),
+                                  const SizedBox(width: AppSpacing.sm),
                                   Expanded(
                                     child: TextField(
                                       controller: widthList[index],
                                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
                                       decoration: InputDecoration(
                                         labelText: 'العرض (بالمتر)',
-                                        border: const OutlineInputBorder(),
-                                        fillColor: isDark ? const Color(0xFF2A2A2A) : Colors.white,
+                                        border: OutlineInputBorder(borderRadius: AppRadius.button),
+                                        fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                                        filled: true,
                                       ),
                                     ),
                                   ),
@@ -802,8 +784,9 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
                                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                                 decoration: InputDecoration(
                                   labelText: 'سعة الخزان (باللتر)',
-                                  border: const OutlineInputBorder(),
-                                  fillColor: isDark ? const Color(0xFF2A2A2A) : Colors.white,
+                                  border: OutlineInputBorder(borderRadius: AppRadius.button),
+                                  fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                                  filled: true,
                                 ),
                               ),
                             ],
@@ -815,14 +798,14 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('إجمالي العدد المختار', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      Text('إجمالي العدد المختار', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
                       Text(
                         '${widget.serviceType.contains('لابس') ? totalClothingPieces : (widget.serviceType.contains('سجاد') || widget.serviceType.contains('مفروشات') ? totalCarpetPieces : (widget.serviceType.contains('خزان') ? totalTankPieces : (widget.serviceType.contains('سيار') ? _carQuantities.values.fold<int>(0, (sum, q) => sum + q) : (widget.serviceType.contains('مكيف') ? _acQuantities.values.fold<int>(0, (sum, q) => sum + q) : (widget.serviceType.contains('شمس') ? _solarQuantities.values.fold<int>(0, (sum, q) => sum + q) : (widget.serviceType.contains('عاملات') ? maidPersons : 1))))))} قطعة',
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primary),
+                        style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppSpacing.md),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -830,9 +813,9 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          const Text('السعر الإجمالي', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                          Text('السعر الإجمالي', style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.5))),
                           const SizedBox(height: 4),
-                          Text('${totalPrice.toStringAsFixed(2)} ر.ي', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.primary)),
+                          Text('${totalPrice.toStringAsFixed(2)} ر.ي', style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.primary)),
                         ],
                       ),
                     ],
@@ -847,12 +830,12 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               final isCartService = widget.serviceType == 'الملابس' || widget.serviceType == 'السجاد والمفروشات';
-              
+
               if (isCartService) {
                 final cart = Provider.of<CartProvider>(context, listen: false);
-                
+
                 if (widget.serviceType.contains('لابس')) {
                   if (totalClothingPieces == 0) {
                     ScaffoldMessenger.of(context).clearSnackBars();
@@ -864,19 +847,19 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
                     );
                     return;
                   }
-                  
+
                   // Add all selected clothing items to the cart
-                  _clothingQuantities.forEach((item, qty) {
-                    if (qty > 0) {
-                      cart.addItem(
+                  for (var entry in _clothingQuantities.entries) {
+                    if (entry.value > 0) {
+                      await cart.addItem(
                         serviceName: widget.serviceType,
-                        selectedType: '$item - ${selectedOption.displayName}',
-                        quantity: qty,
+                        selectedType: '${entry.key} - ${selectedOption.displayName}',
+                        quantity: entry.value,
                         pricePerUnit: basePrice * selectedOption.priceMultiplier,
-                        totalPrice: basePrice * selectedOption.priceMultiplier * qty,
+                        totalPrice: basePrice * selectedOption.priceMultiplier * entry.value,
                       );
                     }
-                  });
+                  }
                   
                   // Reset clothing item quantities
                   setState(() {
@@ -917,32 +900,32 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
                   }
                   
                   // Add all selected carpet pieces with their dimensions to the cart
-                  _carpetQuantities.forEach((item, qty) {
-                    if (qty > 0) {
-                      final lengthList = _carpetLengthControllers[item]!;
-                      final widthList = _carpetWidthControllers[item]!;
-                      double itemBaseMultiplier = (item == 'غسيل سجاد عادي') ? 1.0 : 1.5;
-                      for (int i = 0; i < qty; i++) {
+                  for (var entry in _carpetQuantities.entries) {
+                    if (entry.value > 0) {
+                      final lengthList = _carpetLengthControllers[entry.key]!;
+                      final widthList = _carpetWidthControllers[entry.key]!;
+                      double itemBaseMultiplier = (entry.key == 'غسيل سجاد عادي') ? 1.0 : 1.5;
+                      for (int i = 0; i < entry.value; i++) {
                         double l = double.tryParse(lengthList[i].text) ?? 1.0;
                         double w = double.tryParse(widthList[i].text) ?? 1.0;
                         if (l <= 0) l = 1.0;
                         if (w <= 0) w = 1.0;
                         double itemPrice = basePrice * selectedOption.priceMultiplier * itemBaseMultiplier * (l * w);
-                        cart.addItem(
+                        await cart.addItem(
                           serviceName: widget.serviceType,
-                          selectedType: '$item (القطعة ${i + 1}: ${l.toStringAsFixed(1)}م x ${w.toStringAsFixed(1)}م)',
+                          selectedType: '${entry.key} (القطعة ${i + 1}: ${l.toStringAsFixed(1)}م x ${w.toStringAsFixed(1)}م)',
                           quantity: 1,
                           pricePerUnit: itemPrice,
                           totalPrice: itemPrice,
                         );
                       }
                     }
-                  });
+                  }
                   
                   setState(() {
-                    _carpetQuantities.keys.forEach((key) {
+                    for (final key in _carpetQuantities.keys.toList()) {
                       _updateCarpetQuantity(key, 0);
-                    });
+                    }
                   });
                   
                   ScaffoldMessenger.of(context).clearSnackBars();
@@ -1081,10 +1064,7 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
               }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
               elevation: 4,
             ),
             child: Row(
@@ -1095,12 +1075,11 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
                       ? Icons.add_shopping_cart
                       : Icons.check_circle_outline,
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: AppSpacing.sm),
                 Text(
                   (widget.serviceType == 'الملابس' || widget.serviceType == 'السجاد والمفروشات')
                       ? 'إضافة إلى السلة'
                       : 'إتمام الطلب',
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ],
             ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../../core/theme/app_colors.dart';
+import '../../../../../core/theme/app_styles.dart';
 import '../wallet_details_screen.dart';
 
 class WalletSection extends StatelessWidget {
@@ -9,18 +10,18 @@ class WalletSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      elevation: 2,
+    final theme = Theme.of(context);
+    return Container(
+      decoration: AppStyles.surface(context),
+      clipBehavior: Clip.hardEdge,
       child: ListTile(
-        leading: const Icon(Icons.account_balance_wallet, color: AppColors.primary),
-        title: const Text('المحفظة / النقاط'),
+        leading: Icon(Icons.account_balance_wallet, color: theme.colorScheme.primary),
+        title: Text('المحفظة / النقاط', style: theme.textTheme.titleMedium),
         trailing: Text(
           balance,
-          style: const TextStyle(
+          style: theme.textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.bold,
             color: AppColors.success,
-            fontSize: 16,
           ),
         ),
         onTap: () {
