@@ -22,7 +22,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 2,
+      version: 3,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
       onOpen: (db) async {
@@ -47,6 +47,15 @@ class DatabaseHelper {
 
       if (!columnNames.contains('car_year')) {
         await db.execute("ALTER TABLE users ADD COLUMN car_year TEXT;");
+      }
+    }
+
+    if (oldVersion < 3) {
+      final columns = await db.rawQuery("PRAGMA table_info(orders)");
+      final columnNames = columns.map((column) => column['name'] as String).toSet();
+
+      if (!columnNames.contains('category')) {
+        await db.execute("ALTER TABLE orders ADD COLUMN category TEXT;");
       }
     }
   }
@@ -99,7 +108,8 @@ CREATE TABLE IF NOT EXISTS orders (
   paymentMethod TEXT,
   isRated INTEGER NOT NULL DEFAULT 0,
   pickupDate TEXT,
-  pickupTimeSlot TEXT
+  pickupTimeSlot TEXT,
+  category TEXT
 )
 ''');
 

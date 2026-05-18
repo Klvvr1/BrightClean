@@ -27,6 +27,7 @@ class OrderProvider extends ChangeNotifier {
           isRated: (map['isRated'] as int) == 1,
           pickupDate: map['pickupDate'] != null ? DateTime.parse(map['pickupDate'] as String) : null,
           pickupTimeSlot: map['pickupTimeSlot'] as String?,
+          category: map['category'] as String?,
         )).toList();
       } else {
         // Seed default orders if empty
@@ -46,6 +47,7 @@ class OrderProvider extends ChangeNotifier {
         details: 'تنظيف سجاد - 2 قطعة',
         status: 'قيد الانتظار',
         activeStepIndex: 0,
+        category: 'carpets',
       ),
       Order(
         orderId: '1024',
@@ -53,6 +55,7 @@ class OrderProvider extends ChangeNotifier {
         details: 'غسيل ملابس - 5 قطع',
         status: 'في الطريق',
         activeStepIndex: 1,
+        category: 'clothes',
       ),
       Order(
         orderId: '1023',
@@ -60,6 +63,7 @@ class OrderProvider extends ChangeNotifier {
         details: 'غسيل سيارة - كبيرة',
         status: 'تم التوصيل',
         activeStepIndex: 4,
+        category: 'carsBikes',
       ),
     ];
     for (var order in _orders) {
@@ -81,6 +85,7 @@ class OrderProvider extends ChangeNotifier {
         'isRated': order.isRated ? 1 : 0,
         'pickupDate': order.pickupDate?.toIso8601String(),
         'pickupTimeSlot': order.pickupTimeSlot,
+        'category': order.category,
       }, conflictAlgorithm: ConflictAlgorithm.replace);
     } catch (e) {
       debugPrint('Error saving order: $e');
@@ -108,6 +113,9 @@ class OrderProvider extends ChangeNotifier {
         locationDescription: oldOrder.locationDescription,
         paymentMethod: oldOrder.paymentMethod,
         isRated: true,
+        pickupDate: oldOrder.pickupDate,
+        pickupTimeSlot: oldOrder.pickupTimeSlot,
+        category: oldOrder.category,
       );
       _saveOrderToDb(_orders[index]);
       notifyListeners();

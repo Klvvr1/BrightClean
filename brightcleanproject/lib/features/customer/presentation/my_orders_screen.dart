@@ -233,17 +233,10 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
     );
   }
 
-  void _showRatingDialog(BuildContext parentContext, String orderId, String details) {
+  void _showRatingDialog(BuildContext parentContext, String orderId, bool requiresDriverRating) {
     double serviceRating = 5;
     double driverRating = 5;
     final TextEditingController reviewController = TextEditingController();
-
-    final isClothesOrBedding = details.contains('ملابس') ||
-        details.contains('مفروشات') ||
-        details.contains('سجاد') ||
-        details.contains('Bedding') ||
-        details.contains('Clothes') ||
-        details.contains('Carpet');
 
     showDialog(
       context: parentContext,
@@ -293,7 +286,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                   )),
                 ),
                 
-                if (isClothesOrBedding) ...[
+                if (requiresDriverRating) ...[
                   const SizedBox(height: AppSpacing.lg),
                   
                   // 2. Driver Rating Section
@@ -352,9 +345,9 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                   final review = Review(
                     userName: 'عميل برايت كلين',
                     comment: reviewController.text.trim().isEmpty ? 'خدمة ممتازة! شكراً لكم.' : reviewController.text.trim(),
-                    rating: isClothesOrBedding ? (serviceRating + driverRating) / 2.0 : serviceRating,
+                    rating: requiresDriverRating ? (serviceRating + driverRating) / 2.0 : serviceRating,
                     serviceRating: serviceRating,
-                    driverRating: isClothesOrBedding ? driverRating : null,
+                    driverRating: requiresDriverRating ? driverRating : null,
                     date: DateTime.now(),
                   );
 
@@ -499,7 +492,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                             activeStepIndex: order.activeStepIndex,
                             isRated: order.isRated,
                             onRatePressed: () =>
-                                _showRatingDialog(context, order.orderId, order.details),
+                                _showRatingDialog(context, order.orderId, order.requiresDriverRating),
                             showTracker: order.status != 'تم التوصيل' &&
                                 order.status != 'ملغي',
                           );

@@ -462,7 +462,9 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
         _buildSettingsTile(Icons.phone_outlined, isArabic ? 'رقم الهاتف' : 'Phone Number', _phoneController.text, onTap: () => _showEditDialog(isArabic ? 'رقم الهاتف' : 'Phone Number', _phoneController)),
         _buildSettingsTile(Icons.email_outlined, isArabic ? 'البريد الإلكتروني' : 'Email', _emailController.text, onTap: () => _showEditDialog(isArabic ? 'البريد الإلكتروني' : 'Email', _emailController)),
         _buildSwitchTile(
-          isArabic ? 'حالة المغسلة (مفتوح)' : 'Laundry Status (Open)',
+          isArabic
+            ? (_isLaundryOpen ? 'حالة المغسلة (مفتوح)' : 'حالة المغسلة (مغلق)')
+            : (_isLaundryOpen ? 'Laundry Status (Open)' : 'Laundry Status (Closed)'),
           _isLaundryOpen,
           (v) => setState(() => _isLaundryOpen = v),
           icon: Icons.store_outlined,
@@ -563,6 +565,10 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
       await prefs.remove('user_name');
       await prefs.remove('user_phone');
       await prefs.remove('user_role');
+      await prefs.remove('user_email');
+      await prefs.remove('wallet_balance');
+      await prefs.remove('profile_image_path');
+      await prefs.remove('user_name_is_default');
       if (mounted) context.go('/login');
     }
   }
