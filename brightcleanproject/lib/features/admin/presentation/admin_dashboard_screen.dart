@@ -1,12 +1,11 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:go_router/go_router.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_styles.dart';
 import '../../../../core/widgets/custom_text_field.dart';
+import 'admin_profile_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -309,56 +308,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   final List<String> _titles = [
     'الرئيسية',
     'إدارة التسجيلات',
-    'العروض'
+    'العروض',
+    'حسابي'
   ];
 
-  void _handleLogout() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('تسجيل الخروج'),
-        content: const Text('هل أنت متأكد من رغبتك في تسجيل الخروج؟'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('إلغاء')),
-          TextButton(
-            onPressed: () async {
-              try {
-                // Clear authentication state from SharedPreferences
-                final prefs = await SharedPreferences.getInstance();
-                await prefs.remove('authToken');
-                await prefs.remove('refreshToken');
-                await prefs.remove('user_id');
-                await prefs.remove('user_name');
-                await prefs.remove('user_phone');
-                await prefs.remove('user_role');
-                await prefs.remove('wallet_balance');
 
-                // Close dialog and navigate to login
-                if (context.mounted) {
-                  Navigator.pop(context);
-                  context.go('/login');
-                }
-              } catch (e) {
-                // Handle errors in clearing auth state
-                if (context.mounted) {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('حدث خطأ أثناء تسجيل الخروج: $e'),
-                      backgroundColor: AppColors.error,
-                    ),
-                  );
-                }
-              }
-            },
-            child: const Text('خروج', style: TextStyle(color: AppColors.error)),
-          ),
-        ],
-      ),
-    );
-  }
 
   void _showWarningDialog(String name) {
     final reasonController = TextEditingController();
@@ -2524,97 +2478,37 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_selectedIndex >= 3) {
+    if (_selectedIndex >= 4) {
       _selectedIndex = 0;
     }
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: AppColors.white,
-        automaticallyImplyLeading: false,
-        centerTitle: false,
-        title: _selectedIndex == 0
-            ? PopupMenuButton<String>(
-                padding: EdgeInsets.zero,
-                onSelected: (value) {
-                  if (value == 'logout') {
-                    _handleLogout();
-                  }
-                },
-                itemBuilder: (context) => [
-                  const PopupMenuItem(
-                    value: 'profile',
-                    child: Row(
-                      children: [
-                        Icon(Icons.person_outline, size: 20),
-                        SizedBox(width: 10),
-                        Text('الملف الشخصي'),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuDivider(),
-                  const PopupMenuItem(
-                    value: 'logout',
-                    child: Row(
-                      children: [
-                        Icon(Icons.logout, color: AppColors.error, size: 20),
-                        SizedBox(width: 10),
-                        Text('تسجيل الخروج',
-                            style: TextStyle(color: AppColors.error)),
-                      ],
-                    ),
-                  ),
-                ],
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    CircleAvatar(
-                      radius: 20,
-                      backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                      child: const Icon(Icons.admin_panel_settings,
-                          color: AppColors.primary),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    const Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'أهلاً بك،',
-                          style: TextStyle(
-                              color: AppColors.textLight, fontSize: 12),
-                        ),
-                        Text(
-                          'المشرف الرئيسي',
-                          style: TextStyle(
-                            color: AppColors.primary,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              )
-            : Center(
-                child: Text(
-                  _titles[_selectedIndex],
-                  style: const TextStyle(
-                      color: AppColors.primary, fontWeight: FontWeight.bold),
-                ),
+      appBar: _selectedIndex == 3
+          ? null
+          : AppBar(
+              elevation: 0,
+              backgroundColor: AppColors.white,
+              automaticallyImplyLeading: false,
+              centerTitle: true,
+              title: Text(
+                _titles[_selectedIndex],
+                style: const TextStyle(
+                    color: AppColors.primary, fontWeight: FontWeight.bold),
               ),
-        actions: const [
-          SizedBox(width: AppSpacing.xs),
-        ],
-      ),
+            ),
       body: IndexedStack(
         index: _selectedIndex,
         children: [
           _buildHomeView(),
           _buildRegistrationsView(),
           _buildOffersView(),
+          AdminProfileScreen(
+            onTabChange: (index) {
+              setState(() {
+                _selectedIndex = index;
+              });
+            },
+          ),
         ],
       ),
       bottomNavigationBar: Container(
@@ -2653,6 +2547,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               icon: Icon(Icons.local_offer_outlined),
               activeIcon: Icon(Icons.local_offer),
               label: 'العروض',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.person_outline),
+              activeIcon: Icon(Icons.person),
+              label: 'حسابي',
             ),
           ],
         ),

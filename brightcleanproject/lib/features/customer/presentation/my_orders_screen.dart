@@ -233,10 +233,17 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
     );
   }
 
-  void _showRatingDialog(BuildContext parentContext, String orderId) {
+  void _showRatingDialog(BuildContext parentContext, String orderId, String details) {
     double serviceRating = 5;
     double driverRating = 5;
     final TextEditingController reviewController = TextEditingController();
+
+    final isClothesOrBedding = details.contains('ملابس') ||
+        details.contains('مفروشات') ||
+        details.contains('سجاد') ||
+        details.contains('Bedding') ||
+        details.contains('Clothes') ||
+        details.contains('Carpet');
 
     showDialog(
       context: parentContext,
@@ -285,28 +292,31 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                     ),
                   )),
                 ),
-                const SizedBox(height: AppSpacing.lg),
                 
-                // 2. Driver Rating Section
-                Text(
-                  'تقييم تعامل وسرعة المندوب',
-                  textAlign: TextAlign.right,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(5, (index) => GestureDetector(
-                    onTap: () => setState(() => driverRating = index + 1.0),
-                    child: Icon(
-                      index < driverRating ? Icons.star : Icons.star_border,
-                      color: index < driverRating ? Colors.amber : theme.colorScheme.onSurface.withValues(alpha: 0.3),
-                      size: 36,
+                if (isClothesOrBedding) ...[
+                  const SizedBox(height: AppSpacing.lg),
+                  
+                  // 2. Driver Rating Section
+                  Text(
+                    'تقييم تعامل وسرعة المندوب',
+                    textAlign: TextAlign.right,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
                     ),
-                  )),
-                ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(5, (index) => GestureDetector(
+                      onTap: () => setState(() => driverRating = index + 1.0),
+                      child: Icon(
+                        index < driverRating ? Icons.star : Icons.star_border,
+                        color: index < driverRating ? Colors.amber : theme.colorScheme.onSurface.withValues(alpha: 0.3),
+                        size: 36,
+                      ),
+                    )),
+                  ),
+                ],
                 const SizedBox(height: AppSpacing.xl),
                 
                 // Comments
@@ -341,10 +351,10 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                 onPressed: () {
                   final review = Review(
                     userName: 'عميل برايت كلين',
-                    comment: reviewController.text.trim().isEmpty ? 'خدمة ممتازة وتوصيل سريع! شكراً لكم.' : reviewController.text.trim(),
-                    rating: (serviceRating + driverRating) / 2.0,
+                    comment: reviewController.text.trim().isEmpty ? 'خدمة ممتازة! شكراً لكم.' : reviewController.text.trim(),
+                    rating: isClothesOrBedding ? (serviceRating + driverRating) / 2.0 : serviceRating,
                     serviceRating: serviceRating,
-                    driverRating: driverRating,
+                    driverRating: isClothesOrBedding ? driverRating : null,
                     date: DateTime.now(),
                   );
 
@@ -489,7 +499,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                             activeStepIndex: order.activeStepIndex,
                             isRated: order.isRated,
                             onRatePressed: () =>
-                                _showRatingDialog(context, order.orderId),
+                                _showRatingDialog(context, order.orderId, order.details),
                             showTracker: order.status != 'تم التوصيل' &&
                                 order.status != 'ملغي',
                           );

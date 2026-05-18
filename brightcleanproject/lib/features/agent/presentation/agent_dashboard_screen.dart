@@ -6,7 +6,8 @@ import 'package:go_router/go_router.dart';
 import 'package:brightcleanproject/core/enums/laundry_type.dart';
 import 'package:brightcleanproject/core/enums/order_status.dart';
 import 'package:brightcleanproject/core/controllers/language_controller.dart';
-import 'package:brightcleanproject/features/agent/presentation/widgets/agent_app_bar_actions.dart';
+import 'package:brightcleanproject/core/controllers/theme_controller.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // --- (Mock) نموذج بيانات الطلب ---
 class AgentOrderModel {
@@ -455,11 +456,17 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.md),
       children: [
-        // الملف الشخصي
-        _buildSettingsHeader(isArabic ? 'الملف الشخصي' : 'Profile'),
+        // حسابي
+        _buildSettingsHeader(isArabic ? 'حسابي' : 'My Account'),
         _buildSettingsTile(Icons.person_outline, isArabic ? 'الاسم' : 'Name', _nameController.text, onTap: () => _showEditDialog(isArabic ? 'الاسم' : 'Name', _nameController)),
         _buildSettingsTile(Icons.phone_outlined, isArabic ? 'رقم الهاتف' : 'Phone Number', _phoneController.text, onTap: () => _showEditDialog(isArabic ? 'رقم الهاتف' : 'Phone Number', _phoneController)),
         _buildSettingsTile(Icons.email_outlined, isArabic ? 'البريد الإلكتروني' : 'Email', _emailController.text, onTap: () => _showEditDialog(isArabic ? 'البريد الإلكتروني' : 'Email', _emailController)),
+        _buildSwitchTile(
+          isArabic ? 'حالة المغسلة (مفتوح)' : 'Laundry Status (Open)',
+          _isLaundryOpen,
+          (v) => setState(() => _isLaundryOpen = v),
+          icon: Icons.store_outlined,
+        ),
         
         const SizedBox(height: AppSpacing.xl),
         
@@ -471,7 +478,7 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
         
         const SizedBox(height: AppSpacing.xl),
         
-        // اللغة
+        // التفضيلات
         _buildSettingsHeader(isArabic ? 'التفضيلات' : 'Preferences'),
         ListTile(
           leading: Icon(Icons.language, color: isDark ? Colors.white : AppColors.primary),
@@ -496,11 +503,68 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
             });
           },
         ),
+        ValueListenableBuilder<ThemeMode>(
+          valueListenable: ThemeController().themeMode,
+          builder: (context, themeMode, child) {
+            final isDarkTheme = themeMode == ThemeMode.dark ||
+                (themeMode == ThemeMode.system &&
+                    MediaQuery.of(context).platformBrightness == Brightness.dark);
+            return _buildSwitchTile(
+              isArabic ? 'الوضع الليلي' : 'Night Mode',
+              isDarkTheme,
+              (_) => ThemeController().toggleTheme(),
+              icon: isDarkTheme ? Icons.dark_mode : Icons.light_mode,
+            );
+          },
+        ),
         
         const Divider(height: 40),
-        _buildSettingsTile(Icons.logout, isArabic ? 'تسجيل الخروج' : 'Logout', isArabic ? 'تسجيل خروج من الحساب' : 'Logout from account', color: AppColors.error, onTap: () => context.go('/login')),
+        _buildSettingsTile(
+          Icons.logout,
+          isArabic ? 'تسجيل الخروج' : 'Logout',
+          isArabic ? 'تسجيل خروج من الحساب' : 'Logout from account',
+          color: AppColors.error,
+          onTap: _showLogoutDialog,
+        ),
       ],
     );
+  }
+
+  Future<void> _showLogoutDialog() async {
+    final isArabic = LanguageController().isArabic;
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        final t = Theme.of(ctx);
+        return AlertDialog(
+          title: Text(isArabic ? 'تسجيل الخروج' : 'Logout', style: TextStyle(color: t.colorScheme.error)),
+          content: Text(isArabic ? 'هل أنت متأكد أنك تريد تسجيل الخروج؟' : 'Are you sure you want to logout?'),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: Text(isArabic ? 'إلغاء' : 'Cancel', style: TextStyle(color: t.colorScheme.onSurface.withValues(alpha: 0.6))),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: t.colorScheme.error, foregroundColor: t.colorScheme.onError),
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: Text(isArabic ? 'تأكيد' : 'Confirm'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirm == true && mounted) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('auth_token');
+      await prefs.remove('refresh_token');
+      await prefs.remove('user_id');
+      await prefs.remove('user_name');
+      await prefs.remove('user_phone');
+      await prefs.remove('user_role');
+      if (mounted) context.go('/login');
+    }
   }
 
   Widget _buildSettingsHeader(String title) {
@@ -510,9 +574,12 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
     );
   }
 
-  Widget _buildSwitchTile(String title, bool value, Function(bool) onChanged) {
+  Widget _buildSwitchTile(String title, bool value, Function(bool) onChanged, {IconData? icon}) {
     return SwitchListTile(
-      secondary: Icon(value ? Icons.notifications_active : Icons.notifications_off, color: value ? AppColors.primary : Colors.grey),
+      secondary: Icon(
+        icon ?? (value ? Icons.notifications_active : Icons.notifications_off), 
+        color: value ? AppColors.primary : Colors.grey
+      ),
       title: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
       value: value,
       onChanged: onChanged,
@@ -637,13 +704,13 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
                 ? _nameController.text 
                 : _selectedIndex == 1 
                     ? (isArabic ? 'الطلبات' : 'Orders') 
-                    : (isArabic ? 'الإعدادات' : 'Settings')),
+                    : (isArabic ? 'حسابي' : 'My Account')),
             actions: [
-              AgentAppBarActions(
-                isLaundryOpen: _isLaundryOpen,
-                onAvailabilityChanged: (v) => setState(() => _isLaundryOpen = v),
-                onSettingsPressed: () => setState(() => _selectedIndex = 2),
+              IconButton(
+                icon: const Icon(Icons.notifications_outlined),
+                onPressed: () {},
               ),
+              const SizedBox(width: 8),
             ],
           ),
           body: IndexedStack(
@@ -661,7 +728,11 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
             items: [
               BottomNavigationBarItem(icon: const Icon(Icons.home_filled), label: isArabic ? 'الرئيسية' : 'Home'),
               BottomNavigationBarItem(icon: const Icon(Icons.history), label: isArabic ? 'الطلبات' : 'Orders'),
-              BottomNavigationBarItem(icon: const Icon(Icons.settings), label: isArabic ? 'الإعدادات' : 'Settings'),
+              BottomNavigationBarItem(
+                icon: const Icon(Icons.person_outline),
+                activeIcon: const Icon(Icons.person),
+                label: isArabic ? 'حسابي' : 'My Account',
+              ),
             ],
           ),
         );

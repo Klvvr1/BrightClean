@@ -117,7 +117,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                     child: ListTile(
                       leading: Icon(Icons.person_outline,
                           color: theme.colorScheme.primary),
-                      title: Text(isAr ? 'الملف الشخصي' : 'Profile'),
+                      title: Text(isAr ? 'حسابي' : 'My Account'),
                       contentPadding: EdgeInsets.zero,
                     ),
                   ),
@@ -770,7 +770,50 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
         _buildProfileItem(Icons.confirmation_number_outlined,
             isAr ? 'رقم اللوحة' : 'Plate Number', 'A 12345'),
 
-        const SizedBox(height: 32),
+        const SizedBox(height: AppSpacing.lg),
+
+        // التفضيلات
+        _buildSettingsHeader(isAr ? 'التفضيلات' : 'Preferences'),
+        ListTile(
+          leading: Icon(Icons.language, color: isDark ? Colors.white : AppColors.primary),
+          title: Text(isAr ? 'لغة التطبيق' : 'App Language', style: const TextStyle(fontWeight: FontWeight.bold)),
+          trailing: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: BoxDecoration(
+              color: isDark ? Colors.white10 : AppColors.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              isAr ? 'العربية' : 'English', 
+              style: TextStyle(
+                color: isDark ? Colors.white : AppColors.primary, 
+                fontWeight: FontWeight.bold
+              )
+            ),
+          ),
+          onTap: () {
+            setState(() {
+              LanguageController().toggleLanguage();
+              _loadUserData();
+            });
+          },
+        ),
+        ValueListenableBuilder<ThemeMode>(
+          valueListenable: ThemeController().themeMode,
+          builder: (context, themeMode, child) {
+            final isDarkTheme = themeMode == ThemeMode.dark ||
+                (themeMode == ThemeMode.system &&
+                    MediaQuery.of(context).platformBrightness == Brightness.dark);
+            return _buildSwitchTile(
+              isAr ? 'الوضع الليلي' : 'Night Mode',
+              isDarkTheme,
+              (_) => ThemeController().toggleTheme(),
+              icon: isDarkTheme ? Icons.dark_mode : Icons.light_mode,
+            );
+          },
+        ),
+
+        const Divider(height: 40),
 
         // Logout Button
         SizedBox(
@@ -789,6 +832,27 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildSettingsHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Text(title, style: TextStyle(fontSize: 14, color: Colors.grey.shade600, fontWeight: FontWeight.bold)),
+    );
+  }
+
+  Widget _buildSwitchTile(String title, bool value, Function(bool) onChanged, {IconData? icon}) {
+    return SwitchListTile(
+      secondary: Icon(
+        icon ?? (value ? Icons.dark_mode : Icons.light_mode), 
+        color: value ? AppColors.primary : Colors.grey
+      ),
+      title: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+      value: value,
+      onChanged: onChanged,
+      activeTrackColor: AppColors.primary.withValues(alpha: 0.5),
+      activeThumbColor: AppColors.primary,
     );
   }
 
@@ -879,85 +943,22 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        flexibleSpace: SafeArea(
-          child: Stack(
-            children: [
-              // Icons forced to the left using Directionality(LTR)
-              Positioned(
-                left: 16,
-                top: 0,
-                bottom: 0,
-                child: Directionality(
-                  textDirection: TextDirection.ltr,
-                  child: Row(
-                    children: [
-                      ValueListenableBuilder<Locale>(
-                        valueListenable: LanguageController().locale,
-                        builder: (context, locale, _) {
-                          return TextButton(
-                            onPressed: () {
-                              LanguageController().toggleLanguage();
-                              _loadUserData();
-                            },
-                            style: TextButton.styleFrom(
-                              minimumSize: Size.zero,
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 6),
-                              backgroundColor:
-                                  Colors.white.withValues(alpha: 0.15),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10)),
-                            ),
-                            child: Text(
-                              locale.languageCode == 'ar' ? 'EN' : 'عربي',
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                  fontSize: 13),
-                            ),
-                          );
-                        },
-                      ),
-                      const SizedBox(width: AppSpacing.xs),
-                      ValueListenableBuilder<ThemeMode>(
-                        valueListenable: ThemeController().themeMode,
-                        builder: (context, themeMode, _) {
-                          return IconButton(
-                            icon: Icon(
-                                isDark ? Icons.light_mode : Icons.dark_mode,
-                                color: Colors.white,
-                                size: 22),
-                            onPressed: () => ThemeController().toggleTheme(),
-                            constraints: const BoxConstraints(),
-                            padding: const EdgeInsets.all(10),
-                            style: IconButton.styleFrom(
-                              backgroundColor:
-                                  Colors.white.withValues(alpha: 0.15),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10)),
-                            ),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              // Centered Title
-              Center(
-                child: Text(
-                  isAr ? 'برايت كلين' : 'Bright Clean',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w900,
-                    color: Colors.white,
-                    letterSpacing: 1.2,
-                    fontSize: 20,
-                  ),
-                ),
-              ),
-            ],
+        title: Text(
+          isAr ? 'برايت كلين' : 'Bright Clean',
+          style: const TextStyle(
+            fontWeight: FontWeight.w900,
+            color: Colors.white,
+            fontSize: 20,
           ),
         ),
+        centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications_outlined, color: Colors.white),
+            onPressed: () {},
+          ),
+          const SizedBox(width: 8),
+        ],
         elevation: 4,
         shadowColor: Colors.black26,
         backgroundColor: AppColors.primary,
@@ -1006,7 +1007,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
             BottomNavigationBarItem(
               icon: const Icon(Icons.person_outline, size: 26),
               activeIcon: const Icon(Icons.person, size: 26),
-              label: isAr ? 'الملف' : 'Profile',
+              label: isAr ? 'حسابي' : 'My Account',
             ),
           ],
         ),

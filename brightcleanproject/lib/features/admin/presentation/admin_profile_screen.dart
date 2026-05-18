@@ -3,11 +3,12 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/widgets/profile/profile_widgets.dart';
 import '../../../../core/theme/app_spacing.dart';
-import '../../../../core/theme/app_styles.dart';
 import '../../../../core/controllers/theme_controller.dart';
+import '../../../../core/theme/app_colors.dart';
 
 class AdminProfileScreen extends StatefulWidget {
-  const AdminProfileScreen({super.key});
+  final Function(int)? onTabChange;
+  const AdminProfileScreen({super.key, this.onTabChange});
 
   @override
   State<AdminProfileScreen> createState() => _AdminProfileScreenState();
@@ -83,122 +84,151 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
             name: _userName,
             subtitle: 'مدير النظام',
           ),
-          const SizedBox(height: AppSpacing.xxl),
-          _buildInfoSection(),
-          const SizedBox(height: AppSpacing.md),
-          _buildManagementSection(),
-          const SizedBox(height: AppSpacing.md),
-          _buildSettingsSection(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInfoSection() {
-    return Container(
-      decoration: AppStyles.surface(context),
-      clipBehavior: Clip.hardEdge,
-      child: Column(
-        children: [
-          AccountInfoCard(
-            icon: Icons.phone_outlined,
-            label: 'رقم الهاتف',
-            value: _userPhone,
+          const SizedBox(height: AppSpacing.xl),
+          
+          // معلومات الحساب
+          _buildSettingsHeader('معلومات الحساب'),
+          _buildSettingsTile(
+            Icons.phone_outlined,
+            'رقم الهاتف',
+            subtitle: _userPhone,
           ),
-          const Divider(height: 1),
-          AccountInfoCard(
-            icon: Icons.email_outlined,
-            label: 'البريد الإلكتروني',
-            value: 'admin@brightclean.com',
+          _buildSettingsTile(
+            Icons.email_outlined,
+            'البريد الإلكتروني',
+            subtitle: 'admin@brightclean.com',
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildManagementSection() {
-    return Container(
-      decoration: AppStyles.surface(context),
-      clipBehavior: Clip.hardEdge,
-      child: Column(
-        children: [
-          ProfileMenuTile(
-            icon: Icons.dashboard_outlined,
-            title: 'لوحة التحكم',
-            onTap: () => context.go('/admin'),
+          
+          const SizedBox(height: AppSpacing.lg),
+          
+          // إدارة النظام
+          _buildSettingsHeader('إدارة النظام'),
+          _buildSettingsTile(
+            Icons.dashboard_outlined,
+            'لوحة التحكم',
+            subtitle: 'إدارة طلبات وإحصائيات التطبيق',
+            onTap: () {
+              if (widget.onTabChange != null) {
+                widget.onTabChange!(0);
+              } else {
+                context.go('/admin');
+              }
+            },
           ),
-          const Divider(height: 1),
-          ProfileMenuTile(
-            icon: Icons.people_outline,
-            title: 'إدارة المستخدمين',
+          _buildSettingsTile(
+            Icons.people_outline,
+            'إدارة التسجيلات والمستخدمين',
+            subtitle: 'إدارة بيانات العملاء والمناديب والوكلاء والتسجيلات الجديدة',
+            onTap: () {
+              if (widget.onTabChange != null) {
+                widget.onTabChange!(1);
+              }
+            },
+          ),
+          _buildSettingsTile(
+            Icons.cleaning_services_outlined,
+            'إدارة الخدمات',
+            subtitle: 'تعديل أسعار وخيارات الخدمات المتاحة',
             onTap: () {},
           ),
-          const Divider(height: 1),
-          ProfileMenuTile(
-            icon: Icons.cleaning_services_outlined,
-            title: 'إدارة الخدمات',
+          _buildSettingsTile(
+            Icons.local_offer_outlined,
+            'العروض والكوبونات',
+            subtitle: 'إضافة وإدارة عروض الخصم الترويجية',
+            onTap: () {
+              if (widget.onTabChange != null) {
+                widget.onTabChange!(2);
+              }
+            },
+          ),
+          _buildSettingsTile(
+            Icons.bar_chart_outlined,
+            'التقارير والإحصائيات',
+            subtitle: 'الاطلاع على تقارير الأداء والمبيعات',
             onTap: () {},
           ),
-          const Divider(height: 1),
-          ProfileMenuTile(
-            icon: Icons.local_offer_outlined,
-            title: 'العروض والكوبونات',
+          _buildSettingsTile(
+            Icons.notifications_outlined,
+            'الإشعارات',
+            subtitle: 'إرسال التنبيهات العامة للمستخدمين',
             onTap: () {},
           ),
-          const Divider(height: 1),
-          ProfileMenuTile(
-            icon: Icons.bar_chart_outlined,
-            title: 'التقارير والإحصائيات',
+          
+          const SizedBox(height: AppSpacing.lg),
+          
+          // التفضيلات والإعدادات
+          _buildSettingsHeader('التفضيلات والإعدادات'),
+          _buildSettingsTile(
+            Icons.lock_outline,
+            'تغيير كلمة المرور',
+            subtitle: 'تحديث كلمة المرور لحماية الحساب',
             onTap: () {},
           ),
-          const Divider(height: 1),
-          ProfileMenuTile(
-            icon: Icons.notifications_outlined,
-            title: 'الإشعارات',
-            onTap: () {},
+          ValueListenableBuilder<ThemeMode>(
+            valueListenable: ThemeController().themeMode,
+            builder: (context, themeMode, child) {
+              final isDarkTheme = themeMode == ThemeMode.dark ||
+                  (themeMode == ThemeMode.system &&
+                      MediaQuery.of(context).platformBrightness == Brightness.dark);
+              return _buildSwitchTile(
+                'الوضع الليلي',
+                isDarkTheme,
+                (_) => ThemeController().toggleTheme(),
+              );
+            },
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSettingsSection() {
-    return Container(
-      decoration: AppStyles.surface(context),
-      clipBehavior: Clip.hardEdge,
-      child: Column(
-        children: [
-          ProfileMenuTile(
-            icon: Icons.lock_outline,
-            title: 'تغيير كلمة المرور',
-            onTap: () {},
-          ),
-          const Divider(height: 1),
-          ProfileMenuTile(
-            icon: Icons.dark_mode,
-            title: 'الوضع الليلي',
-            trailing: ValueListenableBuilder<ThemeMode>(
-              valueListenable: ThemeController().themeMode,
-              builder: (context, themeMode, child) {
-                final isDark = themeMode == ThemeMode.dark ||
-                    (themeMode == ThemeMode.system &&
-                        MediaQuery.of(context).platformBrightness == Brightness.dark);
-                return Switch(
-                  value: isDark,
-                  onChanged: (_) => ThemeController().toggleTheme(),
-                );
-              },
-            ),
-          ),
-          const Divider(height: 1),
-          ProfileMenuTile(
-            icon: Icons.logout,
-            title: 'تسجيل الخروج',
-            isDestructive: true,
+          
+          const Divider(height: 40),
+          _buildSettingsTile(
+            Icons.logout,
+            'تسجيل الخروج',
+            subtitle: 'تسجيل خروج من الحساب الحالي',
+            color: AppColors.error,
             onTap: _handleLogout,
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildSettingsHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Text(
+        title,
+        style: TextStyle(
+          fontSize: 14,
+          color: Colors.grey.shade600,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSettingsTile(IconData icon, String title, {String? subtitle, Color? color, VoidCallback? onTap}) {
+    return ListTile(
+      leading: Icon(icon, color: color ?? AppColors.primary),
+      title: Text(
+        title,
+        style: TextStyle(fontWeight: FontWeight.bold, color: color),
+      ),
+      subtitle: subtitle != null ? Text(subtitle, style: const TextStyle(fontSize: 12)) : null,
+      trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+      onTap: onTap,
+    );
+  }
+
+  Widget _buildSwitchTile(String title, bool value, Function(bool) onChanged) {
+    return SwitchListTile(
+      secondary: Icon(
+        value ? Icons.dark_mode : Icons.light_mode,
+        color: value ? AppColors.primary : Colors.grey,
+      ),
+      title: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+      value: value,
+      onChanged: onChanged,
+      activeTrackColor: AppColors.primary.withValues(alpha: 0.5),
+      activeThumbColor: AppColors.primary,
     );
   }
 }
