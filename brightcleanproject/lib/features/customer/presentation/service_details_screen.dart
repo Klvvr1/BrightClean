@@ -835,11 +835,13 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
 
               if (isCartService) {
                 final cart = Provider.of<CartProvider>(context, listen: false);
+                final messenger = ScaffoldMessenger.of(context);
+                final router = GoRouter.of(context);
 
                 if (widget.serviceType.contains('لابس')) {
                   if (totalClothingPieces == 0) {
-                    ScaffoldMessenger.of(context).clearSnackBars();
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    messenger.clearSnackBars();
+                    messenger.showSnackBar(
                       const SnackBar(
                         content: Text('يرجى اختيار قطعة ملابس واحدة على الأقل وزيادة كميتها'),
                         backgroundColor: AppColors.error,
@@ -862,14 +864,15 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
                   }
                   
                   // Reset clothing item quantities
+                  if (!mounted) return;
                   setState(() {
                     for (var item in _clothingItems) {
                       _clothingQuantities[item] = 0;
                     }
                   });
                   
-                  ScaffoldMessenger.of(context).clearSnackBars();
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  messenger.clearSnackBars();
+                  messenger.showSnackBar(
                     SnackBar(
                       content: const Text('تم إضافة الخدمات إلى السلة بنجاح'),
                       backgroundColor: AppColors.success,
@@ -881,16 +884,16 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
                         label: 'عرض السلة',
                         textColor: Colors.white,
                         onPressed: () {
-                          ScaffoldMessenger.of(context).clearSnackBars();
-                          context.push('/cart');
+                          messenger.clearSnackBars();
+                          router.push('/cart');
                         },
                       ),
                     ),
                   );
                 } else if (widget.serviceType.contains('سجاد') || widget.serviceType.contains('مفروشات')) {
                   if (totalCarpetPieces == 0) {
-                    ScaffoldMessenger.of(context).clearSnackBars();
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    messenger.clearSnackBars();
+                    messenger.showSnackBar(
                       const SnackBar(
                         content: Text('يرجى اختيار سجادة أو منسوج واحد على الأقل وزيادة كميتها'),
                         backgroundColor: AppColors.error,
@@ -922,14 +925,15 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
                     }
                   }
                   
+                  if (!mounted) return;
                   setState(() {
                     for (final key in _carpetQuantities.keys.toList()) {
                       _updateCarpetQuantity(key, 0);
                     }
                   });
                   
-                  ScaffoldMessenger.of(context).clearSnackBars();
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  messenger.clearSnackBars();
+                  messenger.showSnackBar(
                     SnackBar(
                       content: const Text('تم إضافة الخدمات إلى السلة بنجاح'),
                       backgroundColor: AppColors.success,
@@ -941,8 +945,8 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
                         label: 'عرض السلة',
                         textColor: Colors.white,
                         onPressed: () {
-                          ScaffoldMessenger.of(context).clearSnackBars();
-                          context.push('/cart');
+                          messenger.clearSnackBars();
+                          router.push('/cart');
                         },
                       ),
                     ),

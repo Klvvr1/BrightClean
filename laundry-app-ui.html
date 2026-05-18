@@ -1,0 +1,1729 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>واجهات تطبيق المغسلة</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --dark-navy: #0F2854;
+      --primary-blue: #1C4D8D;
+      --medium-blue: #4988C4;
+      --light-blue: #BDE8F5;
+      --bg-light: #F7FBFF;
+      --white: #FFFFFF;
+      --gray-light: #F0F4F8;
+      --gray-text: #6B7E8F;
+      --gradient: linear-gradient(135deg, #1C4D8D, #4988C4);
+      --gradient-dark: linear-gradient(180deg, #0F2854, #1C4D8D);
+      --shadow: 0 8px 30px rgba(15, 40, 84, 0.12);
+      --shadow-sm: 0 2px 10px rgba(15, 40, 84, 0.08);
+      --radius: 16px;
+      --radius-lg: 24px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Cairo', sans-serif;
+      background: #E8EDF2;
+      min-height: 100vh;
+      padding: 30px 20px;
+    }
+
+    .showcase-header {
+      text-align: center;
+      margin-bottom: 40px;
+      padding: 30px 20px;
+      background: var(--gradient-dark);
+      border-radius: 20px;
+      color: white;
+      overflow: hidden;
+    }
+    .showcase-header::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -20%;
+      width: 300px;
+      height: 300px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.05);
+    }
+    .showcase-header h1 {
+      font-size: 2.2rem;
+      font-weight: 800;
+      margin-bottom: 6px;
+      letter-spacing: 1px;
+    }
+    .showcase-header p {
+      color: rgba(255,255,255,0.7);
+      font-size: 1rem;
+    }
+
+    .showcase-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 35px 25px;
+      max-width: 1700px;
+      margin: 0 auto;
+      justify-items: center;
+    }
+
+    .phone {
+      width: 310px;
+      height: 640px;
+      background: var(--white);
+      border-radius: 44px;
+      padding: 12px;
+      box-shadow: 0 15px 50px rgba(15, 40, 84, 0.18), 0 0 0 1px rgba(200, 200, 200, 0.2);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      position: relative;
+    }
+    .phone:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 25px 60px rgba(15, 40, 84, 0.25);
+    }
+
+    .phone-screen {
+      width: 100%;
+      height: 100%;
+      border-radius: 34px;
+      overflow: hidden;
+      background: var(--white);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .notch {
+      width: 120px;
+      height: 28px;
+      background: #1a1a1a;
+      border-radius: 0 0 18px 18px;
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 20;
+    }
+
+    .status-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 22px 6px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #333;
+      direction: ltr;
+      flex-shrink: 0;
+    }
+    .status-bar.time-right {
+      direction: ltr;
+    }
+    .status-bar .time { font-size: 13px; font-weight: 700; }
+    .status-bar .icons { display: flex; gap: 5px; align-items: center; }
+    .status-bar .icons svg { width: 16px; height: 16px; fill: currentColor; }
+
+    .home-indicator {
+      width: 130px;
+      height: 5px;
+      background: #ddd;
+      border-radius: 3px;
+      margin: 8px auto;
+      flex-shrink: 0;
+    }
+
+    .screen-content {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+    .screen-content::-webkit-scrollbar { width: 2px; }
+    .screen-content::-webkit-scrollbar-thumb { background: var(--medium-blue); border-radius: 2px; }
+
+    .screen-label {
+      text-align: center;
+      margin-top: 14px;
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--dark-navy);
+    }
+
+    /* ========== SCREEN 1: SPLASH ========== */
+    .screen-splash {
+      background: var(--gradient-dark);
+      justify-content: center;
+      align-items: center;
+      color: white;
+      overflow: hidden;
+      position: relative;
+    }
+    .screen-splash .bubble {
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.06);
+    }
+    .screen-splash .bubble:nth-child(1) { width: 80px; height: 80px; top: 8%; right: 10%; }
+    .screen-splash .bubble:nth-child(2) { width: 50px; height: 50px; top: 20%; left: 12%; }
+    .screen-splash .bubble:nth-child(3) { width: 100px; height: 100px; bottom: 15%; left: 5%; }
+    .screen-splash .bubble:nth-child(4) { width: 40px; height: 40px; bottom: 30%; right: 8%; }
+    .screen-splash .bubble:nth-child(5) { width: 70px; height: 70px; bottom: 45%; right: 25%; }
+    .screen-splash .logo-circle {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.12);
+      border: 3px solid rgba(255,255,255,0.25);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 18px;
+      backdrop-filter: blur(4px);
+    }
+    .screen-splash .logo-circle svg { width: 50px; height: 50px; fill: white; }
+    .screen-splash .app-name {
+      font-size: 2.2rem;
+      font-weight: 900;
+      letter-spacing: 2px;
+    }
+    .screen-splash .tagline {
+      font-size: 0.9rem;
+      color: rgba(255,255,255,0.7);
+      font-weight: 300;
+      margin-top: 4px;
+      letter-spacing: 1px;
+    }
+    .splash-clothes {
+      position: absolute;
+      bottom: 50px;
+      display: flex;
+      gap: 8px;
+      opacity: 0.15;
+    }
+    .splash-clothes span {
+      width: 30px;
+      height: 30px;
+      background: white;
+      border-radius: 6px;
+    }
+    .splash-clothes span:nth-child(2) { width: 40px; height: 35px; border-radius: 8px; }
+    .splash-clothes span:nth-child(3) { width: 28px; height: 32px; border-radius: 4px; }
+
+    /* ========== SCREEN 2: ONBOARDING ========== */
+    .screen-onboarding {
+      background: var(--bg-light);
+      justify-content: center;
+      align-items: center;
+      padding: 30px 24px;
+      text-align: center;
+    }
+    .screen-onboarding .illustration {
+      width: 180px;
+      height: 160px;
+      background: linear-gradient(145deg, var(--light-blue), #D4F0FA);
+      border-radius: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 30px;
+      box-shadow: inset 0 2px 15px rgba(73, 136, 196, 0.15);
+    }
+    .screen-onboarding .illustration svg { width: 90px; height: 90px; }
+    .screen-onboarding .ob-title {
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: var(--dark-navy);
+      line-height: 1.5;
+      margin-bottom: 10px;
+    }
+    .screen-onboarding .ob-desc {
+      font-size: 0.85rem;
+      color: var(--gray-text);
+      line-height: 1.6;
+      margin-bottom: 30px;
+      max-width: 240px;
+    }
+    .screen-onboarding .btn-primary {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 14px;
+      background: var(--gradient);
+      color: white;
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(28, 77, 141, 0.35);
+      transition: all 0.3s;
+    }
+    .screen-onboarding .btn-primary:active { transform: scale(0.97); }
+    .screen-onboarding .skip-btn {
+      margin-top: 14px;
+      background: none;
+      border: none;
+      color: var(--primary-blue);
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      opacity: 0.7;
+    }
+
+    /* ========== SCREEN 3: LOGIN ========== */
+    .screen-login {
+      display: flex;
+      flex-direction: column;
+    }
+    .screen-login .login-header {
+      background: linear-gradient(120deg, #1C4D8D, #4988C4);
+      padding: 40px 24px 50px;
+      flex-shrink: 0;
+      position: relative;
+    }
+    .screen-login .login-header::after {
+      content: '';
+      position: absolute;
+      bottom: -24px;
+      left: 0;
+      right: 0;
+      height: 48px;
+      background: var(--white);
+      border-radius: 48px 48px 0 0;
+    }
+    .screen-login .login-header h2 {
+      color: white;
+      font-size: 1.3rem;
+      font-weight: 800;
+      text-align: center;
+    }
+    .screen-login .login-body {
+      padding: 10px 24px 20px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .screen-login .input-group label {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--gray-text);
+      margin-bottom: 4px;
+    }
+    .screen-login .input-group input {
+      width: 100%;
+      padding: 12px 14px;
+      border: 2px solid #E8EDF2;
+      border-radius: 12px;
+      font-family: inherit;
+      font-size: 0.9rem;
+      direction: rtl;
+      transition: border-color 0.3s;
+      background: var(--bg-light);
+    }
+    .screen-login .input-group input:focus {
+      border-color: var(--medium-blue);
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(73, 136, 196, 0.1);
+    }
+    .screen-login .login-btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 14px;
+      background: var(--gradient);
+      color: white;
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(28, 77, 141, 0.3);
+      margin-top: 4px;
+    }
+    .screen-login .divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--gray-text);
+      font-size: 0.8rem;
+      margin: 8px 0;
+    }
+    .screen-login .divider::before,
+    .screen-login .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #E0E6ED;
+    }
+    .screen-login .social-btns {
+      display: flex;
+      gap: 10px;
+    }
+    .screen-login .social-btn {
+      flex: 1;
+      padding: 10px;
+      border: 2px solid #E8EDF2;
+      border-radius: 12px;
+      background: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-family: inherit;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--dark-navy);
+      cursor: pointer;
+    }
+    .screen-login .social-btn svg { width: 18px; height: 18px; }
+    .screen-login .register-link {
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--gray-text);
+      margin-top: 4px;
+    }
+    .screen-login .register-link a {
+      color: var(--primary-blue);
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    /* ========== SCREEN 4: HOME ========== */
+    .screen-home {
+      display: flex;
+      flex-direction: column;
+    }
+    .screen-home .home-header {
+      padding: 12px 18px 10px;
+      background: white;
+      flex-shrink: 0;
+    }
+    .screen-home .home-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .screen-home .greeting h3 {
+      font-size: 1rem;
+      font-weight: 800;
+      color: var(--dark-navy);
+    }
+    .screen-home .greeting p {
+      font-size: 0.7rem;
+      color: var(--gray-text);
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+    .screen-home .notif-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 40% 60% 60% 40% / 40% 40% 60% 60%;
+      background: var(--bg-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    .screen-home .notif-icon .dot {
+      width: 8px;
+      height: 8px;
+      background: #FF4757;
+      border-radius: 50%;
+      position: absolute;
+      top: 4px;
+      right: 6px;
+      border: 2px solid white;
+    }
+    .screen-home .notif-icon svg { width: 18px; height: 18px; fill: var(--dark-navy); }
+
+    .screen-home .promo-banner {
+      margin: 10px 14px;
+      padding: 16px 18px;
+      background: linear-gradient(135deg, #1C4D8D, #4988C4);
+      border-radius: 14px;
+      color: white;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+      box-shadow: 0 4px 15px rgba(28,77,141,0.25);
+    }
+    .screen-home .promo-banner .promo-text h4 {
+      font-size: 0.85rem;
+      font-weight: 700;
+      margin-bottom: 2px;
+    }
+    .screen-home .promo-banner .promo-text p {
+      font-size: 0.65rem;
+      opacity: 0.85;
+    }
+    .screen-home .promo-banner .promo-btn {
+      padding: 8px 18px;
+      border: none;
+      border-radius: 10px;
+      background: white;
+      color: var(--primary-blue);
+      font-family: inherit;
+      font-size: 0.75rem;
+      font-weight: 700;
+      cursor: pointer;
+      
+    }
+
+    .screen-home .section-title {
+      padding: 10px 18px 6px;
+      font-size: 0.9rem;
+      font-weight: 800;
+      color: var(--dark-navy);
+    }
+
+    .screen-home .services-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      padding: 0 14px;
+      flex-shrink: 0;
+    }
+    .screen-home .service-card {
+      padding: 12px 8px;
+      background: white;
+      border-radius: 10px;
+      border: 1px solid #E8EDF2;
+      text-align: center;
+      box-shadow: var(--shadow-sm);
+      cursor: pointer;
+      transition: all 0.3s;
+      
+    }
+    .screen-home .service-card:active { transform: scale(0.96); }
+    .screen-home .service-card .s-icon {
+      width: 40px;
+      height: 40px;
+      margin: 0 auto 8px;
+      background: var(--bg-light);
+      border-radius: 40% 60% 60% 40% / 40% 40% 60% 60%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .screen-home .service-card .s-icon svg { width: 20px; height: 20px; fill: var(--primary-blue); }
+    .screen-home .service-card .s-name {
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--dark-navy);
+    }
+    .screen-home .service-card .s-price {
+      font-size: 0.6rem;
+      color: var(--gray-text);
+    }
+
+    .screen-home .recent-orders {
+      padding: 0 14px;
+      flex: 1;
+      flex-shrink: 0;
+    }
+    .screen-home .order-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      background: var(--bg-light);
+      border-radius: 12px;
+      margin-bottom: 6px;
+      
+      box-shadow: var(--shadow-sm);
+    }
+    .screen-home .order-item .o-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 40% 60% 60% 40% / 40% 40% 60% 60%;
+      background: var(--bg-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .screen-home .order-item .o-icon svg { width: 16px; height: 16px; fill: var(--primary-blue); }
+    .screen-home .order-item .o-info { flex: 1; }
+    .screen-home .order-item .o-info h5 { font-size: 0.75rem; font-weight: 700; color: var(--dark-navy); }
+    .screen-home .order-item .o-info p { font-size: 0.6rem; color: var(--gray-text); }
+    .screen-home .order-item .o-status {
+      font-size: 0.6rem;
+      font-weight: 700;
+      color: #4988C4;
+    }
+
+    .screen-home .bottom-nav {
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      padding: 6px 0 2px;
+      border-top: 1px solid #E8EDF2;
+      background: white;
+      flex-shrink: 0;
+    }
+    .screen-home .bottom-nav .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1px;
+      font-size: 0.55rem;
+      color: var(--gray-text);
+      cursor: pointer;
+      position: relative;
+    }
+    .screen-home .bottom-nav .nav-item.active {
+      color: var(--primary-blue);
+    }
+    .screen-home .bottom-nav .nav-item.active::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      width: 20px;
+      height: 3px;
+      background: var(--gradient);
+      border-radius: 2px;
+    }
+    .screen-home .bottom-nav .nav-item svg { width: 20px; height: 20px; fill: currentColor; }
+
+    /* ========== SCREEN 5: SERVICE DETAILS ========== */
+    .screen-service {
+      display: flex;
+      flex-direction: column;
+    }
+    .screen-service .sv-image {
+      height: 160px;
+      background: linear-gradient(145deg, var(--light-blue), #D4F0FA);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .screen-service .sv-image svg { width: 80px; height: 80px; fill: var(--primary-blue); opacity: 0.5; }
+    .screen-service .sv-body { padding: 16px 18px; flex: 1; display: flex; flex-direction: column; gap: 12px; }
+    .screen-service .sv-body h3 { font-size: 1.1rem; font-weight: 800; color: var(--dark-navy); }
+    .screen-service .sv-body .sv-desc { font-size: 0.78rem; color: var(--gray-text); line-height: 1.5; }
+    .screen-service .sv-options { display: flex; gap: 8px; }
+    .screen-service .sv-option {
+      padding: 8px 16px;
+      border-radius: 50px;
+      border: 2px solid #E8EDF2;
+      font-family: inherit;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--gray-text);
+      background: white;
+      cursor: pointer;
+    }
+    .screen-service .sv-option.active {
+      border-color: var(--primary-blue);
+      background: var(--bg-light);
+      color: var(--primary-blue);
+    }
+    .screen-service .qty-selector {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+    }
+    .screen-service .qty-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 40% 60% 60% 40% / 40% 40% 60% 60%;
+      border: none;
+      background: var(--gradient);
+      color: white;
+      font-size: 1.2rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .screen-service .qty-num {
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: var(--dark-navy);
+      min-width: 30px;
+      text-align: center;
+    }
+    .screen-service .sv-price {
+      font-size: 1.5rem;
+      font-weight: 900;
+      color: var(--primary-blue);
+      text-align: center;
+    }
+    .screen-service .sv-price small { font-weight: 600; font-size: 0.8rem; color: var(--gray-text); }
+    .screen-service .sv-add-btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 14px;
+      background: var(--gradient);
+      color: white;
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(28, 77, 141, 0.3);
+      margin-top: auto;
+    }
+
+    /* ========== SCREEN 6: CART ========== */
+    .screen-cart {
+      display: flex;
+      flex-direction: column;
+    }
+    .screen-cart .cart-header {
+      padding: 12px 18px;
+      display: flex;
+      align-items: center;
+      border-bottom: 1px solid #E8EDF2;
+      flex-shrink: 0;
+    }
+    .screen-cart .cart-header h3 { font-size: 1rem; font-weight: 800; color: var(--dark-navy); flex: 1; text-align: center; }
+    .screen-cart .cart-items { padding: 10px 16px; flex: 1; display: flex; flex-direction: column; gap: 10px; }
+    .screen-cart .cart-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 14px;
+      background: white;
+      border-radius: 10px;
+      border: 1px solid #E8EDF2;
+      box-shadow: var(--shadow-sm);
+      
+    }
+    .screen-cart .cart-item .ci-img {
+      width: 44px;
+      height: 44px;
+      border-radius: 40% 60% 60% 40% / 40% 40% 60% 60%;
+      background: var(--bg-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .screen-cart .cart-item .ci-img svg { width: 22px; height: 22px; fill: var(--primary-blue); }
+    .screen-cart .cart-item .ci-info { flex: 1; }
+    .screen-cart .cart-item .ci-info h5 { font-size: 0.78rem; font-weight: 700; color: var(--dark-navy); }
+    .screen-cart .cart-item .ci-info p { font-size: 0.65rem; color: var(--gray-text); }
+    .screen-cart .cart-item .ci-qty { display: flex; align-items: center; gap: 6px; }
+    .screen-cart .cart-item .ci-qty button {
+      width: 24px; height: 24px;
+      border-radius: 40% 60% 60% 40% / 40% 40% 60% 60%;
+      border: 1px solid #ddd;
+      background: white;
+      font-size: 0.8rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .screen-cart .cart-item .ci-qty span { font-size: 0.8rem; font-weight: 700; color: var(--dark-navy); min-width: 18px; text-align: center; }
+    .screen-cart .ci-price { font-size: 0.78rem; font-weight: 700; color: var(--dark-navy); }
+    .screen-cart .ci-del { background: none; border: none; color: #FF6B6B; cursor: pointer; font-size: 1rem; }
+    .screen-cart .cart-summary {
+      padding: 12px 18px;
+      border-top: 1px solid #E8EDF2;
+      flex-shrink: 0;
+    }
+    .screen-cart .cart-summary .sum-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      color: var(--gray-text);
+      margin-bottom: 4px;
+    }
+    .screen-cart .cart-summary .sum-row.total {
+      font-size: 0.9rem;
+      font-weight: 800;
+      color: var(--dark-navy);
+      border-top: 1px solid #E8EDF2;
+      padding-top: 6px;
+      margin-top: 4px;
+    }
+    .screen-cart .checkout-btn {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 14px;
+      background: var(--gradient);
+      color: white;
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 6px;
+      box-shadow: 0 4px 15px rgba(28, 77, 141, 0.25);
+    }
+
+    /* ========== SCREEN 7: CHECKOUT ========== */
+    .screen-checkout {
+      display: flex;
+      flex-direction: column;
+    }
+    .screen-checkout .ch-header {
+      padding: 12px 18px;
+      text-align: center;
+      border-bottom: 1px solid #E8EDF2;
+      flex-shrink: 0;
+    }
+    .screen-checkout .ch-header h3 { font-size: 1rem; font-weight: 800; color: var(--dark-navy); }
+    .screen-checkout .steps {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      flex-shrink: 0;
+    }
+    .screen-checkout .step {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.65rem;
+      font-weight: 600;
+      color: var(--gray-text);
+    }
+    .screen-checkout .step .step-circle {
+      width: 24px; height: 24px;
+      border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
+      background: #E8EDF2;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.6rem;
+      color: white;
+      font-weight: 700;
+    }
+    .screen-checkout .step.active .step-circle { background: var(--gradient); }
+    .screen-checkout .step.done .step-circle { background: #27AE60; }
+    .screen-checkout .step-line { width: 20px; height: 2px; background: #E8EDF2; }
+
+    .screen-checkout .ch-body { padding: 10px 16px; flex: 1; display: flex; flex-direction: column; gap: 10px; }
+    .screen-checkout .ch-card {
+      padding: 12px 14px;
+      background: white;
+      border-radius: 10px;
+      border: 1px solid #E8EDF2;
+      box-shadow: var(--shadow-sm);
+      
+    }
+    .screen-checkout .ch-card h5 { font-size: 0.8rem; font-weight: 700; color: var(--dark-navy); margin-bottom: 4px; }
+    .screen-checkout .ch-card p { font-size: 0.7rem; color: var(--gray-text); }
+    .screen-checkout .ch-card .ch-label { font-size: 0.65rem; color: var(--gray-text); font-weight: 600; margin-bottom: 2px; }
+    .screen-checkout .ch-card input, .screen-checkout .ch-card textarea {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid #E0E6ED;
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 0.75rem;
+      background: var(--bg-light);
+      direction: rtl;
+    }
+    .screen-checkout .ch-card textarea { resize: none; height: 50px; }
+    .screen-checkout .ch-summary {
+      padding: 10px;
+      background: white;
+      border-radius: 10px;
+      border: 1px solid #E8EDF2;
+      
+    }
+    .screen-checkout .ch-summary .sum-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.7rem;
+      color: var(--gray-text);
+      margin-bottom: 2px;
+    }
+    .screen-checkout .ch-pay-btn {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 14px;
+      background: var(--gradient);
+      color: white;
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(28, 77, 141, 0.25);
+      margin-top: auto;
+    }
+
+    /* ========== SCREEN 8: PAYMENT ========== */
+    .screen-payment {
+      display: flex;
+      flex-direction: column;
+    }
+    .screen-payment .pay-header {
+      padding: 12px 18px;
+      text-align: center;
+      border-bottom: 1px solid #E8EDF2;
+      flex-shrink: 0;
+    }
+    .screen-payment .pay-header h3 { font-size: 1rem; font-weight: 800; color: var(--dark-navy); }
+    .screen-payment .pay-body { padding: 14px 16px; flex: 1; display: flex; flex-direction: column; gap: 10px; }
+    .screen-payment .pay-method {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px;
+      border: 2px solid #E8EDF2;
+      border-radius: 14px;
+      background: white;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .screen-payment .pay-method.active {
+      border-color: var(--primary-blue);
+      background: var(--bg-light);
+    }
+    .screen-payment .pay-method .pm-radio {
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      border: 2px solid #ccc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .screen-payment .pay-method.active .pm-radio { border-color: var(--primary-blue); }
+    .screen-payment .pay-method.active .pm-radio::after {
+      content: '';
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--primary-blue);
+    }
+    .screen-payment .pay-method .pm-icon svg { width: 28px; height: 28px; }
+    .screen-payment .pay-method .pm-name { font-size: 0.85rem; font-weight: 700; color: var(--dark-navy); flex: 1; }
+    .screen-payment .pay-summary {
+      padding: 12px 14px;
+      background: white;
+      border-radius: 10px;
+      border: 1px solid #E8EDF2;
+      box-shadow: var(--shadow-sm);
+      
+    }
+    .screen-payment .pay-summary .sum-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      color: var(--gray-text);
+      margin-bottom: 4px;
+    }
+    .screen-payment .pay-summary .sum-row.total {
+      font-size: 0.9rem;
+      font-weight: 800;
+      color: var(--dark-navy);
+      border-top: 1px solid #E0E6ED;
+      padding-top: 6px;
+    }
+    .screen-payment .pay-now-btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 14px;
+      background: var(--gradient);
+      color: white;
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(28, 77, 141, 0.3);
+      margin-top: auto;
+    }
+
+    /* ========== SCREEN 9: MY ORDERS ========== */
+    .screen-orders {
+      display: flex;
+      flex-direction: column;
+    }
+    .screen-orders .ord-header {
+      padding: 12px 18px;
+      text-align: center;
+      border-bottom: 1px solid #E8EDF2;
+      flex-shrink: 0;
+    }
+    .screen-orders .ord-header h3 { font-size: 1rem; font-weight: 800; color: var(--dark-navy); }
+    .screen-orders .ord-tabs {
+      display: flex;
+      padding: 6px 12px;
+      gap: 4px;
+      background: #F0F4F8;
+      margin: 8px 14px;
+      border-radius: 12px;
+      flex-shrink: 0;
+      
+    }
+    .screen-orders .ord-tab {
+      flex: 1;
+      padding: 6px 4px;
+      border: none;
+      border-radius: 10px;
+      background: transparent;
+      font-family: inherit;
+      font-size: 0.65rem;
+      font-weight: 600;
+      color: var(--gray-text);
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .screen-orders .ord-tab.active {
+      background: white;
+      color: var(--dark-navy);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    }
+    .screen-orders .ord-list { padding: 4px 14px 10px; flex: 1; display: flex; flex-direction: column; gap: 8px; }
+    .screen-orders .ord-card {
+      padding: 12px;
+      background: white;
+      border-radius: 14px;
+      
+      box-shadow: var(--shadow-sm);
+    }
+    .screen-orders .ord-card .oc-top {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+    .screen-orders .ord-card .oc-num { font-size: 0.7rem; color: var(--gray-text); }
+    .screen-orders .ord-card .oc-status {
+      font-size: 0.6rem;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 20px;
+    }
+    .screen-orders .ord-card .oc-status.pending { background: #FFF3E0; color: #F39C12; }
+    .screen-orders .ord-card .oc-status.done { background: #E8F8F5; color: #27AE60; }
+    .screen-orders .ord-card .oc-status.cancelled { background: #FDEDEC; color: #E74C3C; }
+    .screen-orders .ord-card .oc-status.delivery { background: #E3F2FD; color: #1C4D8D; }
+    .screen-orders .ord-card .oc-info { display: flex; justify-content: space-between; align-items: center; }
+    .screen-orders .ord-card .oc-info h5 { font-size: 0.78rem; font-weight: 700; color: var(--dark-navy); }
+    .screen-orders .ord-card .oc-info p { font-size: 0.65rem; color: var(--gray-text); }
+    .screen-orders .ord-card .oc-info .oc-price { font-size: 0.78rem; font-weight: 800; color: var(--primary-blue); }
+    .screen-orders .ord-card .oc-detail-btn {
+      margin-top: 6px;
+      padding: 8px;
+      border: none;
+      border-radius: 10px;
+      background: var(--bg-light);
+      color: var(--primary-blue);
+      font-family: inherit;
+      font-size: 0.65rem;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+    }
+
+    /* ========== SCREEN 10: TRACKING ========== */
+    .screen-tracking {
+      display: flex;
+      flex-direction: column;
+    }
+    .screen-tracking .tr-header {
+      padding: 12px 18px 8px;
+      text-align: center;
+      border-bottom: 1px solid #E8EDF2;
+      flex-shrink: 0;
+    }
+    .screen-tracking .tr-header h3 { font-size: 1rem; font-weight: 800; color: var(--dark-navy); }
+    .screen-tracking .tr-header .tr-num { font-size: 0.7rem; color: var(--gray-text); }
+    .screen-tracking .tr-status-badge {
+      display: inline-block;
+      padding: 4px 14px;
+      border-radius: 20px;
+      background: #E3F2FD;
+      color: var(--primary-blue);
+      font-size: 0.65rem;
+      font-weight: 700;
+      margin-top: 4px;
+    }
+    .screen-tracking .tr-timeline {
+      padding: 14px 20px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    .screen-tracking .tl-item {
+      display: flex;
+      gap: 12px;
+      padding-bottom: 20px;
+      position: relative;
+    }
+    .screen-tracking .tl-item:last-child { padding-bottom: 0; }
+    .screen-tracking .tl-item::before {
+      content: '';
+      position: absolute;
+      right: 10px;
+      top: 22px;
+      bottom: 0;
+      width: 2px;
+      background: #E0E6ED;
+    }
+    .screen-tracking .tl-item:last-child::before { display: none; }
+    .screen-tracking .tl-item .tl-dot {
+      width: 22px; height: 22px;
+      border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
+      background: #E8EDF2;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      z-index: 1;
+      font-size: 0.55rem;
+      color: white;
+      font-weight: 700;
+    }
+    .screen-tracking .tl-item.done .tl-dot { background: #27AE60; }
+    .screen-tracking .tl-item.active .tl-dot { background: var(--gradient); }
+    .screen-tracking .tl-item .tl-info h5 { font-size: 0.78rem; font-weight: 700; color: var(--dark-navy); }
+    .screen-tracking .tl-item .tl-info p { font-size: 0.62rem; color: var(--gray-text); }
+    .screen-tracking .tl-item.done .tl-info h5, .screen-tracking .tl-item.active .tl-info h5 { color: var(--dark-navy); }
+    .screen-tracking .tl-item:not(.done):not(.active) .tl-info h5 { color: #ccc; }
+    .screen-tracking .tl-item:not(.done):not(.active) .tl-info p { color: #ddd; }
+
+    .screen-tracking .tr-details {
+      padding: 8px 16px 10px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .screen-tracking .tr-card {
+      padding: 10px 12px;
+      background: var(--bg-light);
+      border-radius: 12px;
+      box-shadow: var(--shadow-sm);
+      
+    }
+    .screen-tracking .tr-card h5 { font-size: 0.75rem; font-weight: 700; color: var(--dark-navy); margin-bottom: 2px; }
+    .screen-tracking .tr-card p { font-size: 0.65rem; color: var(--gray-text); }
+    .screen-tracking .support-btn {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 14px;
+      background: var(--gradient);
+      color: white;
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(28, 77, 141, 0.25);
+    }
+
+    /* Responsive */
+    @media (max-width: 700px) {
+      .showcase-grid { grid-template-columns: 1fr; }
+      .phone { width: 290px; height: 590px; }
+      .showcase-header h1 { font-size: 1.5rem; }
+    }
+    @media (min-width: 701px) and (max-width: 1100px) {
+      .showcase-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="showcase-header">
+  <h1>واجهات تطبيق المغسلة</h1>
+  <p>10 شاشات UI احترافية | تصميم RTL عربي | ألوان عصرية</p>
+</header>
+
+<main class="showcase-grid">
+
+  <!-- ============ SCREEN 1: SPLASH ============ -->
+  <div>
+    <div class="phone">
+      <div class="phone-screen">
+        <div class="notch"></div>
+        <div class="screen-content screen-splash">
+          <div class="bubble"></div>
+          <div class="bubble"></div>
+          <div class="bubble"></div>
+          <div class="bubble"></div>
+          <div class="bubble"></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:1;">
+            <div class="logo-circle">
+              <svg viewBox="0 0 24 24"><path d="M7 4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2H7zm0 2h10v12H7V6zm2 2v2h6V8H9zm0 4v2h6v-2H9z"/></svg>
+            </div>
+            <div class="app-name">مغسلتي</div>
+            <div class="tagline">تنظيف يليق بك</div>
+          </div>
+          <div class="splash-clothes">
+            <span style="transform:rotate(-10deg)"></span>
+            <span style="transform:rotate(5deg)"></span>
+            <span style="transform:rotate(-5deg)"></span>
+            <span style="transform:rotate(8deg)"></span>
+          </div>
+          <div class="home-indicator" style="background:rgba(255,255,255,0.2);margin-bottom:6px;flex-shrink:0;z-index:1;"></div>
+        </div>
+      </div>
+    </div>
+    <div class="screen-label">شاشة البداية</div>
+  </div>
+
+  <!-- ============ SCREEN 2: ONBOARDING ============ -->
+  <div>
+    <div class="phone">
+      <div class="phone-screen">
+        <div class="notch"></div>
+        <div class="status-bar time-right">
+          <div class="icons">
+            <svg viewBox="0 0 24 24"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
+          </div>
+          <span class="time">9:41</span>
+        </div>
+        <div class="screen-content screen-onboarding">
+          <div class="illustration">
+            <svg viewBox="0 0 100 100">
+              <rect x="20" y="25" width="60" height="55" rx="6" fill="#1C4D8D" opacity="0.2"/>
+              <rect x="25" y="30" width="22" height="22" rx="4" fill="#1C4D8D" opacity="0.3"/>
+              <rect x="53" y="30" width="22" height="22" rx="4" fill="#4988C4" opacity="0.3"/>
+              <rect x="25" y="58" width="22" height="22" rx="4" fill="#4988C4" opacity="0.25"/>
+              <rect x="53" y="58" width="22" height="22" rx="4" fill="#1C4D8D" opacity="0.2"/>
+              <circle cx="30" cy="85" r="4" fill="#BDE8F5"/>
+              <circle cx="50" cy="88" r="3" fill="#BDE8F5"/>
+              <circle cx="70" cy="86" r="4" fill="#BDE8F5"/>
+            </svg>
+          </div>
+          <div class="ob-title">نظافة احترافية<br>... راحة تدوم</div>
+          <div class="ob-desc">خدمة غسيل وكي متكاملة تصل إلى باب منزلك</div>
+          <button class="btn-primary">ابدأ الآن</button>
+          <button class="skip-btn">تخطي</button>
+          <div class="home-indicator"></div>
+        </div>
+      </div>
+    </div>
+    <div class="screen-label">شاشة الترحيب</div>
+  </div>
+
+  <!-- ============ SCREEN 3: LOGIN ============ -->
+  <div>
+    <div class="phone">
+      <div class="phone-screen">
+        <div class="notch"></div>
+        <div class="screen-content screen-login">
+          <div class="login-header">
+            <h2>مرحبًا بك في مغسلتي</h2>
+          </div>
+          <div class="login-body">
+            <div class="input-group">
+              <label>رقم الجوال</label>
+              <input type="tel" placeholder="05xxxxxxxx" value="٠٥٥ ١٢٣ ٤٥٦٧">
+            </div>
+            <div class="input-group">
+              <label>كلمة المرور</label>
+              <input type="password" placeholder="••••••••">
+            </div>
+            <button class="login-btn">تسجيل الدخول</button>
+            <div class="divider">أو</div>
+            <div class="social-btns">
+              <button class="social-btn">
+                <svg viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+                Google
+              </button>
+              <button class="social-btn">
+                <svg viewBox="0 0 24 24"><path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.62 5.98.52 7.13-.62 1.63-1.58 3.24-3.07 4.08l.5-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/></svg>
+                Apple
+              </button>
+            </div>
+            <div class="register-link">ليس لديك حساب؟ <a href="#">إنشاء حساب جديد</a></div>
+            <div class="home-indicator"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="screen-label">تسجيل الدخول</div>
+  </div>
+
+  <!-- ============ SCREEN 4: HOME ============ -->
+  <div>
+    <div class="phone">
+      <div class="phone-screen">
+        <div class="notch"></div>
+        <div class="status-bar time-right">
+          <div class="icons">
+            <svg viewBox="0 0 24 24"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
+          </div>
+          <span class="time">9:41</span>
+        </div>
+        <div class="screen-content screen-home">
+          <div class="home-header">
+            <div class="home-top">
+              <div class="greeting">
+                <h3>مرحبًا أحمد</h3>
+                <p>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="#6B7E8F"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                  الرياض، حي النرجس
+                </p>
+              </div>
+              <div class="notif-icon">
+                <div class="dot"></div>
+                <svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4a2 2 0 0 0 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
+              </div>
+            </div>
+          </div>
+
+          <div class="promo-banner">
+            <div class="promo-text">
+              <h4>غسيل احترافي</h4>
+              <p>جودة تفوق توقعاتك</p>
+            </div>
+            <button class="promo-btn">اطلب الآن</button>
+          </div>
+
+          <div class="section-title">خدماتنا</div>
+          <div class="services-grid">
+            <div class="service-card">
+              <div class="s-icon"><svg viewBox="0 0 24 24"><path d="M7 4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2H7zm0 2h10v12H7V6zm2 2v2h6V8H9zm0 4v2h6v-2H9z"/></svg></div>
+              <div class="s-name">غسيل وكي الملابس</div>
+              <div class="s-price">من 25 ر.س</div>
+            </div>
+            <div class="service-card">
+              <div class="s-icon"><svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 18H4V4h16v16zM6 6h12v2H6zm0 4h12v2H6zm0 4h8v2H6z"/></svg></div>
+              <div class="s-name">غسيل المفارش</div>
+              <div class="s-price">من 35 ر.س</div>
+            </div>
+            <div class="service-card">
+              <div class="s-icon"><svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 18H4V4h16v16zM6 6h12v2H6zm0 4h12v2H6zm0 4h12v2H6z"/></svg></div>
+              <div class="s-name">غسيل السجاد</div>
+              <div class="s-price">من 50 ر.س</div>
+            </div>
+            <div class="service-card">
+              <div class="s-icon"><svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 18H4V4h16v16zM6 6h12v2H6zm0 4h12v2H6zm0 4h12v2H6z"/></svg></div>
+              <div class="s-name">غسيل الستائر</div>
+              <div class="s-price">من 40 ر.س</div>
+            </div>
+            <div class="service-card">
+              <div class="s-icon"><svg viewBox="0 0 24 24"><path d="M21 10.5h-1.5V9h-1v1.5H17v1h1.5V13h1v-1.5H21v-1zm-5.5-1H14V8h-1v1.5h-1.5v1H13V12h1v-1.5h1.5v-1zM9 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0-6c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm0 8c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></div>
+              <div class="s-name">تنظيف الأحذية</div>
+              <div class="s-price">من 20 ر.س</div>
+            </div>
+            <div class="service-card">
+              <div class="s-icon"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"/></svg></div>
+              <div class="s-name">خدمة التعقيم</div>
+              <div class="s-price">من 30 ر.س</div>
+            </div>
+          </div>
+
+          <div class="section-title">آخر الطلبات</div>
+          <div class="recent-orders">
+            <div class="order-item">
+              <div class="o-icon"><svg viewBox="0 0 24 24"><path d="M7 4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2H7zm0 2h10v12H7V6zm2 2v2h6V8H9zm0 4v2h6v-2H9z"/></svg></div>
+              <div class="o-info">
+                <h5>غسيل وكي الملابس</h5>
+                <p>#ORD-2024-05-15</p>
+              </div>
+              <div class="o-status">في التوصيل</div>
+            </div>
+            <div class="order-item">
+              <div class="o-icon"><svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 18H4V4h16v16zM6 6h12v2H6zm0 4h12v2H6zm0 4h12v2H6z"/></svg></div>
+              <div class="o-info">
+                <h5>غسيل السجاد</h5>
+                <p>#ORD-2024-05-14</p>
+              </div>
+              <div class="o-status" style="color:#27AE60;">تم التسليم</div>
+            </div>
+          </div>
+
+          <div class="bottom-nav">
+            <div class="nav-item active">
+              <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+              <span>الرئيسية</span>
+            </div>
+            <div class="nav-item">
+              <svg viewBox="0 0 24 24"><path d="M7 18c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49A1.003 1.003 0 0 0 20 4H5.21l-.94-2H1v2zm16 16c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
+              <span>السلة</span>
+            </div>
+            <div class="nav-item">
+              <svg viewBox="0 0 24 24"><path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm-2 14l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
+              <span>الطلبات</span>
+            </div>
+            <div class="nav-item">
+              <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+              <span>الحساب</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="screen-label">الصفحة الرئيسية</div>
+  </div>
+
+  <!-- ============ SCREEN 5: SERVICE DETAILS ============ -->
+  <div>
+    <div class="phone">
+      <div class="phone-screen">
+        <div class="notch"></div>
+        <div class="status-bar time-right">
+          <div class="icons">
+            <svg viewBox="0 0 24 24"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
+          </div>
+          <span class="time">9:41</span>
+        </div>
+        <div class="screen-content screen-service">
+          <div class="sv-image">
+            <svg viewBox="0 0 100 100">
+              <rect x="20" y="20" width="60" height="65" rx="8" fill="#1C4D8D" opacity="0.15"/>
+              <rect x="28" y="28" width="18" height="18" rx="4" fill="#1C4D8D" opacity="0.4"/>
+              <rect x="54" y="28" width="18" height="18" rx="4" fill="#4988C4" opacity="0.4"/>
+              <rect x="28" y="54" width="18" height="18" rx="4" fill="#4988C4" opacity="0.3"/>
+              <rect x="54" y="54" width="18" height="18" rx="4" fill="#1C4D8D" opacity="0.3"/>
+              <rect x="35" y="82" width="30" height="4" rx="2" fill="#BDE8F5"/>
+            </svg>
+          </div>
+          <div class="sv-body">
+            <h3>غسيل وكي الملابس</h3>
+            <div class="sv-desc">غسيل احترافي لجميع أنواع الملابس مع تعقيم بالبخار</div>
+            <div class="sv-options">
+              <button class="sv-option active">غسيل وكي</button>
+              <button class="sv-option">غسيل فقط</button>
+              <button class="sv-option">كي فقط</button>
+            </div>
+            <div class="qty-selector">
+              <button class="qty-btn">+</button>
+              <div class="qty-num">2</div>
+              <button class="qty-btn">−</button>
+            </div>
+            <div class="sv-price">45 <small>ر.س</small></div>
+            <button class="sv-add-btn">أضف إلى السلة</button>
+          </div>
+          <div class="home-indicator"></div>
+        </div>
+      </div>
+    </div>
+    <div class="screen-label">تفاصيل الخدمة</div>
+  </div>
+
+  <!-- ============ SCREEN 6: CART ============ -->
+  <div>
+    <div class="phone">
+      <div class="phone-screen">
+        <div class="notch"></div>
+        <div class="status-bar time-right">
+          <div class="icons">
+            <svg viewBox="0 0 24 24"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
+          </div>
+          <span class="time">9:41</span>
+        </div>
+        <div class="screen-content screen-cart">
+          <div class="cart-header">
+            <span style="font-size:1.2rem;cursor:pointer;">←</span>
+            <h3>السلة</h3>
+            <span style="width:1.2rem;"></span>
+          </div>
+          <div class="cart-items">
+            <div class="cart-item">
+              <div class="ci-img"><svg viewBox="0 0 24 24"><path d="M7 4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2H7zm0 2h10v12H7V6zm2 2v2h6V8H9zm0 4v2h6v-2H9z"/></svg></div>
+              <div class="ci-info">
+                <h5>غسيل وكي الملابس</h5>
+                <p>غسيل وكي</p>
+              </div>
+              <div class="ci-qty">
+                <button>−</button>
+                <span>2</span>
+                <button>+</button>
+              </div>
+              <div class="ci-price">90 ر.س</div>
+              <button class="ci-del">✕</button>
+            </div>
+            <div class="cart-item">
+              <div class="ci-img"><svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 18H4V4h16v16zM6 6h12v2H6zm0 4h12v2H6zm0 4h12v2H6z"/></svg></div>
+              <div class="ci-info">
+                <h5>غسيل السجاد</h5>
+                <p>غسيل فقط</p>
+              </div>
+              <div class="ci-qty">
+                <button>−</button>
+                <span>1</span>
+                <button>+</button>
+              </div>
+              <div class="ci-price">50 ر.س</div>
+              <button class="ci-del">✕</button>
+            </div>
+          </div>
+          <div class="cart-summary">
+            <div class="sum-row"><span>المجموع الفرعي</span><span>140 ر.س</span></div>
+            <div class="sum-row"><span>رسوم التوصيل</span><span>15 ر.س</span></div>
+            <div class="sum-row"><span>الضريبة (15%)</span><span>21 ر.س</span></div>
+            <div class="sum-row total"><span>الإجمالي</span><span>176 ر.س</span></div>
+            <button class="checkout-btn">إتمام الطلب</button>
+          </div>
+          <div class="home-indicator"></div>
+        </div>
+      </div>
+    </div>
+    <div class="screen-label">السلة</div>
+  </div>
+
+  <!-- ============ SCREEN 7: CHECKOUT ============ -->
+  <div>
+    <div class="phone">
+      <div class="phone-screen">
+        <div class="notch"></div>
+        <div class="status-bar time-right">
+          <div class="icons">
+            <svg viewBox="0 0 24 24"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
+          </div>
+          <span class="time">9:41</span>
+        </div>
+        <div class="screen-content screen-checkout">
+          <div class="ch-header">
+            <h3>إتمام الطلب</h3>
+          </div>
+          <div class="steps">
+            <div class="step active"><span class="step-circle">1</span> العنوان</div>
+            <div class="step-line"></div>
+            <div class="step"><span class="step-circle">2</span> البيانات</div>
+            <div class="step-line"></div>
+            <div class="step"><span class="step-circle">3</span> الدفع</div>
+          </div>
+          <div class="ch-body">
+            <div class="ch-card">
+              <h5>عنوان الاستلام</h5>
+              <p>📌 الرياض، حي النرجس، شارع الأمير تركي، فيلا ٢٥</p>
+            </div>
+            <div class="ch-card">
+              <h5>موعد التوصيل</h5>
+              <div style="display:flex;gap:6px;margin-top:4px;">
+                <span style="padding:4px 10px;background:var(--light-blue);border-radius:10px;font-size:0.7rem;font-weight:600;color:var(--primary-blue);">اليوم</span>
+                <span style="padding:4px 10px;background:var(--bg-light);border-radius:10px;font-size:0.7rem;font-weight:600;color:var(--gray-text);">غدًا</span>
+                <span style="padding:4px 10px;background:var(--bg-light);border-radius:10px;font-size:0.7rem;font-weight:600;color:var(--gray-text);">بعد غد</span>
+              </div>
+              <div style="margin-top:6px;display:flex;gap:6px;">
+                <span style="padding:4px 10px;background:var(--light-blue);border-radius:10px;font-size:0.7rem;font-weight:600;color:var(--primary-blue);">٩ص - ١٢م</span>
+                <span style="padding:4px 10px;background:var(--bg-light);border-radius:10px;font-size:0.7rem;font-weight:600;color:var(--gray-text);">١م - ٤م</span>
+              </div>
+            </div>
+            <div class="ch-card">
+              <div class="ch-label">ملاحظات الطلب</div>
+              <textarea placeholder="أي ملاحظات إضافية..."></textarea>
+            </div>
+            <div class="ch-summary">
+              <div class="sum-row"><span>المجموع</span><span>176 ر.س</span></div>
+              <div class="sum-row"><span>التوصيل</span><span>15 ر.س</span></div>
+              <div class="sum-row" style="font-weight:700;color:var(--dark-navy);"><span>الإجمالي</span><span>191 ر.س</span></div>
+            </div>
+            <button class="ch-pay-btn">متابعة الدفع</button>
+          </div>
+          <div class="home-indicator"></div>
+        </div>
+      </div>
+    </div>
+    <div class="screen-label">إتمام الطلب</div>
+  </div>
+
+  <!-- ============ SCREEN 8: PAYMENT ============ -->
+  <div>
+    <div class="phone">
+      <div class="phone-screen">
+        <div class="notch"></div>
+        <div class="status-bar time-right">
+          <div class="icons">
+            <svg viewBox="0 0 24 24"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
+          </div>
+          <span class="time">9:41</span>
+        </div>
+        <div class="screen-content screen-payment">
+          <div class="pay-header">
+            <h3>الدفع</h3>
+          </div>
+          <div class="pay-body">
+            <div class="pay-method active">
+              <div class="pm-radio"></div>
+              <div class="pm-icon">
+                <svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2" fill="#1C4D8D" opacity="0.3"/><rect x="4" y="8" width="16" height="8" rx="1" fill="#1C4D8D" opacity="0.2"/><circle cx="9" cy="12" r="2" fill="#1C4D8D"/></svg>
+              </div>
+              <div class="pm-name">مدى</div>
+            </div>
+            <div class="pay-method">
+              <div class="pm-radio"></div>
+              <div class="pm-icon">
+                <svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2" fill="#4988C4" opacity="0.3"/><rect x="10" y="8" width="4" height="8" rx="1" fill="#4988C4"/></svg>
+              </div>
+              <div class="pm-name">فيزا / ماستركارد</div>
+            </div>
+            <div class="pay-method">
+              <div class="pm-radio"></div>
+              <div class="pm-icon">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#1C4D8D" opacity="0.2"/><path d="M12 4C7.58 4 4 7.58 4 12s3.58 8 8 8 8-3.58 8-8-3.58-8-8-8zm-1.5 12.5v-9l7 4.5-7 4.5z" fill="#1C4D8D"/></svg>
+              </div>
+              <div class="pm-name">Apple Pay</div>
+            </div>
+            <div class="pay-method">
+              <div class="pm-radio"></div>
+              <div class="pm-icon">
+                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" fill="#4988C4"/></svg>
+              </div>
+              <div class="pm-name">دفع عند الاستلام</div>
+            </div>
+            <div class="pay-summary">
+              <div class="sum-row"><span>المجموع الفرعي</span><span>140 ر.س</span></div>
+              <div class="sum-row"><span>التوصيل</span><span>15 ر.س</span></div>
+              <div class="sum-row"><span>الضريبة</span><span>21 ر.س</span></div>
+              <div class="sum-row total"><span>الإجمالي</span><span>176 ر.س</span></div>
+            </div>
+            <button class="pay-now-btn">ادفع الآن</button>
+          </div>
+          <div class="home-indicator"></div>
+        </div>
+      </div>
+    </div>
+    <div class="screen-label">الدفع</div>
+  </div>
+
+  <!-- ============ SCREEN 9: MY ORDERS ============ -->
+  <div>
+    <div class="phone">
+      <div class="phone-screen">
+        <div class="notch"></div>
+        <div class="status-bar time-right">
+          <div class="icons">
+            <svg viewBox="0 0 24 24"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
+          </div>
+          <span class="time">9:41</span>
+        </div>
+        <div class="screen-content screen-orders">
+          <div class="ord-header">
+            <h3>طلباتي</h3>
+          </div>
+          <div class="ord-tabs">
+            <button class="ord-tab active">الكل</button>
+            <button class="ord-tab">قيد التنفيذ</button>
+            <button class="ord-tab">تم التسليم</button>
+            <button class="ord-tab">ملغي</button>
+          </div>
+          <div class="ord-list">
+            <div class="ord-card">
+              <div class="oc-top">
+                <span class="oc-num">#ORD-240515-001</span>
+                <span class="oc-status delivery">في التوصيل</span>
+              </div>
+              <div class="oc-info">
+                <div>
+                  <h5>غسيل وكي الملابس</h5>
+                  <p>١٥ مايو ٢٠٢٤ | ١٠:٣٠ ص</p>
+                </div>
+                <div class="oc-price">٩٠ ر.س</div>
+              </div>
+              <button class="oc-detail-btn">عرض التفاصيل</button>
+            </div>
+            <div class="ord-card">
+              <div class="oc-top">
+                <span class="oc-num">#ORD-240514-002</span>
+                <span class="oc-status done">تم التسليم</span>
+              </div>
+              <div class="oc-info">
+                <div>
+                  <h5>غسيل السجاد</h5>
+                  <p>١٤ مايو ٢٠٢٤ | ٢:٠٠ م</p>
+                </div>
+                <div class="oc-price">٥٠ ر.س</div>
+              </div>
+              <button class="oc-detail-btn">عرض التفاصيل</button>
+            </div>
+            <div class="ord-card">
+              <div class="oc-top">
+                <span class="oc-num">#ORD-240513-003</span>
+                <span class="oc-status cancelled">ملغي</span>
+              </div>
+              <div class="oc-info">
+                <div>
+                  <h5>غسيل المفارش</h5>
+                  <p>١٣ مايو ٢٠٢٤ | ٤:١٥ م</p>
+                </div>
+                <div class="oc-price">٣٥ ر.س</div>
+              </div>
+              <button class="oc-detail-btn">عرض التفاصيل</button>
+            </div>
+          </div>
+          <div class="home-indicator"></div>
+        </div>
+      </div>
+    </div>
+    <div class="screen-label">طلباتي</div>
+  </div>
+
+  <!-- ============ SCREEN 10: TRACKING ============ -->
+  <div>
+    <div class="phone">
+      <div class="phone-screen">
+        <div class="notch"></div>
+        <div class="status-bar time-right">
+          <div class="icons">
+            <svg viewBox="0 0 24 24"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
+          </div>
+          <span class="time">9:41</span>
+        </div>
+        <div class="screen-content screen-tracking">
+          <div class="tr-header">
+            <h3>تفاصيل الطلب</h3>
+            <div class="tr-num">#ORD-240515-001</div>
+            <div class="tr-status-badge">في التوصيل</div>
+          </div>
+          <div class="tr-timeline">
+            <div class="tl-item done">
+              <div class="tl-dot">✓</div>
+              <div class="tl-info">
+                <h5>تم الاستلام</h5>
+                <p>تم استلام الطلب في المغسلة | ١٥ مايو ٩:٠٠ ص</p>
+              </div>
+            </div>
+            <div class="tl-item done">
+              <div class="tl-dot">✓</div>
+              <div class="tl-info">
+                <h5>قيد التنفيذ</h5>
+                <p>جاري غسيل وكي الملابس | ١٥ مايو ١٠:٣٠ ص</p>
+              </div>
+            </div>
+            <div class="tl-item active">
+              <div class="tl-dot">●</div>
+              <div class="tl-info">
+                <h5>في التوصيل</h5>
+                <p>الطلب في طريقه إليك | متوقع الوصول ٦:٠٠ م</p>
+              </div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-dot">○</div>
+              <div class="tl-info">
+                <h5>تم التسليم</h5>
+                <p>سيتم تحديث الحالة عند الوصول</p>
+              </div>
+            </div>
+          </div>
+          <div class="tr-details">
+            <div class="tr-card">
+              <h5>الخدمات المطلوبة</h5>
+              <p>🧺 غسيل وكي الملابس (٢ كجم) - ٩٠ ر.س</p>
+            </div>
+            <div class="tr-card">
+              <h5>عنوان الاستلام</h5>
+              <p>📍 الرياض، حي النرجس، شارع الأمير تركي، فيلا ٢٥</p>
+            </div>
+            <div class="tr-card">
+              <h5>موعد التوصيل</h5>
+              <p>🕐 اليوم، ١:٠٠ م - ٤:٠٠ م</p>
+            </div>
+            <button class="support-btn">تواصل مع الدعم</button>
+          </div>
+          <div class="home-indicator"></div>
+        </div>
+      </div>
+    </div>
+    <div class="screen-label">تتبع الطلب</div>
+  </div>
+
+</main>
+
+</body>
+</html>
