@@ -197,7 +197,11 @@ namespace BrightClean.API.Controllers
                 new Claim(ClaimTypes.Role, user.Role.ToString())
             };
 
-            var secretKey = _config["Jwt:Key"] ?? "AVerySecureLongSecretKeyThatHasAtLeast256BitsOfLength";
+            var secretKey = _config["Jwt:Key"];
+            if (string.IsNullOrEmpty(secretKey))
+            {
+                throw new InvalidOperationException("JWT signing key is not configured. Set Jwt:Key in user secrets or environment variables.");
+            }
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 

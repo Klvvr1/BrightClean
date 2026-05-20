@@ -19,6 +19,13 @@ namespace BrightClean.Infrastructure
                 return; // DB has been seeded
             }
 
+            // Read secure seed password hash from environment variable
+            var seedPasswordHash = Environment.GetEnvironmentVariable("SEED_ADMIN_PASSWORD_HASH");
+            if (string.IsNullOrEmpty(seedPasswordHash))
+            {
+                throw new InvalidOperationException("SEED_ADMIN_PASSWORD_HASH environment variable is not set. Set a BCrypt hash for seed user passwords.");
+            }
+
             using var transaction = context.Database.BeginTransaction();
             try
             {
@@ -50,7 +57,7 @@ namespace BrightClean.Infrastructure
                 FirstName = "Ahmad",
                 LastName = "Al-Mutairi",
                 Email = "client@brightclean.com",
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"),
+                PasswordHash = seedPasswordHash,
                 PhoneNo = "96590001",
                 DateOfBirth = new DateTime(1995, 1, 1),
                 ProfilePhotoURL = null,
@@ -67,7 +74,7 @@ namespace BrightClean.Infrastructure
                 FirstName = "Yasir",
                 LastName = "Al-Harbi",
                 Email = "agent@brightclean.com",
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"),
+                PasswordHash = seedPasswordHash,
                 PhoneNo = "96590002",
                 DateOfBirth = new DateTime(1988, 5, 12),
                 ProfilePhotoURL = null,
@@ -90,7 +97,7 @@ namespace BrightClean.Infrastructure
                 FirstName = "Khaled",
                 LastName = "Al-Otaibi",
                 Email = "driver@brightclean.com",
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"),
+                PasswordHash = seedPasswordHash,
                 PhoneNo = "96590003",
                 DateOfBirth = new DateTime(1992, 8, 20),
                 ProfilePhotoURL = null,
@@ -114,7 +121,7 @@ namespace BrightClean.Infrastructure
                 FirstName = "Admin",
                 LastName = "System",
                 Email = "admin@brightclean.com",
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"),
+                PasswordHash = seedPasswordHash,
                 PhoneNo = "96590004",
                 DateOfBirth = new DateTime(1985, 3, 15),
                 ProfilePhotoURL = null,

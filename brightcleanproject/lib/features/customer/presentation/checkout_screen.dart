@@ -707,8 +707,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           );
 
                           try {
-                            // Booking ID = 1 is the seeded Draft booking in backend LocalDB
-                            await orderProvider.submitOrder(1, localOrder: newOrder);
+                            // Use the actual booking ID from the order provider's current booking
+                            final bookingId = orderProvider.currentBookingId;
+                            if (bookingId == null) {
+                              throw Exception('No active booking found');
+                            }
+                            await orderProvider.submitOrder(bookingId, localOrder: newOrder);
 
                             if (widget.directItems == null) {
                               await cart.clearCart();

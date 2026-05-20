@@ -14,7 +14,11 @@ builder.Services.AddControllers().AddJsonOptions(options =>
 });
 
 // Configure JWT Authentication
-var secretKey = builder.Configuration["Jwt:Key"] ?? "AVerySecureLongSecretKeyThatHasAtLeast256BitsOfLength";
+var secretKey = builder.Configuration["Jwt:Key"];
+if (string.IsNullOrEmpty(secretKey))
+{
+    throw new InvalidOperationException("JWT signing key is not configured. Set Jwt:Key in user secrets (dotnet user-secrets set \"Jwt:Key\" \"<your-key>\") or environment variables.");
+}
 var key = Encoding.UTF8.GetBytes(secretKey);
 
 builder.Services.AddAuthentication(options =>
