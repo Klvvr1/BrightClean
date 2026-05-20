@@ -11,8 +11,8 @@ import 'widgets/wallet_section.dart';
 import 'widgets/help_center_bottom_sheet.dart';
 import '../../../core/widgets/profile/profile_widgets.dart';
 import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_styles.dart';
 import '../../../core/controllers/theme_controller.dart';
+import '../../../core/theme/app_colors.dart';
 
 class CustomerProfileScreen extends StatefulWidget {
   const CustomerProfileScreen({super.key});
@@ -110,48 +110,19 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
             subtitle: _currentUser.phone,
             imagePath: _currentUser.imagePath,
           ),
-          const SizedBox(height: AppSpacing.xxl),
-          _buildAccountSection(),
-          const SizedBox(height: AppSpacing.md),
-          _buildActionsSection(),
-          const SizedBox(height: AppSpacing.md),
-          _buildSettingsSection(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAccountSection() {
-    return Container(
-      decoration: AppStyles.surface(context),
-      clipBehavior: Clip.hardEdge,
-      child: Column(
-        children: [
+          const SizedBox(height: AppSpacing.xl),
+          
+          // حسابي
+          _buildSettingsHeader('حسابي'),
+          
+          // Wallet section styled as a flat card or tile
           WalletSection(balance: _currentUser.walletBalance),
-          const Divider(height: 1),
-          ProfileMenuTile(
-            icon: Icons.receipt_long_outlined,
-            title: 'الطلبات',
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const MyOrdersScreen()),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
+          const SizedBox(height: AppSpacing.sm),
 
-  Widget _buildActionsSection() {
-    return Container(
-      decoration: AppStyles.surface(context),
-      clipBehavior: Clip.hardEdge,
-      child: Column(
-        children: [
-          ProfileMenuTile(
-            icon: Icons.person_outline,
-            title: 'تعديل الحساب',
+          _buildSettingsTile(
+            Icons.person_outline,
+            'تعديل الحساب',
+            subtitle: 'تعديل بيانات الحساب الشخصي',
             onTap: () async {
               await Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const EditAccountScreen()),
@@ -159,50 +130,74 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
               await _loadUserFromPrefs();
             },
           ),
-          const Divider(height: 1),
-          ProfileMenuTile(
-            icon: Icons.location_on_outlined,
-            title: 'العناوين المحفوظة',
+          _buildSettingsTile(
+            Icons.receipt_long_outlined,
+            'الطلبات',
+            subtitle: 'عرض طلباتي السابقة والجاري تنفيذها',
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const MyOrdersScreen()),
+              );
+            },
+          ),
+          _buildSettingsTile(
+            Icons.location_on_outlined,
+            'العناوين المحفوظة',
+            subtitle: 'إدارة عناوين التوصيل الخاصة بك',
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const AddressesScreen()),
               );
             },
           ),
-          const Divider(height: 1),
-          ProfileMenuTile(
-            icon: Icons.notifications_outlined,
-            title: 'الإشعارات',
+          
+          const SizedBox(height: AppSpacing.lg),
+          
+          // التفضيلات والإعدادات
+          _buildSettingsHeader('التفضيلات والإعدادات'),
+          _buildSettingsTile(
+            Icons.notifications_outlined,
+            'الإشعارات',
+            subtitle: 'التحكم بإشعارات وتنبيهات التطبيق',
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const NotificationsScreen()),
               );
             },
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSettingsSection() {
-    return Container(
-      decoration: AppStyles.surface(context),
-      clipBehavior: Clip.hardEdge,
-      child: Column(
-        children: [
-          ProfileMenuTile(
-            icon: Icons.lock_outline,
-            title: 'تغيير كلمة المرور',
+          _buildSettingsTile(
+            Icons.lock_outline,
+            'تغيير كلمة المرور',
+            subtitle: 'تحديث كلمة المرور لحماية الحساب',
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const ChangePasswordScreen()),
               );
             },
           ),
-          const Divider(height: 1),
-          ProfileMenuTile(
-            icon: Icons.support_agent,
-            title: 'مركز المساعدة',
+          
+          ValueListenableBuilder<ThemeMode>(
+            valueListenable: ThemeController().themeMode,
+            builder: (context, themeMode, child) {
+              final isDarkTheme = themeMode == ThemeMode.dark ||
+                  (themeMode == ThemeMode.system &&
+                      MediaQuery.of(context).platformBrightness == Brightness.dark);
+              return _buildSwitchTile(
+                'الوضع الليلي',
+                isDarkTheme,
+                (_) => ThemeController().toggleTheme(),
+              );
+            },
+          ),
+
+          const SizedBox(height: AppSpacing.lg),
+          
+          // الدعم والمساعدة
+          _buildSettingsHeader('الدعم والمساعدة'),
+          _buildSettingsTile(
+            Icons.support_agent,
+            'مركز المساعدة',
+            subtitle: 'تواصل مع الدعم الفني للمساعدة',
             onTap: () {
               showModalBottomSheet(
                 context: context,
@@ -212,32 +207,58 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
               );
             },
           ),
-          const Divider(height: 1),
-          ProfileMenuTile(
-            icon: Icons.dark_mode,
-            title: 'الوضع الليلي',
-            trailing: ValueListenableBuilder<ThemeMode>(
-              valueListenable: ThemeController().themeMode,
-              builder: (context, themeMode, child) {
-                final isDark = themeMode == ThemeMode.dark ||
-                    (themeMode == ThemeMode.system &&
-                        MediaQuery.of(context).platformBrightness == Brightness.dark);
-                return Switch(
-                  value: isDark,
-                  onChanged: (_) => ThemeController().toggleTheme(),
-                );
-              },
-            ),
-          ),
-          const Divider(height: 1),
-          ProfileMenuTile(
-            icon: Icons.logout,
-            title: 'تسجيل الخروج',
-            isDestructive: true,
+          
+          const Divider(height: 40),
+          _buildSettingsTile(
+            Icons.logout,
+            'تسجيل الخروج',
+            subtitle: 'تسجيل خروج من الحساب الحالي',
+            color: AppColors.error,
             onTap: _handleLogout,
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildSettingsHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Text(
+        title,
+        style: TextStyle(
+          fontSize: 14,
+          color: Colors.grey.shade600,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSettingsTile(IconData icon, String title, {String? subtitle, Color? color, VoidCallback? onTap}) {
+    return ListTile(
+      leading: Icon(icon, color: color ?? AppColors.primary),
+      title: Text(
+        title,
+        style: TextStyle(fontWeight: FontWeight.bold, color: color),
+      ),
+      subtitle: subtitle != null ? Text(subtitle, style: const TextStyle(fontSize: 12)) : null,
+      trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+      onTap: onTap,
+    );
+  }
+
+  Widget _buildSwitchTile(String title, bool value, Function(bool) onChanged) {
+    return SwitchListTile(
+      secondary: Icon(
+        value ? Icons.dark_mode : Icons.light_mode,
+        color: value ? AppColors.primary : Colors.grey,
+      ),
+      title: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+      value: value,
+      onChanged: onChanged,
+      activeTrackColor: AppColors.primary.withValues(alpha: 0.5),
+      activeThumbColor: AppColors.primary,
     );
   }
 }
