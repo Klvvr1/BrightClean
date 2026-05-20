@@ -1,14 +1,30 @@
 import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import '../../../../core/database/database_helper.dart';
+import '../../../../core/error/exceptions.dart';
+import '../../../../core/network/api_client.dart';
+import '../../domain/repositories/booking_repository.dart';
+import '../repositories/booking_repository_impl.dart';
 import '../../domain/models/order.dart';
+import '../models/booking_model.dart';
 
 class OrderProvider extends ChangeNotifier {
+  final BookingRepository bookingRepository;
   List<Order> _orders = [];
+  bool _isLoading = false;
+  bool _isActionLoading = false;
+  bool _isCheckoutLoading = false;
+  String? _errorMessage;
 
-  OrderProvider() {
+  bool get isActionLoading => _isActionLoading;
+  bool get isCheckoutLoading => _isCheckoutLoading;
+
+  OrderProvider({BookingRepository? bookingRepository})
+      : bookingRepository = bookingRepository ??
+            BookingRepositoryImpl(apiClient: BaseApiClient()) {
     _loadOrders();
   }
+
 
   Future<void> _loadOrders() async {
     try {
@@ -93,6 +109,8 @@ class OrderProvider extends ChangeNotifier {
   }
 
   List<Order> get orders => List.unmodifiable(_orders);
+  bool get isLoading => _isLoading;
+  String? get errorMessage => _errorMessage;
 
   void addOrder(Order order) {
     _orders.insert(0, order);
@@ -118,6 +136,175 @@ class OrderProvider extends ChangeNotifier {
         category: oldOrder.category,
       );
       _saveOrderToDb(_orders[index]);
+      notifyListeners();
+    }
+  }
+
+  Future<void> fetchPendingBookings(int agentId) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final bookingModels = await bookingRepository.getPendingBookings(agentId);
+      
+      _orders = bookingModels.map((booking) {
+        return Order(
+          orderId: booking.bookingID.toString(),
+          date: '${booking.createdAt.day} ${_getMonthName(booking.createdAt.month)} ${booking.createdAt.year}',
+          details: _mapBookingItemsToDetails(booking),
+          status: _mapStatusToString(booking.status),
+          activeStepIndex: _mapStatusToStepIndex(booking.status),
+          category: _mapCategory(booking),
+          pickupDate: booking.scheduledAt,
+        );
+      }).toList();
+      
+      _isLoading = false;
+    } on ServerException catch (e) {
+      _errorMessage = e.message ?? 'حدث خطأ في الخادم';
+      _isLoading = false;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _isLoading = false;
+    } finally {
+      notifyListeners();
+    }
+  }
+
+  String _getMonthName(int month) {
+    const months = [
+      'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+      'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+    ];
+    if (month >= 1 && month <= 12) {
+      return months[month - 1];
+    }
+    return '';
+  }
+
+  String _mapBookingItemsToDetails(BookingModel booking) {
+    if (booking.bookingItems.isEmpty) return 'طلب فارغ';
+    return booking.bookingItems.map((item) {
+      final name = item.serviceCatalogItem?.serviceName ?? 'خدمة';
+      return '$name - ${item.quantity} قطعة';
+    }).join(', ');
+  }
+
+  String _mapStatusToString(int statusInt) {
+    switch (statusInt) {
+      case 0:
+        return 'مسودة';
+      case 1:
+        return 'قيد الانتظار';
+      case 2:
+        return 'في الطريق';
+      case 3:
+        return 'قيد المعالجة';
+      case 4:
+        return 'جاهز';
+      case 5:
+        return 'تم التوصيل';
+      case 6:
+        return 'ملغي';
+      default:
+        return 'قيد الانتظار';
+    }
+  }
+
+  int _mapStatusToStepIndex(int statusInt) {
+    switch (statusInt) {
+      case 1:
+        return 0;
+      case 2:
+        return 1;
+      case 3:
+        return 2;
+      case 4:
+        return 3;
+      case 5:
+        return 4;
+      default:
+        return 0;
+    }
+  }
+
+  String? _mapCategory(BookingModel booking) {
+    if (booking.bookingItems.isEmpty) return null;
+    final catId = booking.bookingItems.first.serviceCatalogItem?.category;
+    switch (catId) {
+      case 0:
+        return 'clothes';
+      case 1:
+        return 'carpets';
+      case 2:
+        return 'carsBikes';
+      case 3:
+        return 'furniture';
+      default:
+        return null;
+    }
+  }
+
+  Future<void> acceptOrder(int bookingId, int agentId) async {
+    _isActionLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await bookingRepository.acceptBooking(bookingId);
+      await fetchPendingBookings(agentId);
+    } on ServerException catch (e) {
+      _errorMessage = e.message ?? 'حدث خطأ في الخادم';
+    } catch (e) {
+      _errorMessage = e.toString();
+    } finally {
+      _isActionLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> markOrderReady(int bookingId, int agentId) async {
+    _isActionLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await bookingRepository.markBookingReady(bookingId);
+      await fetchPendingBookings(agentId);
+    } on ServerException catch (e) {
+      _errorMessage = e.message ?? 'حدث خطأ في الخادم';
+    } catch (e) {
+      _errorMessage = e.toString();
+    } finally {
+      _isActionLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> submitOrder(int bookingId, {Order? localOrder}) async {
+    _isCheckoutLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await bookingRepository.submitBooking(bookingId);
+      if (localOrder != null) {
+        _orders.insert(0, localOrder);
+        await _saveOrderToDb(localOrder);
+      }
+      
+      // On success, clear local cart DB table
+      final db = await DatabaseHelper.instance.database;
+      await db.delete('cart_items');
+    } on ServerException catch (e) {
+      _errorMessage = e.message ?? 'حدث خطأ في الخادم';
+      rethrow;
+    } catch (e) {
+      _errorMessage = e.toString();
+      rethrow;
+    } finally {
+      _isCheckoutLoading = false;
       notifyListeners();
     }
   }

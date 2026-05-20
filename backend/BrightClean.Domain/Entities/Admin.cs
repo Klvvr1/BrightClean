@@ -17,6 +17,7 @@ namespace BrightClean.Domain.Entities
         public Admin()
         {
             Role = UserRole.Admin;
+            IsApproved = true;
             ManagedServices = new HashSet<ServiceCatalogItem>();
             CreatedOffers = new HashSet<Offer>();
             AuditLogs = new HashSet<AuditLog>();

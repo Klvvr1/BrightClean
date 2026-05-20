@@ -3,9 +3,12 @@ import 'package:brightcleanproject/core/theme/app_spacing.dart';
 
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/controllers/theme_controller.dart';
 import '../../../core/controllers/language_controller.dart';
+import '../data/providers/driver_provider.dart';
+import '../data/models/delivery_task_model.dart';
 
 class DriverDashboardScreen extends StatefulWidget {
   const DriverDashboardScreen({super.key});
@@ -17,7 +20,6 @@ class DriverDashboardScreen extends StatefulWidget {
 class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
   int _selectedIndex = 0;
   bool _isOnline = false;
-  Map<String, bool> _completedTasks = {};
 
   // Mock data for user profile
   String _userName = 'سائق برايت كلين';
@@ -27,6 +29,11 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
   void initState() {
     super.initState();
     _loadUserData();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<DriverProvider>().fetchTaskPool();
+      }
+    });
   }
 
   Future<void> _loadUserData() async {
@@ -34,16 +41,6 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
     final prefs = await SharedPreferences.getInstance();
 
     if (!mounted) return;
-
-    // Load completed tasks
-    final keys = prefs.getKeys();
-    final completed = <String, bool>{};
-    for (var key in keys) {
-      if (key.startsWith('task_completed_')) {
-        completed[key.replaceFirst('task_completed_', '')] =
-            prefs.getBool(key) ?? false;
-      }
-    }
 
     setState(() {
       final savedName = prefs.getString('user_name');
@@ -61,7 +58,6 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
         _userName = savedName;
       }
       _userPhone = prefs.getString('user_phone') ?? '0533333333';
-      _completedTasks = completed;
     });
   }
 
@@ -293,116 +289,376 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
   }
 
   Future<void> _refreshOrders() async {
-    // Simulate API call
-    await Future.delayed(const Duration(seconds: 1));
+    await context.read<DriverProvider>().fetchTaskPool();
     if (mounted) {
       _loadUserData();
     }
   }
 
-  Widget _buildOnlineContent(bool isAr, bool isDark) {
-    List<Widget> availableOrdersWidgets = [];
+  Widget _buildRealTaskCard({
+    required DeliveryTaskModel task,
+    required bool isAr,
+    required bool isDark,
+    required DriverProvider provider,
+  }) {
+    final theme = Theme.of(context);
+    final workflow = task.type == 0 ? 1 : 2; // 1 = Pickup, 2 = Delivery
+    final isUnassigned = task.status == 0;
+    final isAssigned = task.status == 1 || task.status == 2;
+    final isCompleted = task.status == 3;
 
-    // Only show task if not completed
-    if (_completedTasks['1026'] != true) {
-      availableOrdersWidgets.add(
-        _buildOrderCard(
-          orderId: '1026',
-          time: isAr ? 'منذ 5 دقائق' : '5 mins ago',
-          from: isAr ? 'المغسلة الذهبية' : 'Golden Laundry',
-          to: isAr
-              ? 'منزل العميل - برج السلام'
-              : 'Customer House - Salam Tower',
-          type: isAr ? 'ملابس' : 'Clothes',
-          isNew: true,
-          workflow: 1, // Pickup
-        ),
-      );
-    }
+    // Build pickup and dropoff address descriptions
+    final fromAddress = task.pickupAddress != null
+        ? "${task.pickupAddress!['area'] ?? ''} ${task.pickupAddress!['street'] ?? ''}"
+        : "Address ID ${task.pickupAddressID}";
+    final toAddress = task.dropoffAddress != null
+        ? "${task.dropoffAddress!['area'] ?? ''} ${task.dropoffAddress!['street'] ?? ''}"
+        : "Address ID ${task.dropoffAddressID}";
 
-    if (_completedTasks['1027'] != true) {
-      availableOrdersWidgets.add(
-        _buildOrderCard(
-          orderId: '1027',
-          time: isAr ? 'منذ 15 دقيقة' : '15 mins ago',
-          from: isAr ? 'مغسلة النور' : 'Al Noor Laundry',
-          to: isAr ? 'فلل النخيل' : 'Palm Villas',
-          type: isAr ? 'سجاد' : 'Carpets',
-          isNew: true,
-          workflow: 2, // Delivery
-        ),
-      );
-    }
-
-    if (availableOrdersWidgets.isEmpty) {
-      // Empty state when online but no orders
-      return RefreshIndicator(
-        onRefresh: _refreshOrders,
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildEarningsCard(),
-            const SizedBox(height: 40),
-            Center(
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: (workflow == 1
+                                ? AppColors.primary
+                                : AppColors.secondary)
+                            .withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        workflow == 1
+                            ? (isAr ? 'استلام' : 'Pickup')
+                            : (isAr ? 'توصيل' : 'Delivery'),
+                        style: TextStyle(
+                          color: workflow == 1
+                              ? AppColors.primary
+                              : AppColors.secondary,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                    // Order Type Badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.tertiary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        isAr ? 'مهمة' : 'Task',
+                        style: const TextStyle(
+                          color: AppColors.tertiary,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                    Text('${isAr ? 'مهمة' : 'Task'} #${task.taskID}',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: isDark ? Colors.white : Colors.black87)),
+                  ],
+                ),
+                Text(
+                  isAr ? '${task.deliveryFee} ريال' : '${task.deliveryFee} YER',
+                  style: TextStyle(
+                      color: isDark ? Colors.white : Colors.grey,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12),
+                ),
+              ],
+            ),
+            const Divider(height: 24),
+            Row(
+              children: [
+                Icon(Icons.trip_origin,
+                    size: 16,
+                    color: isDark ? Colors.white : theme.colorScheme.primary),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                    child: Text('${isAr ? 'من:' : 'From:'} $fromAddress',
+                        style: TextStyle(
+                            fontSize: 14,
+                            color: isDark ? Colors.white : Colors.black87))),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Row(
+              children: [
+                Icon(Icons.location_on,
+                    size: 16,
+                    color: isDark ? Colors.white : AppColors.secondary),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                    child: Text('${isAr ? 'إلى:' : 'To:'} $toAddress',
+                        style: TextStyle(
+                            fontSize: 14,
+                            color: isDark ? Colors.white : Colors.black87))),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Row(
+              children: [
+                Icon(Icons.receipt_long,
+                    size: 16,
+                    color: Colors.amber.shade700),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                    child: Text('${isAr ? 'رقم الحجز:' : 'Booking ID:'} #${task.bookingID}',
+                        style: TextStyle(
+                            fontSize: 14,
+                            color: isDark ? Colors.white : Colors.black87))),
+              ],
+            ),
+            if (isUnassigned) ...[
+              const SizedBox(height: AppSpacing.md),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: provider.isActionLoading
+                      ? null
+                      : () async {
+                          try {
+                            // Driver ID = 3 is hardcoded for PoC
+                            await provider.claimTask(task.taskID, 3);
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('تم قبول المهمة بنجاح!'),
+                                  backgroundColor: AppColors.success,
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('فشل قبول المهمة: $e'),
+                                  backgroundColor: AppColors.error,
+                                ),
+                              );
+                            }
+                          }
+                        },
+                  icon: provider.isActionLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.hail),
+                  label: Text(isAr ? 'قبول المهمة' : 'Claim Task'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+            if (isAssigned) ...[
+              const SizedBox(height: AppSpacing.md),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: provider.isActionLoading
+                      ? null
+                      : () async {
+                          try {
+                            await provider.completeTask(task.taskID);
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('تم إكمال المهمة بنجاح!'),
+                                  backgroundColor: AppColors.success,
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('فشل إكمال المهمة: $e'),
+                                  backgroundColor: AppColors.error,
+                                ),
+                              );
+                            }
+                          }
+                        },
+                  icon: provider.isActionLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.check_circle_outline),
+                  label: Text(isAr ? 'إكمال المهمة' : 'Complete Task'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.success,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+            if (isCompleted) ...[
+              const SizedBox(height: AppSpacing.md),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppColors.success.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  isAr ? 'تم بنجاح' : 'Completed Successfully',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                      color: AppColors.success, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOnlineContent(bool isAr, bool isDark) {
+    return Consumer<DriverProvider>(
+      builder: (context, provider, child) {
+        if (provider.isLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (provider.errorMessage != null) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.inbox_outlined,
-                      size: 80,
-                      color: isDark
-                          ? Colors.white
-                          : Colors.grey.withValues(alpha: 0.2)),
+                  const Icon(Icons.error_outline, color: AppColors.error, size: 60),
                   const SizedBox(height: AppSpacing.md),
                   Text(
-                    isAr
-                        ? 'لا توجد طلبات متاحة حالياً'
-                        : 'No Available Orders Yet',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                        fontSize: 18,
-                        color: isDark ? Colors.white : Colors.grey,
-                        fontWeight: FontWeight.w500),
+                    isAr ? 'حدث خطأ أثناء تحميل الطلبات' : 'Error loading requests',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
                   ),
                   const SizedBox(height: AppSpacing.xs),
                   Text(
-                    isAr ? 'اسحب للأسفل للتحديث' : 'Pull down to refresh',
+                    provider.errorMessage!,
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                        fontSize: 14,
-                        color: isDark ? Colors.white : Colors.grey),
+                    style: const TextStyle(color: Colors.grey),
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  ElevatedButton(
+                    onPressed: () => provider.fetchTaskPool(),
+                    child: Text(isAr ? 'إعادة المحاولة' : 'Retry'),
                   ),
                 ],
               ),
             ),
-          ],
-        ),
-      );
-    }
+          );
+        }
 
-    // Has orders - show list with refresh
-    return RefreshIndicator(
-      onRefresh: _refreshOrders,
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        children: [
-          _buildEarningsCard(),
-          const SizedBox(height: AppSpacing.xl),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: Text(
-              isAr ? 'الطلبات المتاحة' : 'Available Requests',
-              style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: isDark ? Colors.white : Colors.black87),
+        final availableTasks = provider.tasks.where((t) => t.status == 0).toList();
+
+        if (availableTasks.isEmpty) {
+          return RefreshIndicator(
+            onRefresh: _refreshOrders,
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              children: [
+                _buildEarningsCard(),
+                const SizedBox(height: 40),
+                Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.inbox_outlined,
+                          size: 80,
+                          color: isDark
+                              ? Colors.white
+                              : Colors.grey.withValues(alpha: 0.2)),
+                      const SizedBox(height: AppSpacing.md),
+                      Text(
+                        isAr
+                            ? 'لا توجد طلبات متاحة حالياً'
+                            : 'No Available Orders Yet',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                            fontSize: 18,
+                            color: isDark ? Colors.white : Colors.grey,
+                            fontWeight: FontWeight.w500),
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        isAr ? 'اسحب للأسفل للتحديث' : 'Pull down to refresh',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                            fontSize: 14,
+                            color: isDark ? Colors.white : Colors.grey),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
+          );
+        }
+
+        return RefreshIndicator(
+          onRefresh: _refreshOrders,
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            children: [
+              _buildEarningsCard(),
+              const SizedBox(height: AppSpacing.xl),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Text(
+                  isAr ? 'الطلبات المتاحة' : 'Available Requests',
+                  style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : Colors.black87),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              ...availableTasks.map((task) => _buildRealTaskCard(
+                    task: task,
+                    isAr: isAr,
+                    isDark: isDark,
+                    provider: provider,
+                  )),
+            ],
           ),
-          const SizedBox(height: AppSpacing.md),
-          ...availableOrdersWidgets,
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -464,156 +720,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
     );
   }
 
-  Widget _buildOrderCard({
-    required String orderId,
-    required String time,
-    required String from,
-    required String to,
-    required String type,
-    bool isNew = false,
-    bool isCompleted = false,
-    required int workflow,
-  }) {
-    final isAr = LanguageController().isArabic;
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: (workflow == 1
-                                ? AppColors.primary
-                                : AppColors.secondary)
-                            .withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        workflow == 1
-                            ? (isAr ? 'استلام' : 'Pickup')
-                            : (isAr ? 'توصيل' : 'Delivery'),
-                        style: TextStyle(
-                          color: workflow == 1
-                              ? AppColors.primary
-                              : AppColors.secondary,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.xs),
-                    // Order Type Badge
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AppColors.tertiary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        type,
-                        style: const TextStyle(
-                          color: AppColors.tertiary,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.xs),
-                    Text('${isAr ? 'طلب' : 'Order'} #$orderId',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                            color: isDark ? Colors.white : Colors.black87)),
-                  ],
-                ),
-                Text(time,
-                    style: TextStyle(
-                        color: isDark ? Colors.white : Colors.grey,
-                        fontSize: 12)),
-              ],
-            ),
-            const Divider(height: 24),
-            Row(
-              children: [
-                Icon(Icons.trip_origin,
-                    size: 16,
-                    color: isDark ? Colors.white : theme.colorScheme.primary),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                    child: Text('${isAr ? 'من:' : 'From:'} $from',
-                        style: TextStyle(
-                            fontSize: 14,
-                            color: isDark ? Colors.white : Colors.black87))),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Row(
-              children: [
-                Icon(Icons.location_on,
-                    size: 16,
-                    color: isDark ? Colors.white : AppColors.secondary),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                    child: Text('${isAr ? 'إلى:' : 'To:'} $to',
-                        style: TextStyle(
-                            fontSize: 14,
-                            color: isDark ? Colors.white : Colors.black87))),
-              ],
-            ),
-            if (!isCompleted) ...[
-              const SizedBox(height: AppSpacing.md),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () async {
-                    await context.push(
-                      '/driver_tracking/$orderId',
-                      extra: {'workflow': workflow},
-                    );
-                    _loadUserData(); // Refresh when coming back
-                  },
-                  child: Text(isNew
-                      ? (isAr ? 'قبول الطلب' : 'Accept Order')
-                      : (isAr ? 'متابعة الطلب' : 'Track Order')),
-                ),
-              ),
-            ],
-            if (isCompleted) ...[
-              const SizedBox(height: AppSpacing.md),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                decoration: BoxDecoration(
-                  color: AppColors.success.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  isAr ? 'تم بنجاح' : 'Completed Successfully',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                      color: AppColors.success, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
 
   // --- My Orders Tab (Current/Previous Toggle) ---
   Widget _buildMyOrdersTab() {
@@ -621,95 +728,102 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    // Evaluate Current Orders logic
-    List<Widget> currentOrdersWidgets = [];
-    if (_completedTasks['1020'] != true) {
-      currentOrdersWidgets.add(
-        _buildOrderCard(
-          orderId: '1020',
-          time: isAr ? 'قيد التوصيل' : 'In Transit',
-          from: isAr ? 'مغسلة النور' : 'Al Noor Laundry',
-          to: isAr ? 'منطقة المارينا' : 'Marina Area',
-          type: isAr ? 'ملابس' : 'Clothes',
-          workflow: 2,
-        ),
-      );
-    }
-    if (currentOrdersWidgets.isEmpty) {
-      currentOrdersWidgets.add(Center(
-          child: Padding(
-        padding: const EdgeInsets.all(32.0),
-        child: Text(isAr ? 'لا توجد طلبات جارية' : 'No current orders',
-            style: TextStyle(color: isDark ? Colors.white : Colors.grey)),
-      )));
-    }
+    return Consumer<DriverProvider>(
+      builder: (context, provider, child) {
+        // Driver ID is 3 for PoC
+        final currentTasks = provider.tasks
+            .where((t) => t.deliveryStaffID == 3 && (t.status == 1 || t.status == 2))
+            .toList();
+        final previousTasks = provider.tasks
+            .where((t) => t.deliveryStaffID == 3 && t.status == 3)
+            .toList();
 
-    return DefaultTabController(
-      length: 2,
-      child: Column(
-        children: [
-          Container(
-            color: theme.cardColor,
-            child: TabBar(
-              labelColor: theme.colorScheme.primary,
-              unselectedLabelColor: isDark ? Colors.white : Colors.grey,
-              indicatorColor: theme.colorScheme.primary,
-              tabs: [
-                Tab(text: isAr ? 'الطلبات الحالية' : 'Current Orders'),
-                Tab(text: isAr ? 'الطلبات السابقة' : 'Previous Orders'),
-              ],
-            ),
-          ),
-          Expanded(
-            child: TabBarView(
-              children: [
-                // Current Orders (Not completed)
-                ListView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  children: currentOrdersWidgets,
+        List<Widget> currentWidgets = [];
+        if (currentTasks.isEmpty) {
+          currentWidgets.add(
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32.0),
+                child: Text(
+                  isAr ? 'لا توجد طلبات جارية' : 'No current orders',
+                  style: TextStyle(color: isDark ? Colors.white : Colors.grey),
                 ),
-                // Previous Orders (Completed)
-                ListView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.all(AppSpacing.md),
+              ),
+            ),
+          );
+        } else {
+          currentWidgets.addAll(
+            currentTasks.map((task) => _buildRealTaskCard(
+                  task: task,
+                  isAr: isAr,
+                  isDark: isDark,
+                  provider: provider,
+                )),
+          );
+        }
+
+        List<Widget> previousWidgets = [];
+        if (previousTasks.isEmpty) {
+          previousWidgets.add(
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32.0),
+                child: Text(
+                  isAr ? 'لا توجد طلبات سابقة' : 'No previous orders',
+                  style: TextStyle(color: isDark ? Colors.white : Colors.grey),
+                ),
+              ),
+            ),
+          );
+        } else {
+          previousWidgets.addAll(
+            previousTasks.map((task) => _buildRealTaskCard(
+                  task: task,
+                  isAr: isAr,
+                  isDark: isDark,
+                  provider: provider,
+                )),
+          );
+        }
+
+        return DefaultTabController(
+          length: 2,
+          child: Column(
+            children: [
+              Container(
+                color: theme.cardColor,
+                child: TabBar(
+                  labelColor: theme.colorScheme.primary,
+                  unselectedLabelColor: isDark ? Colors.white : Colors.grey,
+                  indicatorColor: theme.colorScheme.primary,
+                  tabs: [
+                    Tab(text: isAr ? 'الطلبات الحالية' : 'Current Orders'),
+                    Tab(text: isAr ? 'الطلبات السابقة' : 'Previous Orders'),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: TabBarView(
                   children: [
-                    if (_completedTasks['1026'] == true)
-                      _buildOrderCard(
-                        orderId: '1026',
-                        time: isAr ? 'اليوم' : 'Today',
-                        from: isAr ? 'المغسلة الذهبية' : 'Golden Laundry',
-                        to: isAr ? 'منزل العميل' : 'Customer House',
-                        type: isAr ? 'ملابس' : 'Clothes',
-                        isCompleted: true,
-                        workflow: 1,
-                      ),
-                    if (_completedTasks['1027'] == true)
-                      _buildOrderCard(
-                        orderId: '1027',
-                        time: isAr ? 'اليوم' : 'Today',
-                        from: isAr ? 'مغسلة النور' : 'Al Noor Laundry',
-                        to: isAr ? 'فلل النخيل' : 'Palm Villas',
-                        type: isAr ? 'سجاد' : 'Carpets',
-                        isCompleted: true,
-                        workflow: 2,
-                      ),
-                    _buildOrderCard(
-                      orderId: '985',
-                      time: isAr ? 'أمس 04:30 م' : 'Yesterday 04:30 PM',
-                      from: isAr ? 'مغسلة الرمال' : 'Al Rimal Laundry',
-                      to: isAr ? 'جميرا' : 'Jumeirah',
-                      type: isAr ? 'ملابس' : 'Clothes',
-                      isCompleted: true,
-                      workflow: 2,
+                    // Current Orders
+                    ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      children: currentWidgets,
+                    ),
+                    // Previous Orders
+                    ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      children: previousWidgets,
                     ),
                   ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 

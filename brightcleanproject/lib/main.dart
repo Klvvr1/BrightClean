@@ -13,6 +13,7 @@ import 'package:provider/provider.dart';
 import 'features/customer/data/providers/order_provider.dart';
 import 'features/customer/data/providers/review_provider.dart';
 import 'features/customer/data/providers/cart_provider.dart';
+import 'features/driver/data/providers/driver_provider.dart';
 
 void main() {
   // Initialize FFI database factory for desktop platforms (Windows, macOS, Linux)
@@ -27,6 +28,7 @@ void main() {
         ChangeNotifierProvider(create: (_) => OrderProvider()),
         ChangeNotifierProvider(create: (_) => ReviewProvider()),
         ChangeNotifierProvider(create: (_) => CartProvider()),
+        ChangeNotifierProvider(create: (_) => DriverProvider()),
       ],
       child: const BrightCleanApp(),
     ),

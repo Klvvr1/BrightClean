@@ -44,6 +44,9 @@ namespace BrightClean.Domain.Entities
         public DateTime? VerifiedAt { get; set; }
 
         [Required]
+        public bool IsApproved { get; set; } = false;
+
+        [Required]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         // Navigation Property

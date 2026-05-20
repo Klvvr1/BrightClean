@@ -18,6 +18,14 @@ class MyOrdersScreen extends StatefulWidget {
 }
 
 class _MyOrdersScreenState extends State<MyOrdersScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<OrderProvider>(context, listen: false).fetchPendingBookings(2);
+    });
+  }
+
   Color _getStatusColor(String status) {
     switch (status) {
       case 'قيد الانتظار':
@@ -225,6 +233,110 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                     foregroundColor: isRated ? theme.colorScheme.onSurfaceVariant : theme.colorScheme.onPrimary,
                   ),
                 ),
+              ),
+            ],
+            if (status == 'قيد الانتظار') ...[
+              const SizedBox(height: AppSpacing.md),
+              Consumer<OrderProvider>(
+                builder: (context, orderProvider, child) {
+                  return SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: orderProvider.isActionLoading
+                          ? null
+                          : () async {
+                              try {
+                                final bId = int.parse(orderId);
+                                await orderProvider.acceptOrder(bId, 2);
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('تم قبول الطلب بنجاح وتم إنشاء مهام التوصيل!'),
+                                      backgroundColor: AppColors.success,
+                                    ),
+                                  );
+                                }
+                              } catch (e) {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('فشل قبول الطلب: $e'),
+                                      backgroundColor: AppColors.error,
+                                    ),
+                                  );
+                                }
+                              }
+                            },
+                      icon: orderProvider.isActionLoading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(Icons.check_circle_outline),
+                      label: const Text('قبول الطلب (الوكيل)'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.success,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
+            if (status == 'في الطريق' || status == 'قيد المعالجة') ...[
+              const SizedBox(height: AppSpacing.md),
+              Consumer<OrderProvider>(
+                builder: (context, orderProvider, child) {
+                  return SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: orderProvider.isActionLoading
+                          ? null
+                          : () async {
+                              try {
+                                final bId = int.parse(orderId);
+                                await orderProvider.markOrderReady(bId, 2);
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('تم تجهيز الطلب بنجاح وتحديث حالته!'),
+                                      backgroundColor: AppColors.success,
+                                    ),
+                                  );
+                                }
+                              } catch (e) {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('فشل تحديث حالة الطلب: $e'),
+                                      backgroundColor: AppColors.error,
+                                    ),
+                                  );
+                                }
+                              }
+                            },
+                      icon: orderProvider.isActionLoading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(Icons.done_all),
+                      label: const Text('تجهيز الطلب (الوكيل جاهز)'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  );
+                },
               ),
             ],
           ],
@@ -463,6 +575,41 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
           children: [
             Consumer<OrderProvider>(
               builder: (context, orderProvider, child) {
+                if (orderProvider.isLoading) {
+                  return const Center(
+                    child: CircularProgressIndicator(),
+                  );
+                }
+
+                if (orderProvider.errorMessage != null) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSpacing.lg),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.error_outline, color: AppColors.error, size: 48),
+                          const SizedBox(height: AppSpacing.md),
+                          Text(
+                            orderProvider.errorMessage!,
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                              color: AppColors.error,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.lg),
+                          ElevatedButton(
+                            onPressed: () {
+                              orderProvider.fetchPendingBookings(2);
+                            },
+                            child: const Text('إعادة المحاولة'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+
                 final currentOrders = orderProvider.orders;
 
                 return currentOrders.isEmpty

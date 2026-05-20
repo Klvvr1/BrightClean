@@ -67,6 +67,7 @@ namespace BrightClean.Domain.Entities
         public LaundryAgent()
         {
             Role = UserRole.LaundryAgent;
+            IsApproved = false;
             SubscribedServices = new HashSet<AgentService>();
             Bookings = new HashSet<Booking>();
             ScopedOffers = new HashSet<Offer>();
