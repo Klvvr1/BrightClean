@@ -30,7 +30,15 @@ class OrderProvider extends ChangeNotifier {
   OrderProvider({BookingRepository? bookingRepository})
       : bookingRepository = bookingRepository ??
             BookingRepositoryImpl(apiClient: BaseApiClient()) {
-    _loadOrders();
+    _initialize();
+  }
+
+  Future<void> _initialize() async {
+    await _loadOrders();
+    // Seed demo orders only in debug mode if DB is empty
+    if (kDebugMode && _orders.isEmpty) {
+      seedDemoOrders();
+    }
   }
 
   Future<void> loadLocalOrders() => _loadOrders();
@@ -40,7 +48,7 @@ class OrderProvider extends ChangeNotifier {
     try {
       final db = await DatabaseHelper.instance.database;
       final maps = await db.query('orders', orderBy: 'date DESC');
-      
+
       if (maps.isNotEmpty) {
         _orders = maps.map((map) => Order(
           orderId: map['orderId'] as String,
@@ -56,8 +64,7 @@ class OrderProvider extends ChangeNotifier {
           category: map['category'] as String?,
         )).toList();
       } else {
-        // Seed default orders if empty
-        _seedDefaultOrders();
+        _orders = [];
       }
       notifyListeners();
     } catch (e) {
@@ -65,7 +72,9 @@ class OrderProvider extends ChangeNotifier {
     }
   }
 
-  void _seedDefaultOrders() {
+  /// Seeds demo orders for testing/debug purposes.
+  /// Should only be called explicitly in debug mode or test scenarios.
+  void seedDemoOrders() {
     _orders = [
       Order(
         orderId: '1025',

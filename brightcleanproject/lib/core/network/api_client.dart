@@ -48,7 +48,27 @@ class BaseApiClient {
 
   void _logResponse(http.Response response) {
     debugPrint('<-- ${response.statusCode} ${response.request?.url}');
-    debugPrint('Response Body: ${response.body}');
+
+    // Redact response headers
+    final responseHeaders = response.headers;
+    final loggedHeaders = Map<String, String>.from(responseHeaders);
+    if (loggedHeaders.containsKey('authorization')) {
+      loggedHeaders['authorization'] = 'Bearer ***';
+    }
+    if (loggedHeaders.isNotEmpty) {
+      debugPrint('Response Headers: $loggedHeaders');
+    }
+
+    // Check if response is from sensitive endpoint
+    final requestUrl = response.request?.url;
+    final isSensitive = requestUrl != null &&
+        (requestUrl.path.endsWith('/login') || requestUrl.path.endsWith('/register'));
+
+    if (isSensitive) {
+      debugPrint('Response Body: [REDACTED - sensitive endpoint]');
+    } else {
+      debugPrint('Response Body: ${response.body}');
+    }
   }
 
   Uri _buildUrl(String endpoint) {

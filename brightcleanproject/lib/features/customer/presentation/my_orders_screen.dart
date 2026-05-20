@@ -19,17 +19,29 @@ class MyOrdersScreen extends StatefulWidget {
 }
 
 class _MyOrdersScreenState extends State<MyOrdersScreen> {
+  bool _hasLoadedOrders = false;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final userId = Provider.of<AuthProvider>(context, listen: false).userId;
-      if (userId == null) {
-        // Block action if userId is null
-        return;
-      }
-      Provider.of<OrderProvider>(context, listen: false).loadLocalOrders();
+      _tryLoadOrders();
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Listen for auth changes and retry loading orders when auth becomes available
+    _tryLoadOrders();
+  }
+
+  void _tryLoadOrders() {
+    final userId = Provider.of<AuthProvider>(context, listen: false).userId;
+    if (userId != null && !_hasLoadedOrders) {
+      Provider.of<OrderProvider>(context, listen: false).loadLocalOrders();
+      _hasLoadedOrders = true;
+    }
   }
 
   Color _getStatusColor(String status) {
@@ -503,11 +515,9 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                           ElevatedButton(
                             onPressed: () {
                               final userId = Provider.of<AuthProvider>(context, listen: false).userId;
-                              if (userId == null) {
-                                // Block action if userId is null
-                                return;
+                              if (userId != null) {
+                                orderProvider.loadLocalOrders();
                               }
-                              orderProvider.loadLocalOrders();
                             },
                             child: const Text('إعادة المحاولة'),
                           ),
