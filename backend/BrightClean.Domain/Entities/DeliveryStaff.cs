@@ -15,6 +15,7 @@ namespace BrightClean.Domain.Entities
         public string GrandfatherName { get; set; } = string.Empty;
 
         [Required]
+        [MaxLength(450)]
         public string NationalIDNumber { get; set; } = string.Empty;
 
         [Required]
@@ -38,10 +39,11 @@ namespace BrightClean.Domain.Entities
             get
             {
                 if (DeliveryTasks == null || !DeliveryTasks.Any()) return 0m;
-                
+
                 var ratings = DeliveryTasks
                     .Where(t => t.Booking?.Rating != null && t.Booking.Rating.DeliveryRating.HasValue)
-                    .Select(t => t.Booking.Rating!.DeliveryRating!.Value)
+                    .GroupBy(t => t.BookingID)
+                    .Select(g => g.First().Booking.Rating!.DeliveryRating!.Value)
                     .ToList();
 
                 return ratings.Any() ? (decimal)ratings.Average() : 0m;
@@ -55,7 +57,10 @@ namespace BrightClean.Domain.Entities
             {
                 if (DeliveryTasks == null) return 0;
                 return DeliveryTasks
-                    .Count(t => t.Booking?.Rating != null && t.Booking.Rating.DeliveryRating.HasValue);
+                    .Where(t => t.Booking?.Rating != null && t.Booking.Rating.DeliveryRating.HasValue)
+                    .Select(t => t.BookingID)
+                    .Distinct()
+                    .Count();
             }
         }
 

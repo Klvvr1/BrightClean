@@ -79,6 +79,16 @@ namespace BrightClean.Infrastructure
                 .HasIndex(o => o.OfferCode)
                 .IsUnique();
 
+            // DeliveryTask uniqueness constraint for (BookingID, StageNumber)
+            modelBuilder.Entity<DeliveryTask>()
+                .HasIndex(dt => new { dt.BookingID, dt.StageNumber })
+                .IsUnique();
+
+            // Configure Booking RowVersion as concurrency token
+            modelBuilder.Entity<Booking>()
+                .Property(b => b.RowVersion)
+                .IsRowVersion();
+
             // One-to-One Relationships
             modelBuilder.Entity<Booking>()
                 .HasOne(b => b.Payment)
@@ -226,6 +236,15 @@ namespace BrightClean.Infrastructure
                 .Where(p => p.ClrType == typeof(decimal) || p.ClrType == typeof(decimal?)))
             {
                 property.SetColumnType("decimal(18,3)");
+            }
+
+            // --- 5. GPS Coordinates Precision Override (18, 6) ---
+            foreach (var property in modelBuilder.Model.GetEntityTypes()
+                .SelectMany(t => t.GetProperties())
+                .Where(p => (p.ClrType == typeof(decimal) || p.ClrType == typeof(decimal?)) &&
+                           (p.Name == "Latitude" || p.Name == "Longitude" || p.Name == "Lat" || p.Name == "Lng")))
+            {
+                property.SetPrecision(18, 6);
             }
         }
     }

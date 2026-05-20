@@ -17,12 +17,14 @@ namespace BrightClean.Domain.Entities
         public string LastName { get; set; } = string.Empty;
 
         [Required]
+        [MaxLength(256)]
         public string Email { get; set; } = string.Empty;
 
         [Required]
         public string PasswordHash { get; set; } = string.Empty;
 
         [Required]
+        [MaxLength(20)]
         public string PhoneNo { get; set; } = string.Empty;
 
         [Required]

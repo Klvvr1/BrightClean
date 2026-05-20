@@ -29,9 +29,14 @@ class BaseApiClient {
     print('Response Body: ${response.body}');
   }
 
+  Uri _buildUrl(String endpoint) {
+    final normalizedEndpoint = endpoint.startsWith('/') ? endpoint : '/$endpoint';
+    return Uri.parse('$baseUrl$normalizedEndpoint');
+  }
+
   dynamic _processResponse(http.Response response) {
     _logResponse(response);
-    
+
     if (response.statusCode >= 200 && response.statusCode < 300) {
       if (response.body.isNotEmpty) {
         return json.decode(response.body);
@@ -46,7 +51,7 @@ class BaseApiClient {
   }
 
   Future<dynamic> get(String endpoint) async {
-    final url = Uri.parse('$baseUrl$endpoint');
+    final url = _buildUrl(endpoint);
     _logRequest('GET', url);
     try {
       final response = await _client.get(url, headers: _headers);
@@ -58,7 +63,7 @@ class BaseApiClient {
   }
 
   Future<dynamic> post(String endpoint, {Map<String, dynamic>? body}) async {
-    final url = Uri.parse('$baseUrl$endpoint');
+    final url = _buildUrl(endpoint);
     final requestBody = body != null ? json.encode(body) : null;
     _logRequest('POST', url, body: requestBody);
     try {
@@ -75,7 +80,7 @@ class BaseApiClient {
   }
 
   Future<dynamic> put(String endpoint, {Map<String, dynamic>? body}) async {
-    final url = Uri.parse('$baseUrl$endpoint');
+    final url = _buildUrl(endpoint);
     final requestBody = body != null ? json.encode(body) : null;
     _logRequest('PUT', url, body: requestBody);
     try {
@@ -92,7 +97,7 @@ class BaseApiClient {
   }
 
   Future<dynamic> delete(String endpoint) async {
-    final url = Uri.parse('$baseUrl$endpoint');
+    final url = _buildUrl(endpoint);
     _logRequest('DELETE', url);
     try {
       final response = await _client.delete(url, headers: _headers);

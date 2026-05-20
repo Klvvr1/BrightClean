@@ -15,6 +15,7 @@ namespace BrightClean.Domain.Entities
         public string GrandfatherName { get; set; } = string.Empty;
 
         [Required]
+        [MaxLength(450)]
         public string NationalIDNumber { get; set; } = string.Empty;
 
         [Required]

@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using Microsoft.EntityFrameworkCore;
 using BrightClean.Domain.Entities;
 using BrightClean.Domain.Enums;
 
@@ -9,7 +10,7 @@ namespace BrightClean.Infrastructure
     {
         public static void Seed(AppDbContext context)
         {
-            context.Database.EnsureCreated();
+            context.Database.Migrate();
 
             // Check if seeding is already done
             if (context.Users.Any())
@@ -17,7 +18,10 @@ namespace BrightClean.Infrastructure
                 return; // DB has been seeded
             }
 
-            // 1. Seed Addresses
+            using var transaction = context.Database.BeginTransaction();
+            try
+            {
+                // 1. Seed Addresses
             var clientAddress = new Address
             {
                 Area = "Salmiya",
@@ -185,6 +189,14 @@ namespace BrightClean.Infrastructure
 
             context.BookingItems.Add(bookingItem);
             context.SaveChanges();
+
+                transaction.Commit();
+            }
+            catch
+            {
+                transaction.Rollback();
+                throw;
+            }
         }
     }
 }

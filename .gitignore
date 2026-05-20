@@ -26,8 +26,10 @@ x86/
 bld/
 [Bb]in/
 [Ob]j/
-[Log]s/
-[Te]mp/
+Logs/
+logs/
+Temp/
+temp/
 
 # EF Core migrations / LocalDB
 appsettings.Development.json

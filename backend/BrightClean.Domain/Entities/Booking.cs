@@ -39,6 +39,9 @@ namespace BrightClean.Domain.Entities
 
         public decimal? FinalTotal { get; set; }
 
+        [Timestamp]
+        public byte[]? RowVersion { get; set; }
+
         [Required]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

@@ -20,19 +20,28 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// Run database seeding
+// Run database seeding (only in Development or when configured)
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
-    try
+    var env = services.GetRequiredService<IHostEnvironment>();
+    var config = services.GetRequiredService<IConfiguration>();
+
+    var shouldSeed = env.IsDevelopment() || config.GetValue<bool>("Database:SeedOnStartup", false);
+
+    if (shouldSeed)
     {
-        var context = services.GetRequiredService<AppDbContext>();
-        DbInitializer.Seed(context);
-    }
-    catch (Exception ex)
-    {
-        var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "An error occurred while seeding the database.");
+        try
+        {
+            var context = services.GetRequiredService<AppDbContext>();
+            var logger = services.GetRequiredService<ILogger<Program>>();
+            DbInitializer.Seed(context);
+        }
+        catch (Exception ex)
+        {
+            var logger = services.GetRequiredService<ILogger<Program>>();
+            logger.LogError(ex, "An error occurred while seeding the database.");
+        }
     }
 }
 

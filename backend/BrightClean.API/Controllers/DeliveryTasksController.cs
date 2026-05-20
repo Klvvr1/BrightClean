@@ -30,10 +30,12 @@ namespace BrightClean.API.Controllers
                 .Include(t => t.DropoffAddress)
                 .Where(t => t.Status == DeliveryTaskStatus.Unassigned &&
                     (t.StageNumber == 1 ||
-                    (t.StageNumber == 2 && _context.DeliveryTasks.Any(prev =>
+                    (t.StageNumber == 2 &&
+                     _context.DeliveryTasks.Any(prev =>
                         prev.BookingID == t.BookingID &&
                         prev.StageNumber == 1 &&
-                        prev.Status == DeliveryTaskStatus.Completed))))
+                        prev.Status == DeliveryTaskStatus.Completed) &&
+                     _context.Bookings.Any(b => b.BookingID == t.BookingID && b.Status == BookingStatus.Ready))))
                 .ToListAsync();
 
             return Ok(pool);
@@ -43,23 +45,31 @@ namespace BrightClean.API.Controllers
         [HttpPost("{taskId}/claim")]
         public async Task<IActionResult> ClaimTask(int taskId, [FromBody] ClaimTaskDto dto)
         {
+            // Verify delivery staff exists
+            var staff = await _context.DeliveryStaffs.FindAsync(dto.DeliveryStaffID);
+            if (staff == null)
+            {
+                return NotFound($"Delivery staff with ID {dto.DeliveryStaffID} not found.");
+            }
+
+            // Atomic conditional update
+            var assignedAt = DateTime.UtcNow;
+            var rowsAffected = await _context.Database.ExecuteSqlInterpolatedAsync(
+                $@"UPDATE DeliveryTasks
+                   SET DeliveryStaffID = {dto.DeliveryStaffID},
+                       Status = {(int)DeliveryTaskStatus.Assigned},
+                       AssignedAt = {assignedAt}
+                   WHERE TaskID = {taskId}
+                     AND Status = {(int)DeliveryTaskStatus.Unassigned}"
+            );
+
+            if (rowsAffected == 0)
+            {
+                return Conflict("Task is not available for claiming or does not exist.");
+            }
+
+            // Retrieve the updated task
             var task = await _context.DeliveryTasks.FindAsync(taskId);
-
-            if (task == null)
-            {
-                return NotFound($"Delivery task with ID {taskId} not found.");
-            }
-
-            if (task.Status != DeliveryTaskStatus.Unassigned)
-            {
-                return BadRequest("Task is not in Unassigned status and cannot be claimed.");
-            }
-
-            task.DeliveryStaffID = dto.DeliveryStaffID;
-            task.Status = DeliveryTaskStatus.Assigned;
-            task.AssignedAt = DateTime.UtcNow;
-
-            await _context.SaveChangesAsync();
 
             return Ok(task);
         }
