@@ -1,0 +1,56 @@
+@host = http://localhost:5000
+@agentId = 8
+@driverId = 7
+@bookingId = 2
+
+### Step 1: Submit a Draft Booking
+POST {{host}}/api/bookings/submit
+Content-Type: application/json
+
+{
+  "bookingID": {{bookingId}}
+}
+
+### Step 2: Agent fetches pending bookings
+GET {{host}}/api/bookings/agent/{{agentId}}/pending
+Accept: application/json
+
+### Step 3: Agent accepts the booking (Generates Stage 1 & Stage 2 Delivery Tasks in DB)
+POST {{host}}/api/bookings/{{bookingId}}/accept
+Accept: application/json
+
+### Step 4: Driver fetches the unassigned task pool (Stage 1 pickup task should be visible)
+GET {{host}}/api/deliverytasks/pool
+Accept: application/json
+
+### Step 5: Driver claims Stage 1 task
+POST {{host}}/api/deliverytasks/1/claim
+Content-Type: application/json
+
+{
+  "deliveryStaffID": {{driverId}}
+}
+
+### Step 6: Driver completes Stage 1 task (Pickup complete, booking status transitions to InProgress)
+POST {{host}}/api/deliverytasks/1/complete
+Accept: application/json
+
+### Step 7: Agent marks the booking as Ready (Laundry processing done, waiting for Stage 2 driver)
+POST {{host}}/api/bookings/{{bookingId}}/ready
+Accept: application/json
+
+### Step 8: Driver fetches the task pool again (Stage 2 delivery task is now visible because Stage 1 is Completed and Booking is Ready)
+GET {{host}}/api/deliverytasks/pool
+Accept: application/json
+
+### Step 9: Driver claims Stage 2 task
+POST {{host}}/api/deliverytasks/2/claim
+Content-Type: application/json
+
+{
+  "deliveryStaffID": {{driverId}}
+}
+
+### Step 10: Driver completes Stage 2 task (Delivery complete, parent booking status transitions to Completed)
+POST {{host}}/api/deliverytasks/2/complete
+Accept: application/json
