@@ -15,6 +15,14 @@ class OrderProvider extends ChangeNotifier {
   bool _isActionLoading = false;
   bool _isCheckoutLoading = false;
   String? _errorMessage;
+  int? _currentBookingId = 1; // Mock/default booking ID for PoC
+
+  int? get currentBookingId => _currentBookingId;
+
+  set currentBookingId(int? value) {
+    _currentBookingId = value;
+    notifyListeners();
+  }
 
   bool get isActionLoading => _isActionLoading;
   bool get isCheckoutLoading => _isCheckoutLoading;

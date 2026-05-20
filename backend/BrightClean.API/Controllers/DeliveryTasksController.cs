@@ -1,6 +1,8 @@
 using System;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using BrightClean.Infrastructure;
@@ -11,6 +13,7 @@ namespace BrightClean.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize(Roles = "DeliveryStaff")]
     public class DeliveryTasksController : ControllerBase
     {
         private readonly AppDbContext _context;
@@ -44,20 +47,26 @@ namespace BrightClean.API.Controllers
 
         // POST: /api/deliverytasks/{taskId}/claim
         [HttpPost("{taskId}/claim")]
-        public async Task<IActionResult> ClaimTask(int taskId, [FromBody] ClaimTaskDto dto)
+        public async Task<IActionResult> ClaimTask(int taskId, [FromBody] ClaimTaskDto? dto)
         {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out var driverId))
+            {
+                return Unauthorized();
+            }
+
             // Verify delivery staff exists
-            var staff = await _context.DeliveryStaffs.FindAsync(dto.DeliveryStaffID);
+            var staff = await _context.DeliveryStaffs.FindAsync(driverId);
             if (staff == null)
             {
-                return NotFound($"Delivery staff with ID {dto.DeliveryStaffID} not found.");
+                return NotFound($"Delivery staff with ID {driverId} not found.");
             }
 
             // Atomic conditional update
             var assignedAt = DateTime.UtcNow;
             var rowsAffected = await _context.Database.ExecuteSqlInterpolatedAsync(
                 $@"UPDATE DeliveryTasks
-                   SET DeliveryStaffID = {dto.DeliveryStaffID},
+                   SET DeliveryStaffID = {driverId},
                        Status = {(int)DeliveryTaskStatus.Assigned},
                        AssignedAt = {assignedAt}
                    WHERE TaskID = {taskId}
@@ -79,6 +88,12 @@ namespace BrightClean.API.Controllers
         [HttpPost("{taskId}/complete")]
         public async Task<IActionResult> CompleteTask(int taskId)
         {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out var driverId))
+            {
+                return Unauthorized();
+            }
+
             var task = await _context.DeliveryTasks
                 .Include(t => t.Booking)
                 .FirstOrDefaultAsync(t => t.TaskID == taskId);
@@ -86,6 +101,12 @@ namespace BrightClean.API.Controllers
             if (task == null)
             {
                 return NotFound($"Delivery task with ID {taskId} not found.");
+            }
+
+            // Verify task belongs to the logged-in driver
+            if (task.DeliveryStaffID != driverId)
+            {
+                return Forbid();
             }
 
             if (task.Status != DeliveryTaskStatus.Assigned)

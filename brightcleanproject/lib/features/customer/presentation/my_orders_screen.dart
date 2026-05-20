@@ -9,6 +9,7 @@ import 'package:brightcleanproject/features/customer/domain/models/order.dart';
 import 'package:brightcleanproject/features/customer/data/providers/order_provider.dart';
 import 'package:brightcleanproject/features/customer/domain/models/review.dart';
 import 'package:brightcleanproject/features/customer/data/providers/review_provider.dart';
+import 'package:brightcleanproject/features/auth/data/providers/auth_provider.dart';
 
 class MyOrdersScreen extends StatefulWidget {
   const MyOrdersScreen({super.key});
@@ -22,7 +23,8 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<OrderProvider>(context, listen: false).fetchPendingBookings(2);
+      final userId = Provider.of<AuthProvider>(context, listen: false).userId ?? 2;
+      Provider.of<OrderProvider>(context, listen: false).fetchPendingBookings(userId);
     });
   }
 
@@ -233,110 +235,6 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                     foregroundColor: isRated ? theme.colorScheme.onSurfaceVariant : theme.colorScheme.onPrimary,
                   ),
                 ),
-              ),
-            ],
-            if (status == 'قيد الانتظار') ...[
-              const SizedBox(height: AppSpacing.md),
-              Consumer<OrderProvider>(
-                builder: (context, orderProvider, child) {
-                  return SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: orderProvider.isActionLoading
-                          ? null
-                          : () async {
-                              try {
-                                final bId = int.parse(orderId);
-                                await orderProvider.acceptOrder(bId, 2);
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('تم قبول الطلب بنجاح وتم إنشاء مهام التوصيل!'),
-                                      backgroundColor: AppColors.success,
-                                    ),
-                                  );
-                                }
-                              } catch (e) {
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('فشل قبول الطلب: $e'),
-                                      backgroundColor: AppColors.error,
-                                    ),
-                                  );
-                                }
-                              }
-                            },
-                      icon: orderProvider.isActionLoading
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Icon(Icons.check_circle_outline),
-                      label: const Text('قبول الطلب (الوكيل)'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.success,
-                        foregroundColor: Colors.white,
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ],
-            if (status == 'في الطريق' || status == 'قيد المعالجة') ...[
-              const SizedBox(height: AppSpacing.md),
-              Consumer<OrderProvider>(
-                builder: (context, orderProvider, child) {
-                  return SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: orderProvider.isActionLoading
-                          ? null
-                          : () async {
-                              try {
-                                final bId = int.parse(orderId);
-                                await orderProvider.markOrderReady(bId, 2);
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('تم تجهيز الطلب بنجاح وتحديث حالته!'),
-                                      backgroundColor: AppColors.success,
-                                    ),
-                                  );
-                                }
-                              } catch (e) {
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('فشل تحديث حالة الطلب: $e'),
-                                      backgroundColor: AppColors.error,
-                                    ),
-                                  );
-                                }
-                              }
-                            },
-                      icon: orderProvider.isActionLoading
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Icon(Icons.done_all),
-                      label: const Text('تجهيز الطلب (الوكيل جاهز)'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                      ),
-                    ),
-                  );
-                },
               ),
             ],
           ],
@@ -600,7 +498,8 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                           const SizedBox(height: AppSpacing.lg),
                           ElevatedButton(
                             onPressed: () {
-                              orderProvider.fetchPendingBookings(2);
+                              final userId = Provider.of<AuthProvider>(context, listen: false).userId ?? 2;
+                              orderProvider.fetchPendingBookings(userId);
                             },
                             child: const Text('إعادة المحاولة'),
                           ),

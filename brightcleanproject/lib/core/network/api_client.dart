@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../error/exceptions.dart';
 
 class BaseApiClient {
@@ -12,14 +13,26 @@ class BaseApiClient {
     http.Client? client,
   }) : _client = client ?? http.Client();
 
-  Map<String, String> get _headers => {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      };
+  Future<Map<String, String>> _getHeaders() async {
+    final headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    };
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token');
+      if (token != null && token.isNotEmpty) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+    } catch (e) {
+      debugPrint('Error loading auth token from SharedPreferences: $e');
+    }
+    return headers;
+  }
 
-  void _logRequest(String method, Uri url, {String? body}) {
+  void _logRequest(String method, Uri url, Map<String, String> headers, {String? body}) {
     debugPrint('--> $method ${url.toString()}');
-    debugPrint('Headers: $_headers');
+    debugPrint('Headers: $headers');
     if (body != null) {
       debugPrint('Body: $body');
     }
@@ -44,8 +57,25 @@ class BaseApiClient {
       }
       return null;
     } else {
+      String errorMessage = 'Server responded with status code ${response.statusCode}';
+      try {
+        if (response.body.isNotEmpty) {
+          final decodedBody = json.decode(response.body);
+          if (decodedBody is Map<String, dynamic>) {
+            errorMessage = decodedBody['message']?.toString() ??
+                decodedBody['error']?.toString() ??
+                decodedBody['title']?.toString() ??
+                errorMessage;
+          }
+        }
+      } catch (e) {
+        if (response.body.isNotEmpty) {
+          errorMessage = response.body;
+        }
+      }
+
       throw ServerException(
-        message: 'Server responded with status code ${response.statusCode}',
+        message: errorMessage,
         statusCode: response.statusCode,
       );
     }
@@ -53,9 +83,10 @@ class BaseApiClient {
 
   Future<dynamic> get(String endpoint) async {
     final url = _buildUrl(endpoint);
-    _logRequest('GET', url);
+    final headers = await _getHeaders();
+    _logRequest('GET', url, headers);
     try {
-      final response = await _client.get(url, headers: _headers);
+      final response = await _client.get(url, headers: headers);
       return _processResponse(response);
     } catch (e) {
       if (e is ServerException) rethrow;
@@ -66,11 +97,12 @@ class BaseApiClient {
   Future<dynamic> post(String endpoint, {Map<String, dynamic>? body}) async {
     final url = _buildUrl(endpoint);
     final requestBody = body != null ? json.encode(body) : null;
-    _logRequest('POST', url, body: requestBody);
+    final headers = await _getHeaders();
+    _logRequest('POST', url, headers, body: requestBody);
     try {
       final response = await _client.post(
         url,
-        headers: _headers,
+        headers: headers,
         body: requestBody,
       );
       return _processResponse(response);
@@ -83,11 +115,12 @@ class BaseApiClient {
   Future<dynamic> put(String endpoint, {Map<String, dynamic>? body}) async {
     final url = _buildUrl(endpoint);
     final requestBody = body != null ? json.encode(body) : null;
-    _logRequest('PUT', url, body: requestBody);
+    final headers = await _getHeaders();
+    _logRequest('PUT', url, headers, body: requestBody);
     try {
       final response = await _client.put(
         url,
-        headers: _headers,
+        headers: headers,
         body: requestBody,
       );
       return _processResponse(response);
@@ -99,9 +132,10 @@ class BaseApiClient {
 
   Future<dynamic> delete(String endpoint) async {
     final url = _buildUrl(endpoint);
-    _logRequest('DELETE', url);
+    final headers = await _getHeaders();
+    _logRequest('DELETE', url, headers);
     try {
-      final response = await _client.delete(url, headers: _headers);
+      final response = await _client.delete(url, headers: headers);
       return _processResponse(response);
     } catch (e) {
       if (e is ServerException) rethrow;

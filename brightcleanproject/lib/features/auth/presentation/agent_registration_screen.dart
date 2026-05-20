@@ -3,13 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
-import 'dart:convert';
 import '../../../../core/widgets/custom_text_field.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/widgets/map_picker_screen.dart';
-import '../../../../core/database/database_helper.dart';
+import 'package:provider/provider.dart';
+import '../data/providers/auth_provider.dart';
+import '../data/models/register_agent_model.dart';
 
 class AgentRegistrationScreen extends StatefulWidget {
   const AgentRegistrationScreen({super.key});
@@ -327,46 +328,45 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
     setState(() => _isSubmitting = true);
     
     try {
-      final dbHelper = DatabaseHelper.instance;
-      final userData = {
-        'first_name': _firstNameController.text.trim(),
-        'father_name': _fatherNameController.text.trim(),
-        'grandfather_name': _grandfatherNameController.text.trim(),
-        'last_name': _lastNameController.text.trim(),
-        'dob': _dobController.text.trim(),
-        'business_name': _businessNameController.text.trim(),
-        'email': _emailController.text.trim(),
-        'phone': _phoneController.text.trim(),
-        'password': dbHelper.hashPassword(_passwordController.text),
-        'role': 'agent',
-        'selected_services': jsonEncode(selectedServices),
-        'address_string': _selectedAddress,
-        'latitude': _selectedCoordinates?.latitude,
-        'longitude': _selectedCoordinates?.longitude,
-        'commercial_reg_image_path': _commercialRegImage?.path,
-        'id_image_path': _idImage?.path,
-        'status': 'pending',
-        'created_at': DateTime.now().toIso8601String(),
-      };
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      
+      final agentModel = RegisterAgentModel(
+        firstName: _firstNameController.text.trim(),
+        lastName: _lastNameController.text.trim(),
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+        phoneNo: _phoneController.text.trim(),
+        dateOfBirth: _dobController.text.trim(),
+        fatherName: _fatherNameController.text.trim(),
+        grandfatherName: _grandfatherNameController.text.trim(),
+        nationalIdNumber: '1111111111', // Mock value for PoC
+        businessName: _businessNameController.text.trim(),
+        commercialRegister: 'CR-123456', // Mock value for PoC
+        bankAcc: 'SA0000000000000000000000', // Mock value for PoC
+        area: _selectedAddress ?? '',
+        street: _selectedAddress ?? '',
+        latitude: _selectedCoordinates?.latitude ?? 0.0,
+        longitude: _selectedCoordinates?.longitude ?? 0.0,
+      );
 
-      await dbHelper.registerUser(userData);
+      await authProvider.registerAgent(agentModel);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('تم تسجيل المغسلة بنجاح!'),
+            content: Text('تم تسجيل المغسلة بنجاح وهي قيد المراجعة من الإدارة!'),
             backgroundColor: AppColors.success,
           ),
         );
-        if (mounted) {
-          Navigator.pushReplacementNamed(context, '/login');
-        }
+        Navigator.pushReplacementNamed(context, '/login');
       }
     } catch (e) {
       if (mounted) {
+        final authProvider = Provider.of<AuthProvider>(context, listen: false);
+        final errorMsg = authProvider.errorMessage ?? 'حدث خطأ أثناء التسجيل';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('حدث خطأ أثناء التسجيل: $e'),
+            content: Text(errorMsg),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );

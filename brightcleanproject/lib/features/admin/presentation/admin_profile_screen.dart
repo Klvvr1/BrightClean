@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
+import '../../auth/data/providers/auth_provider.dart';
+import '../../customer/data/providers/cart_provider.dart';
 import '../../../../core/widgets/profile/profile_widgets.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/controllers/theme_controller.dart';
@@ -59,13 +62,9 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
     );
 
     if (confirm == true && mounted) {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('auth_token');
-      await prefs.remove('refresh_token');
-      await prefs.remove('user_id');
-      await prefs.remove('user_name');
-      await prefs.remove('user_phone');
-      await prefs.remove('user_role');
+      await Provider.of<AuthProvider>(context, listen: false).logout(
+        Provider.of<CartProvider>(context, listen: false)
+      );
       if (mounted) context.go('/login');
     }
   }

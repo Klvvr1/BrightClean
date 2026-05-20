@@ -7,7 +7,9 @@ import 'package:brightcleanproject/core/enums/laundry_type.dart';
 import 'package:brightcleanproject/core/enums/order_status.dart';
 import 'package:brightcleanproject/core/controllers/language_controller.dart';
 import 'package:brightcleanproject/core/controllers/theme_controller.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
+import '../../auth/data/providers/auth_provider.dart';
+import '../../customer/data/providers/cart_provider.dart';
 
 // --- (Mock) نموذج بيانات الطلب ---
 class AgentOrderModel {
@@ -558,17 +560,9 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
     );
 
     if (confirm == true && mounted) {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('auth_token');
-      await prefs.remove('refresh_token');
-      await prefs.remove('user_id');
-      await prefs.remove('user_name');
-      await prefs.remove('user_phone');
-      await prefs.remove('user_role');
-      await prefs.remove('user_email');
-      await prefs.remove('wallet_balance');
-      await prefs.remove('profile_image_path');
-      await prefs.remove('user_name_is_default');
+      await Provider.of<AuthProvider>(context, listen: false).logout(
+        Provider.of<CartProvider>(context, listen: false)
+      );
       if (mounted) context.go('/login');
     }
   }

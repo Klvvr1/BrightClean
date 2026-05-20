@@ -9,6 +9,8 @@ import '../../../core/controllers/theme_controller.dart';
 import '../../../core/controllers/language_controller.dart';
 import '../data/providers/driver_provider.dart';
 import '../data/models/delivery_task_model.dart';
+import '../../auth/data/providers/auth_provider.dart';
+import '../../customer/data/providers/cart_provider.dart';
 
 class DriverDashboardScreen extends StatefulWidget {
   const DriverDashboardScreen({super.key});
@@ -437,8 +439,8 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                       ? null
                       : () async {
                           try {
-                            // Driver ID = 3 is hardcoded for PoC
-                            await provider.claimTask(task.taskID, 3);
+                            final driverId = Provider.of<AuthProvider>(context, listen: false).userId ?? 3;
+                            await provider.claimTask(task.taskID, driverId);
                             if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
@@ -728,14 +730,14 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return Consumer<DriverProvider>(
-      builder: (context, provider, child) {
-        // Driver ID is 3 for PoC
+    return Consumer2<DriverProvider, AuthProvider>(
+      builder: (context, provider, authProvider, child) {
+        final driverId = authProvider.userId ?? 3;
         final currentTasks = provider.tasks
-            .where((t) => t.deliveryStaffID == 3 && (t.status == 1 || t.status == 2))
+            .where((t) => t.deliveryStaffID == driverId && (t.status == 1 || t.status == 2))
             .toList();
         final previousTasks = provider.tasks
-            .where((t) => t.deliveryStaffID == 3 && t.status == 3)
+            .where((t) => t.deliveryStaffID == driverId && t.status == 3)
             .toList();
 
         List<Widget> currentWidgets = [];
@@ -1028,15 +1030,9 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () async {
-              final prefs = await SharedPreferences.getInstance();
-              // Only clear authentication-related keys, preserve theme/locale settings
-              await prefs.remove('auth_token');
-              await prefs.remove('refresh_token');
-              await prefs.remove('user_id');
-              await prefs.remove('user_name');
-              await prefs.remove('user_phone');
-              await prefs.remove('user_name_is_default');
-
+              await Provider.of<AuthProvider>(context, listen: false).logout(
+                Provider.of<CartProvider>(context, listen: false)
+              );
               if (context.mounted) {
                 context.go('/login');
               }

@@ -95,6 +95,7 @@ namespace BrightClean.API.Controllers
 
         // POST: /api/bookings/{bookingId}/accept
         [HttpPost("{bookingId}/accept")]
+        [Authorize(Roles = "LaundryAgent")]
         public async Task<IActionResult> AcceptBooking(int bookingId)
         {
             using var transaction = await _context.Database.BeginTransactionAsync();
@@ -108,6 +109,13 @@ namespace BrightClean.API.Controllers
                 if (booking == null)
                 {
                     return NotFound($"Booking with ID {bookingId} not found.");
+                }
+
+                // Verify caller is the Laundry Agent assigned to the booking
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+                if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out var agentId) || booking.LaundryAgentID != agentId)
+                {
+                    return Forbid();
                 }
 
                 if (booking.Status != BookingStatus.Pending)
@@ -176,6 +184,7 @@ namespace BrightClean.API.Controllers
 
         // POST: /api/bookings/{bookingId}/ready
         [HttpPost("{bookingId}/ready")]
+        [Authorize(Roles = "LaundryAgent")]
         public async Task<IActionResult> MarkBookingReady(int bookingId)
         {
             var booking = await _context.Bookings.FindAsync(bookingId);
@@ -183,6 +192,13 @@ namespace BrightClean.API.Controllers
             if (booking == null)
             {
                 return NotFound($"Booking with ID {bookingId} not found.");
+            }
+
+            // Verify caller is the Laundry Agent assigned to the booking
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out var agentId) || booking.LaundryAgentID != agentId)
+            {
+                return Forbid();
             }
 
             if (booking.Status != BookingStatus.InProgress && booking.Status != BookingStatus.Accepted)
