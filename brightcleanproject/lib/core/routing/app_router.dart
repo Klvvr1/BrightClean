@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import 'package:brightcleanproject/core/enums/order_status.dart';
+import '../../features/auth/data/providers/auth_provider.dart';
 import '../../features/auth/presentation/splash_screen.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/role_selection_screen.dart';
@@ -20,8 +22,86 @@ import '../../features/customer/presentation/notifications_screen.dart';
 import '../../features/customer/presentation/cart_screen.dart';
 
 class AppRouter {
+  static String _getHomeRouteForRole(String? role) {
+    if (role == null) {
+      return '/login';
+    }
+    final normalizedRole = role.toLowerCase();
+    if (normalizedRole == 'admin') {
+      return '/admin';
+    } else if (normalizedRole == 'manager' || normalizedRole == 'agent' || normalizedRole == 'laundryagent') {
+      return '/agent_dashboard';
+    } else if (normalizedRole == 'driver' || normalizedRole == 'deliverystaff') {
+      return '/driver_dashboard';
+    } else if (normalizedRole == 'client' || normalizedRole == 'customer') {
+      return '/customer_home';
+    } else {
+      return '/login';
+    }
+  }
+
   static final router = GoRouter(
     initialLocation: '/',
+    redirect: (context, state) {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final isLoggedIn = authProvider.isAuthenticated;
+      final location = state.matchedLocation;
+
+      // Define public routes
+      final publicRoutes = [
+        '/',
+        '/login',
+        '/role_selection',
+        '/register/customer',
+        '/register/agent',
+        '/register/driver'
+      ];
+
+      // If not logged in and trying to access a private route, redirect to /login
+      if (!isLoggedIn && !publicRoutes.contains(location)) {
+        return '/login';
+      }
+
+      // If logged in and trying to go to login or registration pages, redirect to their home
+      if (isLoggedIn && (location == '/login' || location == '/role_selection' || location.startsWith('/register'))) {
+        return _getHomeRouteForRole(authProvider.role);
+      }
+
+      // Role authorization guards
+      if (isLoggedIn) {
+        final role = authProvider.role;
+
+        // 1. Admin Guard
+        if (location.startsWith('/admin') && (role == null || role.toLowerCase() != 'admin')) {
+          return _getHomeRouteForRole(role);
+        }
+
+        // 2. Agent Guard
+        if ((location.startsWith('/agent_dashboard') || location.startsWith('/agent_order_management')) &&
+            (role == null || !(role.toLowerCase() == 'manager' || role.toLowerCase() == 'agent' || role.toLowerCase() == 'laundryagent'))) {
+          return _getHomeRouteForRole(role);
+        }
+
+        // 3. Driver Guard
+        if ((location.startsWith('/driver_dashboard') || location.startsWith('/driver_tracking')) &&
+            (role == null || !(role.toLowerCase() == 'driver' || role.toLowerCase() == 'deliverystaff'))) {
+          return _getHomeRouteForRole(role);
+        }
+
+        // 4. Customer/Client Guard
+        final customerPaths = ['/customer_home', '/service_details', '/checkout', '/notifications', '/cart'];
+        final isCustomerPath = customerPaths.any((path) => location.startsWith(path));
+        if (isCustomerPath &&
+            (role == null ||
+             role.toLowerCase() == 'admin' ||
+             role.toLowerCase() == 'manager' || role.toLowerCase() == 'agent' || role.toLowerCase() == 'laundryagent' ||
+             role.toLowerCase() == 'driver' || role.toLowerCase() == 'deliverystaff')) {
+          return _getHomeRouteForRole(role);
+        }
+      }
+
+      return null;
+    },
     routes: [
       GoRoute(
         path: '/',

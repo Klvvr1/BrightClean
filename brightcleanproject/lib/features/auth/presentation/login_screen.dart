@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/widgets/custom_text_field.dart';
-import '../../../../core/database/database_helper.dart';
+import '../data/providers/auth_provider.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -19,7 +19,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
 
   // Controllers
-  final _phoneController = TextEditingController();
+  final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
   // State variable to manage the loading indicator
@@ -28,7 +28,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   void dispose() {
-    _phoneController.dispose();
+    _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -44,42 +44,32 @@ class _LoginScreenState extends State<LoginScreen> {
       });
 
       try {
-        // Simulate a network request taking 1.5 seconds
-        await Future.delayed(const Duration(milliseconds: 1500));
-
-        // DB Authentication Logic
-        final user = await DatabaseHelper.instance.loginUser(
-          _phoneController.text,
+        final authProvider = Provider.of<AuthProvider>(context, listen: false);
+        await authProvider.login(
+          _emailController.text.trim(),
           _passwordController.text,
         );
 
         // After async gaps, check if the widget is still mounted
         if (mounted) {
-          if (user != null) {
-            final String role = (user['role'] as String? ?? 'customer').toLowerCase();
-            if (role == 'admin') {
-              context.go('/admin');
-            } else if (role == 'manager' || role == 'agent') {
-              context.go('/agent_dashboard');
-            } else if (role == 'driver') {
-              context.go('/driver_dashboard');
-            } else {
-              context.go('/customer_home');
-            }
+          final String role = (authProvider.role ?? 'customer').toLowerCase();
+          if (role == 'admin') {
+            context.go('/admin');
+          } else if (role == 'manager' || role == 'agent' || role == 'laundryagent') {
+            context.go('/agent_dashboard');
+          } else if (role == 'driver' || role == 'deliverystaff') {
+            context.go('/driver_dashboard');
           } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Text('خطأ في رقم الجوال أو كلمة المرور'),
-                backgroundColor: Theme.of(context).colorScheme.error,
-              ),
-            );
+            context.go('/customer_home');
           }
         }
       } catch (e) {
         if (mounted) {
+          final authProvider = Provider.of<AuthProvider>(context, listen: false);
+          final errorMsg = authProvider.errorMessage ?? 'خطأ في البريد الإلكتروني أو كلمة المرور';
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('حدث خطأ أثناء تسجيل الدخول: $e'),
+              content: Text(errorMsg),
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
           );
@@ -116,22 +106,22 @@ class _LoginScreenState extends State<LoginScreen> {
           runSpacing: AppSpacing.sm,
           alignment: WrapAlignment.center,
           children: [
-            _debugLoginButton('مدير النظام', '0500000000', 'Password123'),
-            _debugLoginButton('المدير', '0511111111', 'Password123'),
-            _debugLoginButton('عميل', '0522222222', 'Password123'),
-            _debugLoginButton('مندوب التوصيل', '0533333333', 'Password123'),
+            _debugLoginButton('مدير النظام', 'admin@brightclean.com', 'Password123'),
+            _debugLoginButton('المدير', 'agent@brightclean.com', 'Password123'),
+            _debugLoginButton('عميل', 'client@brightclean.com', 'Password123'),
+            _debugLoginButton('مندوب التوصيل', 'driver@brightclean.com', 'Password123'),
           ],
         ),
       ],
     );
   }
 
-  Widget _debugLoginButton(String role, String phone, String password) {
+  Widget _debugLoginButton(String role, String email, String password) {
     final theme = Theme.of(context);
     return ActionChip(
       label: Text(role, style: theme.textTheme.labelMedium?.copyWith(color: theme.colorScheme.primary)),
       onPressed: () {
-        _phoneController.text = phone;
+        _emailController.text = email;
         _passwordController.text = password;
         // Small delay to ensure UI updates fields before logging in
         Future.delayed(const Duration(milliseconds: 100), () {
@@ -185,26 +175,17 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: AppSpacing.xxl),
                     CustomTextField(
-                      controller: _phoneController,
-                      hintText: 'رقم الهاتف',
-                      prefixIcon: Icons.phone_outlined,
-                      keyboardType: TextInputType.phone,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.digitsOnly,
-                        LengthLimitingTextInputFormatter(10),
-                      ],
+                      controller: _emailController,
+                      hintText: 'البريد الإلكتروني',
+                      prefixIcon: Icons.email_outlined,
+                      keyboardType: TextInputType.emailAddress,
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'الرجاء إدخال رقم الهاتف';
+                          return 'الرجاء إدخال البريد الإلكتروني';
                         }
-                        if (value.length > 10) {
-                          return 'رقم الهاتف يجب ألا يتجاوز 10 أرقام';
-                        }
-                        if (value.contains(RegExp(r'[a-zA-Z]'))) {
-                          return 'الرجاء إدخال رقم صالح';
-                        }
-                        if (!RegExp(r'^[0-9]{9,10}$').hasMatch(value)) {
-                          return 'الرجاء إدخال رقم هاتف صالح (9 أو 10 أرقام)';
+                        final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+                        if (!emailRegex.hasMatch(value.trim())) {
+                          return 'الرجاء إدخال بريد إلكتروني صالح';
                         }
                         return null;
                       },

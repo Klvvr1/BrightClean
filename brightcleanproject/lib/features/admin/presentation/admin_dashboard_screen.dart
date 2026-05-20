@@ -1,6 +1,8 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:provider/provider.dart';
+import '../data/providers/admin_provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_styles.dart';
@@ -49,6 +51,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   String _searchQuery = '';
   List<Map<String, dynamic>> get _coupons => AdminDashboardScreen.couponsList;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<AdminProvider>().fetchPendingUsers();
+    });
+  }
 
 
   // Dummy data for live orders
@@ -358,35 +368,35 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  void _acceptStaff(Map<String, dynamic> request) {
-    setState(() {
-      // Move from pending to approved
-      _pendingRequests.removeWhere((r) => r['name'] == request['name']);
-      _staffMembers.add({
-        'name': request['name'],
-        'managerName': request['managerName'],
-        'type': request['type'],
-        'rating': 5.0, // Initial rating
-        'phone': request['phone'],
-        'email': request['email'],
-        'location': request['location'],
-        'commercialRegister': request['commercialRegister'],
-        'nationalId': request['nationalId'],
-        'licenseNumber': request['licenseNumber'],
-        'vehicleType': request['vehicleType'],
-        'vehiclePlate': request['vehiclePlate'],
-        'orders': [],
-      });
-    });
-    _logActivity(
-      'تم قبول طلب انضمام ${request['type']} "${request['name']}" وتفعيل الحساب',
-      request['type'] == 'مغسلة' ? 'add_laundry' : 'add_driver',
-      request['type'] == 'مغسلة' ? Icons.business : Icons.person_add,
-      AppColors.success,
-    );
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('تم قبول ${request['name']} بنجاح')),
-    );
+  void _acceptStaff(Map<String, dynamic> request) async {
+    final adminProvider = Provider.of<AdminProvider>(context, listen: false);
+    if (adminProvider.isActionLoading) return;
+    final userId = request['id'] as int?;
+    if (userId != null) {
+      try {
+        await adminProvider.approveUser(userId);
+        if (mounted) {
+          _logActivity(
+            'تم قبول طلب انضمام ${request['type']} "${request['name']}" وتفعيل الحساب',
+            request['type'] == 'مغسلة' ? 'add_laundry' : 'add_driver',
+            request['type'] == 'مغسلة' ? Icons.business : Icons.person_add,
+            AppColors.success,
+          );
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('تم قبول ${request['name']} بنجاح')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(adminProvider.errorMessage ?? 'حدث خطأ أثناء تفعيل الحساب'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      }
+    }
   }
 
   void _rejectStaff(String name) {
@@ -1120,29 +1130,72 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Widget _buildPendingRegistrations() {
-    final laundries =
-        _pendingRequests.where((r) => r['type'] == 'مغسلة').toList();
-    final drivers = _pendingRequests.where((r) => r['type'] == 'سائق').toList();
+    return Consumer<AdminProvider>(
+      builder: (context, adminProvider, child) {
+        if (adminProvider.isLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-    return ListView(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      children: [
-        _buildSectionHeader('المغاسل'),
-        if (laundries.isEmpty)
-          const Center(
-              child: Padding(
-                  padding: EdgeInsets.all(AppSpacing.lg),
-                  child: Text('لا توجد طلبات مغاسل حالياً'))),
-        ...laundries.map((r) => _buildRegistrationItem(r)),
-        const SizedBox(height: AppSpacing.lg),
-        _buildSectionHeader('السائقين'),
-        if (drivers.isEmpty)
-          const Center(
-              child: Padding(
-                  padding: EdgeInsets.all(AppSpacing.lg),
-                  child: Text('لا توجد طلبات مناديب حالياً'))),
-        ...drivers.map((r) => _buildRegistrationItem(r)),
-      ],
+        if (adminProvider.errorMessage != null) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: Text(
+                adminProvider.errorMessage!,
+                style: const TextStyle(color: AppColors.error, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          );
+        }
+
+        final List<Map<String, dynamic>> mappedPending = adminProvider.pendingUsers.map((u) {
+          final isLaundry = u.role.toLowerCase() == 'laundryagent';
+          return {
+            'id': u.id,
+            'name': isLaundry ? (u.businessName ?? '${u.firstName} ${u.lastName}') : '${u.firstName} ${u.lastName}',
+            'managerName': '${u.firstName} ${u.lastName}',
+            'type': isLaundry ? 'مغسلة' : 'سائق',
+            'phone': u.phoneNo ?? 'غير متوفر',
+            'email': u.email,
+            'location': 'غير متوفر',
+            'commercialRegister': u.commercialRegister ?? 'غير متوفر',
+            'nationalId': 'غير متوفر',
+            'licenseNumber': 'غير متوفر',
+            'vehicleType': 'غير متوفر',
+            'vehiclePlate': 'غير متوفر',
+            'commercialRegisterImage': null,
+            'nationalIdImage': null,
+            'storefrontImage': null,
+            'licenseImage': null,
+            'vehicleImage': null,
+          };
+        }).toList();
+
+        final laundries = mappedPending.where((r) => r['type'] == 'مغسلة').toList();
+        final drivers = mappedPending.where((r) => r['type'] == 'سائق').toList();
+
+        return ListView(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          children: [
+            _buildSectionHeader('المغاسل'),
+            if (laundries.isEmpty)
+              const Center(
+                  child: Padding(
+                      padding: EdgeInsets.all(AppSpacing.lg),
+                      child: Text('لا توجد طلبات مغاسل حالياً'))),
+            ...laundries.map((r) => _buildRegistrationItem(r)),
+            const SizedBox(height: AppSpacing.lg),
+            _buildSectionHeader('السائقين'),
+            if (drivers.isEmpty)
+              const Center(
+                  child: Padding(
+                      padding: EdgeInsets.all(AppSpacing.lg),
+                      child: Text('لا توجد طلبات مناديب حالياً'))),
+            ...drivers.map((r) => _buildRegistrationItem(r)),
+          ],
+        );
+      },
     );
   }
 
