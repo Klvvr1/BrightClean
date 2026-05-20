@@ -1,0 +1,51 @@
+# Visual Studio / dotnet ignore rules
+bin/
+obj/
+*.user
+*.userosscache
+*.sln.docstates
+.vs/
+.vscode/
+
+# User-specific files
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Ob]j/
+Logs/
+logs/
+Temp/
+temp/
+
+# EF Core migrations / LocalDB
+appsettings.Development.json
+*.db
+*.db-shm
+*.db-wal
+
+# Flutter / Dart ignore rules
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+*.iml
+*.ipr
+*.iws
+.idea/
