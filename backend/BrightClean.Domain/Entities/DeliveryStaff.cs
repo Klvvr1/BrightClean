@@ -70,6 +70,7 @@ namespace BrightClean.Domain.Entities
         public DeliveryStaff()
         {
             Role = UserRole.DeliveryStaff;
+            IsApproved = false;
             DeliveryTasks = new HashSet<DeliveryTask>();
         }
     }

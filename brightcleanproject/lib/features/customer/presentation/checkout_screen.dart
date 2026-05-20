@@ -671,72 +671,94 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           ],
         ),
       ),
-      bottomSheet: Container(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        decoration: BoxDecoration(
-          color: theme.colorScheme.surface,
-          boxShadow: AppShadows.getMd(context),
-        ),
-        child: SafeArea(
-          child: SizedBox(
-            width: double.infinity,
-            height: 56,
-            child: ElevatedButton(
-              onPressed: canCompleteOrder
-                  ? () {
-                      final orderDetails = itemsToCheckout
-                          .map((i) => '${i.serviceName} (${i.selectedType})')
-                          .join(', ');
+      bottomSheet: Consumer<OrderProvider>(
+        builder: (orderContext, orderProvider, child) {
+          return Container(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surface,
+              boxShadow: AppShadows.getMd(context),
+            ),
+            child: SafeArea(
+              child: SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: ElevatedButton(
+                  onPressed: (canCompleteOrder && !orderProvider.isCheckoutLoading)
+                      ? () async {
+                          final navigator = Navigator.of(context);
+                          final scaffoldMessenger = ScaffoldMessenger.of(context);
+                          final orderDetails = itemsToCheckout
+                              .map((i) => '${i.serviceName} (${i.selectedType})')
+                              .join(', ');
 
-                      final newOrder = Order(
-                        orderId: const Uuid().v4(),
-                        date: DateFormat('dd MMMM yyyy', 'ar')
-                            .format(DateTime.now()),
-                        details: orderDetails,
-                        status: 'قيد الانتظار',
-                        activeStepIndex: 0,
-                        locationDescription:
-                            _locationDescriptionController.text,
-                        paymentMethod: _selectedPaymentMethod,
-                        pickupDate: _selectedDate,
-                        pickupTimeSlot: _selectedTimeSlot,
-                      );
+                          final newOrder = Order(
+                            orderId: const Uuid().v4(),
+                            date: DateFormat('dd MMMM yyyy', 'ar')
+                                .format(DateTime.now()),
+                            details: orderDetails,
+                            status: 'قيد الانتظار',
+                            activeStepIndex: 0,
+                            locationDescription:
+                                _locationDescriptionController.text,
+                            paymentMethod: _selectedPaymentMethod,
+                            pickupDate: _selectedDate,
+                            pickupTimeSlot: _selectedTimeSlot,
+                          );
 
-                      Provider.of<OrderProvider>(context, listen: false)
-                          .addOrder(newOrder);
+                          try {
+                            // Use the actual booking ID from the order provider's current booking
+                            final bookingId = orderProvider.currentBookingId;
+                            if (bookingId == null) {
+                              throw Exception('No active booking found');
+                            }
+                            await orderProvider.submitOrder(bookingId, localOrder: newOrder);
 
-                      if (widget.directItems == null) {
-                        cart.clearCart();
-                      }
+                            if (widget.directItems == null) {
+                              await cart.clearCart();
+                            }
 
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const OrderSuccessScreen(),
+                            navigator.pushReplacement(
+                              MaterialPageRoute(
+                                builder: (context) => const OrderSuccessScreen(),
+                              ),
+                            );
+                          } catch (e) {
+                            scaffoldMessenger.showSnackBar(
+                              SnackBar(
+                                content: Text('فشل تأكيد الطلب: $e'),
+                                backgroundColor: theme.colorScheme.error,
+                              ),
+                            );
+                          }
+                        }
+                      : (orderProvider.isCheckoutLoading
+                          ? null
+                          : () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: const Text(
+                                    'الرجاء التحقق من الموقع واختيار موعد الاستلام لتأكيد الطلب',
+                                  ),
+                                  backgroundColor: theme.colorScheme.error,
+                                ),
+                              );
+                            }),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor:
+                        canCompleteOrder ? theme.colorScheme.primary : theme.colorScheme.surfaceContainerHighest,
+                    foregroundColor: canCompleteOrder ? theme.colorScheme.onPrimary : theme.colorScheme.onSurfaceVariant,
+                  ),
+                  child: orderProvider.isCheckoutLoading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : Text(
+                          'إتمام الطلب (${finalPrice.toStringAsFixed(0)} ر.ي)',
                         ),
-                      );
-                    }
-                  : () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: const Text(
-                            'الرجاء التحقق من الموقع واختيار موعد الاستلام لتأكيد الطلب',
-                          ),
-                          backgroundColor: theme.colorScheme.error,
-                        ),
-                      );
-                    },
-              style: ElevatedButton.styleFrom(
-                backgroundColor:
-                    canCompleteOrder ? theme.colorScheme.primary : theme.colorScheme.surfaceContainerHighest,
-                foregroundColor: canCompleteOrder ? theme.colorScheme.onPrimary : theme.colorScheme.onSurfaceVariant,
-              ),
-              child: Text(
-                'إتمام الطلب (${finalPrice.toStringAsFixed(0)} ر.ي)',
+                ),
               ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }

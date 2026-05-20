@@ -19,6 +19,7 @@ namespace BrightClean.Domain.Entities
         public Client()
         {
             Role = UserRole.Client;
+            IsApproved = true;
             Addresses = new HashSet<Address>();
             Bookings = new HashSet<Booking>();
         }

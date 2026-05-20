@@ -244,7 +244,7 @@ namespace BrightClean.Infrastructure
                 .Where(p => (p.ClrType == typeof(decimal) || p.ClrType == typeof(decimal?)) &&
                            (p.Name == "Latitude" || p.Name == "Longitude" || p.Name == "Lat" || p.Name == "Lng")))
             {
-                property.SetPrecision(18, 6);
+                property.SetColumnType("decimal(18,6)");
             }
         }
     }

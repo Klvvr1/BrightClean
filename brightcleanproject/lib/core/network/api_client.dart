@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../error/exceptions.dart';
 
@@ -17,16 +18,16 @@ class BaseApiClient {
       };
 
   void _logRequest(String method, Uri url, {String? body}) {
-    print('--> $method ${url.toString()}');
-    print('Headers: $_headers');
+    debugPrint('--> $method ${url.toString()}');
+    debugPrint('Headers: $_headers');
     if (body != null) {
-      print('Body: $body');
+      debugPrint('Body: $body');
     }
   }
 
   void _logResponse(http.Response response) {
-    print('<-- ${response.statusCode} ${response.request?.url}');
-    print('Response Body: ${response.body}');
+    debugPrint('<-- ${response.statusCode} ${response.request?.url}');
+    debugPrint('Response Body: ${response.body}');
   }
 
   Uri _buildUrl(String endpoint) {

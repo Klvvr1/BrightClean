@@ -28,14 +28,15 @@ namespace BrightClean.API.Controllers
                 .Include(t => t.Booking)
                 .Include(t => t.PickupAddress)
                 .Include(t => t.DropoffAddress)
-                .Where(t => t.Status == DeliveryTaskStatus.Unassigned &&
+                .Where(t => (t.Status == DeliveryTaskStatus.Unassigned &&
                     (t.StageNumber == 1 ||
                     (t.StageNumber == 2 &&
                      _context.DeliveryTasks.Any(prev =>
                         prev.BookingID == t.BookingID &&
                         prev.StageNumber == 1 &&
                         prev.Status == DeliveryTaskStatus.Completed) &&
-                     _context.Bookings.Any(b => b.BookingID == t.BookingID && b.Status == BookingStatus.Ready))))
+                     _context.Bookings.Any(b => b.BookingID == t.BookingID && b.Status == BookingStatus.Ready)))) ||
+                    t.Status == DeliveryTaskStatus.Assigned)
                 .ToListAsync();
 
             return Ok(pool);

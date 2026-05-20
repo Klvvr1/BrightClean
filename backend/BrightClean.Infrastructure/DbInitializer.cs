@@ -3,6 +3,7 @@ using System.Linq;
 using Microsoft.EntityFrameworkCore;
 using BrightClean.Domain.Entities;
 using BrightClean.Domain.Enums;
+using BCrypt.Net;
 
 namespace BrightClean.Infrastructure
 {
@@ -16,6 +17,13 @@ namespace BrightClean.Infrastructure
             if (context.Users.Any())
             {
                 return; // DB has been seeded
+            }
+
+            // Read secure seed password hash from environment variable
+            var seedPasswordHash = Environment.GetEnvironmentVariable("SEED_ADMIN_PASSWORD_HASH");
+            if (string.IsNullOrEmpty(seedPasswordHash))
+            {
+                throw new InvalidOperationException("SEED_ADMIN_PASSWORD_HASH environment variable is not set. Set a BCrypt hash for seed user passwords.");
             }
 
             using var transaction = context.Database.BeginTransaction();
@@ -49,7 +57,7 @@ namespace BrightClean.Infrastructure
                 FirstName = "Ahmad",
                 LastName = "Al-Mutairi",
                 Email = "client@brightclean.com",
-                PasswordHash = "hashed_password",
+                PasswordHash = seedPasswordHash,
                 PhoneNo = "96590001",
                 DateOfBirth = new DateTime(1995, 1, 1),
                 ProfilePhotoURL = null,
@@ -66,7 +74,7 @@ namespace BrightClean.Infrastructure
                 FirstName = "Yasir",
                 LastName = "Al-Harbi",
                 Email = "agent@brightclean.com",
-                PasswordHash = "hashed_password",
+                PasswordHash = seedPasswordHash,
                 PhoneNo = "96590002",
                 DateOfBirth = new DateTime(1988, 5, 12),
                 ProfilePhotoURL = null,
@@ -80,7 +88,8 @@ namespace BrightClean.Infrastructure
                 BusinessName = "Golden Clean Laundry",
                 CommercialRegister = "CR-123456",
                 BankAcc = "KW1234567890123456789012",
-                AddressID = agentAddress.AddressID
+                AddressID = agentAddress.AddressID,
+                IsApproved = true
             };
 
             var driver = new DeliveryStaff
@@ -88,7 +97,7 @@ namespace BrightClean.Infrastructure
                 FirstName = "Khaled",
                 LastName = "Al-Otaibi",
                 Email = "driver@brightclean.com",
-                PasswordHash = "hashed_password",
+                PasswordHash = seedPasswordHash,
                 PhoneNo = "96590003",
                 DateOfBirth = new DateTime(1992, 8, 20),
                 ProfilePhotoURL = null,
@@ -103,7 +112,8 @@ namespace BrightClean.Infrastructure
                 VehicleMake = "Honda",
                 VehicleModel = "Super Cub",
                 PlateNumber = "M-9988",
-                BankAcc = "KW9876543210987654321098"
+                BankAcc = "KW9876543210987654321098",
+                IsApproved = true
             };
 
             var admin = new Admin
@@ -111,7 +121,7 @@ namespace BrightClean.Infrastructure
                 FirstName = "Admin",
                 LastName = "System",
                 Email = "admin@brightclean.com",
-                PasswordHash = "hashed_password",
+                PasswordHash = seedPasswordHash,
                 PhoneNo = "96590004",
                 DateOfBirth = new DateTime(1985, 3, 15),
                 ProfilePhotoURL = null,

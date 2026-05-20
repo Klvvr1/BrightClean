@@ -1,0 +1,104 @@
+@host = http://localhost:5000
+
+### 1. Register a new Laundry Agent
+# This agent should default to IsApproved = false
+# HTTP/1.1 200 OK
+POST {{host}}/api/auth/register/agent
+Content-Type: application/json
+
+{
+  "firstName": "Sami",
+  "lastName": "Al-Fadhli",
+  "email": "sami.agent@brightclean.com",
+  "password": "agentPassword123",
+  "phoneNo": "96580001",
+  "dateOfBirth": "1990-04-15",
+  "fatherName": "Saad",
+  "grandfatherName": "Hamad",
+  "nationalIDNumber": "290041512345",
+  "businessName": "Express Cleaners",
+  "commercialRegister": "CR-888999",
+  "bankAcc": "KW8889991234567890123456",
+  "area": "Salmiya",
+  "street": "Baghdad Street",
+  "latitude": 29.3364,
+  "longitude": 48.0772
+}
+
+### 2. Login as the newly registered Agent (Should fail with 403)
+# Expected result: HTTP/1.1 403 Forbidden
+# Response body: { "message": "حسابك قيد المراجعة من قبل الإدارة" }
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "sami.agent@brightclean.com",
+  "password": "agentPassword123"
+}
+
+### 3. Login as Admin to get Admin JWT
+# Expected result: HTTP/1.1 200 OK with admin token
+# Save the token from the response to use in the variables below
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@brightclean.com",
+  "password": "password123"
+}
+
+### Use the token from Step 3 to populate the variable below:
+@adminToken = paste_admin_token_here
+@newAgentId = 9
+
+### 4. Admin checks pending approvals (Should show Sami Al-Fadhli)
+# Expected result: HTTP/1.1 200 OK containing the pending agent
+GET {{host}}/api/admin/pending-approvals
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+### 5. Admin approves the new Agent
+# Expected result: HTTP/1.1 200 OK
+POST {{host}}/api/admin/approve/{{newAgentId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+### 6. Login as the newly approved Agent (Should now succeed!)
+# Expected result: HTTP/1.1 200 OK with agent JWT
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "sami.agent@brightclean.com",
+  "password": "agentPassword123"
+}
+
+### 7. Login as seeded Client (verify password hash migration)
+# Expected result: HTTP/1.1 200 OK
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "client@brightclean.com",
+  "password": "password123"
+}
+
+### 8. Login as seeded Agent Yasir (verify auto-approved status)
+# Expected result: HTTP/1.1 200 OK
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "agent@brightclean.com",
+  "password": "password123"
+}
+
+### 9. Login as seeded Driver Khaled (verify auto-approved status)
+# Expected result: HTTP/1.1 200 OK
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "driver@brightclean.com",
+  "password": "password123"
+}
