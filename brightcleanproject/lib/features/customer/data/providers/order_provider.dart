@@ -33,6 +33,8 @@ class OrderProvider extends ChangeNotifier {
     _loadOrders();
   }
 
+  Future<void> loadLocalOrders() => _loadOrders();
+
 
   Future<void> _loadOrders() async {
     try {

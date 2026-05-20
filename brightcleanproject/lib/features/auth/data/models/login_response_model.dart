@@ -16,17 +16,25 @@ class LoginResponseModel {
   });
 
   factory LoginResponseModel.fromJson(Map<String, dynamic> json) {
-    // Safe parsing of userId from String or Int
+    final token = json['token'] as String? ?? '';
+    if (token.isEmpty) {
+      throw const FormatException('Invalid or missing token in LoginResponseModel');
+    }
+
     final rawUserId = json['userId'];
-    int parsedUserId = 0;
+    int? parsedUserId;
     if (rawUserId is int) {
       parsedUserId = rawUserId;
     } else if (rawUserId is String) {
-      parsedUserId = int.tryParse(rawUserId) ?? 0;
+      parsedUserId = int.tryParse(rawUserId);
+    }
+
+    if (parsedUserId == null || parsedUserId <= 0) {
+      throw const FormatException('Invalid or missing userId in LoginResponseModel');
     }
 
     return LoginResponseModel(
-      token: json['token'] as String? ?? '',
+      token: token,
       userId: parsedUserId,
       role: json['role'] as String? ?? 'Customer',
       email: json['email'] as String? ?? '',

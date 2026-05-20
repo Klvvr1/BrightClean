@@ -23,8 +23,12 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final userId = Provider.of<AuthProvider>(context, listen: false).userId ?? 2;
-      Provider.of<OrderProvider>(context, listen: false).fetchPendingBookings(userId);
+      final userId = Provider.of<AuthProvider>(context, listen: false).userId;
+      if (userId == null) {
+        // Block action if userId is null
+        return;
+      }
+      Provider.of<OrderProvider>(context, listen: false).loadLocalOrders();
     });
   }
 
@@ -498,8 +502,12 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                           const SizedBox(height: AppSpacing.lg),
                           ElevatedButton(
                             onPressed: () {
-                              final userId = Provider.of<AuthProvider>(context, listen: false).userId ?? 2;
-                              orderProvider.fetchPendingBookings(userId);
+                              final userId = Provider.of<AuthProvider>(context, listen: false).userId;
+                              if (userId == null) {
+                                // Block action if userId is null
+                                return;
+                              }
+                              orderProvider.loadLocalOrders();
                             },
                             child: const Text('إعادة المحاولة'),
                           ),

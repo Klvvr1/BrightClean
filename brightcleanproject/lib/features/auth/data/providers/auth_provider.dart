@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../../core/error/exceptions.dart';
 import '../../data/models/register_agent_model.dart';
 import '../../domain/repositories/auth_repository.dart';
@@ -8,6 +9,7 @@ import '../../../customer/data/providers/cart_provider.dart';
 
 class AuthProvider with ChangeNotifier {
   final AuthRepository _authRepository;
+  final FlutterSecureStorage _secureStorage;
 
   String? _token;
   int? _userId;
@@ -15,8 +17,11 @@ class AuthProvider with ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
 
-  AuthProvider({AuthRepository? authRepository})
-      : _authRepository = authRepository ?? AuthRepositoryImpl() {
+  AuthProvider({
+    AuthRepository? authRepository,
+    FlutterSecureStorage? secureStorage,
+  })  : _authRepository = authRepository ?? AuthRepositoryImpl(),
+        _secureStorage = secureStorage ?? const FlutterSecureStorage() {
     _loadSession();
   }
 
@@ -25,12 +30,12 @@ class AuthProvider with ChangeNotifier {
   String? get role => _role;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
-  bool get isAuthenticated => _token != null;
+  bool get isAuthenticated => _token != null && _token!.isNotEmpty;
 
   Future<void> _loadSession() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      _token = prefs.getString('auth_token');
+      _token = await _secureStorage.read(key: 'auth_token');
       
       final rawUserId = prefs.get('user_id');
       if (rawUserId is int) {
@@ -54,16 +59,18 @@ class AuthProvider with ChangeNotifier {
     try {
       final response = await _authRepository.login(email, password);
       
-      _token = response.token;
-      _userId = response.userId;
-      _role = response.role;
-
+      // Await all persistence operations before mutating memory state
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('auth_token', response.token);
+      await _secureStorage.write(key: 'auth_token', value: response.token);
       await prefs.setInt('user_id', response.userId);
       await prefs.setString('user_role', response.role);
       await prefs.setString('user_email', response.email);
       await prefs.setString('user_name', '${response.firstName} ${response.lastName}'.trim());
+
+      // Mutate variables only after successful persistence
+      _token = response.token;
+      _userId = response.userId;
+      _role = response.role;
 
       _isLoading = false;
       notifyListeners();
@@ -104,8 +111,11 @@ class AuthProvider with ChangeNotifier {
 
   Future<void> logout([CartProvider? cartProvider]) async {
     try {
+      // Delete token from secure storage first
+      await _secureStorage.delete(key: 'auth_token');
+
+      // Clear shared preferences
       final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('auth_token');
       await prefs.remove('user_id');
       await prefs.remove('user_role');
       await prefs.remove('user_email');
@@ -115,7 +125,10 @@ class AuthProvider with ChangeNotifier {
       await prefs.remove('profile_image_path');
       await prefs.remove('user_name_is_default');
       await prefs.remove('user_phone');
+      // For clean migration, remove any legacy plain text token key
+      await prefs.remove('auth_token');
 
+      // Reset state
       _token = null;
       _userId = null;
       _role = null;

@@ -28,6 +28,15 @@ class BookingModel {
   });
 
   factory BookingModel.fromJson(Map<String, dynamic> json) {
+    final rawCreatedAt = json['createdAt'] ?? json['CreatedAt'];
+    DateTime? parsedCreatedAt;
+    if (rawCreatedAt != null && rawCreatedAt is String) {
+      parsedCreatedAt = DateTime.tryParse(rawCreatedAt);
+    }
+    if (parsedCreatedAt == null) {
+      throw const FormatException('Invalid or missing createdAt in BookingModel');
+    }
+
     final rawStatus = json['status'] ?? json['Status'];
     int parsedStatus = 0;
     if (rawStatus is int) {
@@ -72,11 +81,7 @@ class BookingModel {
       offerID: json['offerID'] as int? ?? json['offerId'] as int? ?? json['OfferID'] as int?,
       status: parsedStatus,
       finalTotal: (json['finalTotal'] ?? json['FinalTotal'] as num?)?.toDouble(),
-      createdAt: json['createdAt'] != null
-          ? DateTime.parse(json['createdAt'] as String)
-          : json['CreatedAt'] != null
-              ? DateTime.parse(json['CreatedAt'] as String)
-              : DateTime.now(),
+      createdAt: parsedCreatedAt,
       expiresAt: json['expiresAt'] != null
           ? DateTime.tryParse(json['expiresAt'] as String)
           : json['ExpiresAt'] != null

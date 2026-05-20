@@ -1,17 +1,20 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../error/exceptions.dart';
 
 class BaseApiClient {
   final http.Client _client;
   final String baseUrl;
+  final FlutterSecureStorage _secureStorage;
 
   BaseApiClient({
     this.baseUrl = 'http://localhost:5000',
     http.Client? client,
-  }) : _client = client ?? http.Client();
+    FlutterSecureStorage? secureStorage,
+  })  : _client = client ?? http.Client(),
+        _secureStorage = secureStorage ?? const FlutterSecureStorage();
 
   Future<Map<String, String>> _getHeaders() async {
     final headers = {
@@ -19,21 +22,26 @@ class BaseApiClient {
       'Accept': 'application/json',
     };
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('auth_token');
+      final token = await _secureStorage.read(key: 'auth_token');
       if (token != null && token.isNotEmpty) {
         headers['Authorization'] = 'Bearer $token';
       }
     } catch (e) {
-      debugPrint('Error loading auth token from SharedPreferences: $e');
+      debugPrint('Error loading auth token from SecureStorage: $e');
     }
     return headers;
   }
 
   void _logRequest(String method, Uri url, Map<String, String> headers, {String? body}) {
     debugPrint('--> $method ${url.toString()}');
-    debugPrint('Headers: $headers');
-    if (body != null) {
+    final loggedHeaders = Map<String, String>.from(headers);
+    if (loggedHeaders.containsKey('Authorization')) {
+      loggedHeaders['Authorization'] = 'Bearer ***';
+    }
+    debugPrint('Headers: $loggedHeaders');
+    final path = url.path;
+    final isSensitive = path.endsWith('/login') || path.endsWith('/register');
+    if (body != null && !isSensitive) {
       debugPrint('Body: $body');
     }
   }

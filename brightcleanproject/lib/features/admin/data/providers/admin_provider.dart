@@ -44,13 +44,22 @@ class AdminProvider with ChangeNotifier {
 
     try {
       await adminRepository.approveUser(userId);
-      await fetchPendingUsers();
     } on ServerException catch (e) {
       _errorMessage = e.message ?? 'حدث خطأ أثناء الموافقة على المستخدم';
+      _isActionLoading = false;
+      notifyListeners();
       rethrow;
     } catch (e) {
       _errorMessage = e.toString();
+      _isActionLoading = false;
+      notifyListeners();
       rethrow;
+    }
+
+    try {
+      await fetchPendingUsers();
+    } catch (e) {
+      debugPrint('Error refreshing pending users after approval: $e');
     } finally {
       _isActionLoading = false;
       notifyListeners();

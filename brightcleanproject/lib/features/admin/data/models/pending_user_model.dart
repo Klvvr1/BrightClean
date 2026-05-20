@@ -22,11 +22,14 @@ class PendingUserModel {
   factory PendingUserModel.fromJson(Map<String, dynamic> json) {
     // Safe parsing of id supporting different possible casings from ASP.NET Core
     final rawId = json['id'] ?? json['userID'] ?? json['userId'];
-    int parsedId = 0;
+    int? parsedId;
     if (rawId is int) {
       parsedId = rawId;
     } else if (rawId is String) {
-      parsedId = int.tryParse(rawId) ?? 0;
+      parsedId = int.tryParse(rawId);
+    }
+    if (parsedId == null || parsedId <= 0) {
+      throw const FormatException('Invalid or missing userID in PendingUserModel');
     }
 
     // Safe role parsing (handling numeric enum representation or string)

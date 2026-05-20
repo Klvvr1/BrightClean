@@ -11,6 +11,7 @@ import '../../../../core/widgets/map_picker_screen.dart';
 import 'package:provider/provider.dart';
 import '../data/providers/auth_provider.dart';
 import '../data/models/register_agent_model.dart';
+import '../../customer/data/providers/cart_provider.dart';
 
 class AgentRegistrationScreen extends StatefulWidget {
   const AgentRegistrationScreen({super.key});
@@ -36,6 +37,9 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
   final TextEditingController _confirmPasswordController =
       TextEditingController();
   final TextEditingController _dobController = TextEditingController();
+  final TextEditingController _nationalIdController = TextEditingController();
+  final TextEditingController _commercialRegisterController = TextEditingController();
+  final TextEditingController _bankAccountController = TextEditingController();
 
   XFile? _commercialRegImage;
   XFile? _idImage;
@@ -70,6 +74,9 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     _dobController.dispose();
+    _nationalIdController.dispose();
+    _commercialRegisterController.dispose();
+    _bankAccountController.dispose();
     super.dispose();
   }
 
@@ -229,6 +236,27 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
     );
   }
 
+  String? _validateNationalId(String? value) {
+    if (value == null || value.trim().isEmpty) return 'رقم الهوية الوطنية مطلوب';
+    if (!RegExp(r'^[0-9]{10}$').hasMatch(value.trim())) {
+      return 'يجب أن يتكون رقم الهوية من 10 أرقام';
+    }
+    return null;
+  }
+
+  String? _validateCR(String? value) {
+    if (value == null || value.trim().isEmpty) return 'رقم السجل التجاري مطلوب';
+    return null;
+  }
+
+  String? _validateBankAccount(String? value) {
+    if (value == null || value.trim().isEmpty) return 'رقم الحساب البنكي مطلوب';
+    if (value.trim().length < 15) {
+      return 'أدخل رقم حساب بنكي/آيبان صحيح';
+    }
+    return null;
+  }
+
   String? _validateName(String? value) {
     if (value == null || value.trim().isEmpty) return 'هذا الحقل مطلوب';
     if (!RegExp(r'^[a-zA-Z\u0600-\u06FF\s]+$').hasMatch(value)) {
@@ -339,17 +367,21 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
         dateOfBirth: _dobController.text.trim(),
         fatherName: _fatherNameController.text.trim(),
         grandfatherName: _grandfatherNameController.text.trim(),
-        nationalIdNumber: '1111111111', // Mock value for PoC
+        nationalIdNumber: _nationalIdController.text.trim(),
         businessName: _businessNameController.text.trim(),
-        commercialRegister: 'CR-123456', // Mock value for PoC
-        bankAcc: 'SA0000000000000000000000', // Mock value for PoC
+        commercialRegister: _commercialRegisterController.text.trim(),
+        bankAcc: _bankAccountController.text.trim(),
         area: _selectedAddress ?? '',
         street: _selectedAddress ?? '',
         latitude: _selectedCoordinates?.latitude ?? 0.0,
         longitude: _selectedCoordinates?.longitude ?? 0.0,
       );
 
+      final cartProvider = Provider.of<CartProvider>(context, listen: false);
       await authProvider.registerAgent(agentModel);
+
+      // Crucially logout after registration succeeds so the pending applicant doesn't remain authenticated
+      await authProvider.logout(cartProvider);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -511,6 +543,26 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
                           : null,
                     ),
                   ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                CustomTextField(
+                  controller: _nationalIdController,
+                  hintText: 'رقم الهوية الوطنية للمدير',
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  validator: _validateNationalId,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                CustomTextField(
+                  controller: _commercialRegisterController,
+                  hintText: 'رقم السجل التجاري / الترخيص',
+                  validator: _validateCR,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                CustomTextField(
+                  controller: _bankAccountController,
+                  hintText: 'رقم الحساب البنكي / الآيبان (IBAN)',
+                  validator: _validateBankAccount,
                 ),
                 const SizedBox(height: AppSpacing.xl),
 

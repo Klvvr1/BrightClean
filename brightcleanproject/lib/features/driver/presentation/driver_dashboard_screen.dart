@@ -438,8 +438,19 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                   onPressed: provider.isActionLoading
                       ? null
                       : () async {
+                          final driverId = Provider.of<AuthProvider>(context, listen: false).userId;
+                          if (driverId == null) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('خطأ: لم يتم العثور على معرف السائق'),
+                                  backgroundColor: AppColors.error,
+                                ),
+                              );
+                            }
+                            return;
+                          }
                           try {
-                            final driverId = Provider.of<AuthProvider>(context, listen: false).userId ?? 3;
                             await provider.claimTask(task.taskID, driverId);
                             if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
@@ -732,11 +743,11 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
 
     return Consumer2<DriverProvider, AuthProvider>(
       builder: (context, provider, authProvider, child) {
-        final driverId = authProvider.userId ?? 3;
-        final currentTasks = provider.tasks
+        final driverId = authProvider.userId;
+        final currentTasks = driverId == null ? <dynamic>[] : provider.tasks
             .where((t) => t.deliveryStaffID == driverId && (t.status == 1 || t.status == 2))
             .toList();
-        final previousTasks = provider.tasks
+        final previousTasks = driverId == null ? <dynamic>[] : provider.tasks
             .where((t) => t.deliveryStaffID == driverId && t.status == 3)
             .toList();
 
@@ -1030,6 +1041,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () async {
+              Navigator.pop(context); // Close the dialog first
               await Provider.of<AuthProvider>(context, listen: false).logout(
                 Provider.of<CartProvider>(context, listen: false)
               );

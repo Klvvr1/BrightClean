@@ -370,6 +370,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   void _acceptStaff(Map<String, dynamic> request) async {
     final adminProvider = Provider.of<AdminProvider>(context, listen: false);
+    if (adminProvider.isActionLoading) return;
     final userId = request['id'] as int?;
     if (userId != null) {
       try {
@@ -1155,19 +1156,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             'name': isLaundry ? (u.businessName ?? '${u.firstName} ${u.lastName}') : '${u.firstName} ${u.lastName}',
             'managerName': '${u.firstName} ${u.lastName}',
             'type': isLaundry ? 'مغسلة' : 'سائق',
-            'phone': u.phoneNo ?? '0500000000',
+            'phone': u.phoneNo ?? 'غير متوفر',
             'email': u.email,
-            'location': 'صنعاء',
-            'commercialRegister': u.commercialRegister ?? 'CR-2026-99000',
-            'nationalId': '1092837400',
-            'licenseNumber': 'DL-9827300',
-            'vehicleType': 'سيارة صغيرة',
-            'vehiclePlate': 'صنعاء - 12345',
-            'commercialRegisterImage': 'https://images.unsplash.com/photo-1586281380349-632531db7ed4?q=80&w=600',
-            'nationalIdImage': 'https://images.unsplash.com/photo-1554774853-aae0a22c8aa4?q=80&w=600',
-            'storefrontImage': 'https://images.unsplash.com/photo-1545173168-9f1947e8017e?q=80&w=600',
-            'licenseImage': 'https://images.unsplash.com/photo-1554774853-aae0a22c8aa4?q=80&w=600',
-            'vehicleImage': 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?q=80&w=600',
+            'location': 'غير متوفر',
+            'commercialRegister': u.commercialRegister ?? 'غير متوفر',
+            'nationalId': 'غير متوفر',
+            'licenseNumber': 'غير متوفر',
+            'vehicleType': 'غير متوفر',
+            'vehiclePlate': 'غير متوفر',
+            'commercialRegisterImage': null,
+            'nationalIdImage': null,
+            'storefrontImage': null,
+            'licenseImage': null,
+            'vehicleImage': null,
           };
         }).toList();
 
