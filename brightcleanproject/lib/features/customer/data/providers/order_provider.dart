@@ -327,4 +327,28 @@ class OrderProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
+
+  Future<int> createBooking(int laundryAgentID, List<Map<String, int>> items) async {
+    _isCheckoutLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final bookingId = await bookingRepository.createBooking(laundryAgentID, items);
+      _currentBookingId = bookingId;
+      _isCheckoutLoading = false;
+      notifyListeners();
+      return bookingId;
+    } on ServerException catch (e) {
+      _errorMessage = e.message ?? 'حدث خطأ أثناء إنشاء الحجز';
+      _isCheckoutLoading = false;
+      notifyListeners();
+      rethrow;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _isCheckoutLoading = false;
+      notifyListeners();
+      rethrow;
+    }
+  }
 }

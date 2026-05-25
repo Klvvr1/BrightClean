@@ -22,6 +22,7 @@ class AdminDashboardScreen extends StatefulWidget {
       'startDate': '2026/05/01',
       'endDate': '2026/06/30',
       'minAmount': '150',
+      'type': 'Percentage',
     },
     {
       'title': 'أول غسلة مجاناً',
@@ -32,6 +33,7 @@ class AdminDashboardScreen extends StatefulWidget {
       'startDate': '2026/01/01',
       'endDate': '2026/12/31',
       'minAmount': null,
+      'type': 'Percentage',
     },
   ];
 
@@ -2233,6 +2235,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     final discountController = TextEditingController();
     final minAmountController = TextEditingController();
     String selectedTarget = 'الجميع';
+    String selectedOfferType = 'Percentage'; // 'Percentage' or 'FixedAmount'
     DateTime? startDate;
     DateTime? endDate;
     bool hasCondition = false;
@@ -2245,264 +2248,345 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Text(
-            'إضافة عرض أو كوبون جديد',
-            style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                CustomTextField(
-                  hintText: 'اسم العرض (مثال: خصم الصيف)',
-                  controller: titleController,
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                CustomTextField(
-                  hintText: 'كود الخصم (مثال: SUMMER25)',
-                  controller: codeController,
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                CustomTextField(
-                  hintText: 'قيمة الخصم (مثال: 20% أو 50 ريال)',
-                  controller: discountController,
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                const Text(
-                  'الفئة المستهدفة:',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textMain),
-                ),
-                const SizedBox(height: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey.shade300),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: selectedTarget,
-                      isExpanded: true,
-                      items: [
-                        'الجميع',
-                        ...laundryNames,
-                      ].map((String value) {
-                        return DropdownMenuItem<String>(
-                          value: value,
-                          child: Text(value),
-                        );
-                      }).toList(),
-                      onChanged: (val) {
-                        if (val != null) {
-                          setDialogState(() => selectedTarget = val);
-                        }
-                      },
-                    ),
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                const Text(
-                  'مدة العرض:',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textMain),
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Row(
-                  children: [
-                    Expanded(
-                      child: InkWell(
-                        onTap: () async {
-                          final date = await showDatePicker(
-                            context: context,
-                            initialDate: startDate ?? DateTime.now(),
-                            firstDate: DateTime(2020),
-                            lastDate: DateTime(2030),
-                          );
-                          if (date != null) {
-                            setDialogState(() => startDate = date);
-                          }
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.grey.shade300),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.calendar_today, size: 14, color: AppColors.primary),
-                              const SizedBox(width: 4),
-                              Expanded(
-                                child: Text(
-                                  startDate == null 
-                                      ? 'تاريخ البدء' 
-                                      : '${startDate!.year}/${startDate!.month.toString().padLeft(2, '0')}/${startDate!.day.toString().padLeft(2, '0')}',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: startDate == null ? Colors.grey.shade600 : AppColors.textMain,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.xs),
-                    Expanded(
-                      child: InkWell(
-                        onTap: () async {
-                          final date = await showDatePicker(
-                            context: context,
-                            initialDate: endDate ?? DateTime.now().add(const Duration(days: 7)),
-                            firstDate: DateTime(2020),
-                            lastDate: DateTime(2030),
-                          );
-                          if (date != null) {
-                            setDialogState(() => endDate = date);
-                          }
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.grey.shade300),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.calendar_today, size: 14, color: AppColors.primary),
-                              const SizedBox(width: 4),
-                              Expanded(
-                                child: Text(
-                                  endDate == null 
-                                      ? 'تاريخ الانتهاء' 
-                                      : '${endDate!.year}/${endDate!.month.toString().padLeft(2, '0')}/${endDate!.day.toString().padLeft(2, '0')}',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: endDate == null ? Colors.grey.shade600 : AppColors.textMain,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                SwitchListTile(
-                  title: const Text(
-                    'تفعيل شرط على العرض',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textMain),
-                  ),
-                  subtitle: const Text(
-                    'مثال: للطلبات التي تتجاوز مبلغاً معيناً',
-                    style: TextStyle(fontSize: 10, color: AppColors.textLight),
-                  ),
-                  value: hasCondition,
-                  activeThumbColor: AppColors.primary,
-                  activeTrackColor: AppColors.primary.withValues(alpha: 0.5),
-                  contentPadding: EdgeInsets.zero,
-                  onChanged: (val) {
-                    setDialogState(() => hasCondition = val);
-                  },
-                ),
-                if (hasCondition) ...[
-                  const SizedBox(height: AppSpacing.xs),
+        builder: (context, setDialogState) {
+          final theme = Theme.of(context);
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: const Text(
+              'إضافة عرض أو كوبون جديد',
+              style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   CustomTextField(
-                    hintText: 'الحد الأدنى لقيمة الطلب بالريال (مثال: 5000)',
-                    controller: minAmountController,
+                    hintText: 'اسم العرض (مثال: خصم الصيف)',
+                    controller: titleController,
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  CustomTextField(
+                    hintText: 'كود الخصم (مثال: SUMMER25)',
+                    controller: codeController,
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  CustomTextField(
+                    hintText: 'قيمة الخصم (مثال: 20% أو 500 ريال)',
+                    controller: discountController,
                     keyboardType: TextInputType.number,
                   ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    'نوع الخصم:',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
+                  ),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: selectedOfferType,
+                        isExpanded: true,
+                        dropdownColor: theme.cardColor,
+                        items: const [
+                          DropdownMenuItem<String>(
+                            value: 'Percentage',
+                            child: Text('نسبة مئوية (%)'),
+                          ),
+                          DropdownMenuItem<String>(
+                            value: 'FixedAmount',
+                            child: Text('مبلغ ثابت (ريال)'),
+                          ),
+                        ],
+                        onChanged: (val) {
+                          if (val != null) {
+                            setDialogState(() => selectedOfferType = val);
+                          }
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    'الفئة المستهدفة:',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
+                  ),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: selectedTarget,
+                        isExpanded: true,
+                        dropdownColor: theme.cardColor,
+                        items: [
+                          'الجميع',
+                          ...laundryNames,
+                        ].map((String value) {
+                          return DropdownMenuItem<String>(
+                            value: value,
+                            child: Text(value),
+                          );
+                        }).toList(),
+                        onChanged: (val) {
+                          if (val != null) {
+                            setDialogState(() => selectedTarget = val);
+                          }
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  Text(
+                    'مدة العرض:',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: InkWell(
+                          onTap: () async {
+                            final date = await showDatePicker(
+                              context: context,
+                              initialDate: startDate ?? DateTime.now(),
+                              firstDate: DateTime(2020),
+                              lastDate: DateTime(2030),
+                            );
+                            if (date != null) {
+                              setDialogState(() => startDate = date);
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.grey.shade300),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.calendar_today, size: 14, color: AppColors.primary),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    startDate == null 
+                                        ? 'تاريخ البدء' 
+                                        : '${startDate!.year}/${startDate!.month.toString().padLeft(2, '0')}/${startDate!.day.toString().padLeft(2, '0')}',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: startDate == null ? Colors.grey.shade600 : theme.colorScheme.onSurface,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.xs),
+                      Expanded(
+                        child: InkWell(
+                          onTap: () async {
+                            final date = await showDatePicker(
+                              context: context,
+                              initialDate: endDate ?? DateTime.now().add(const Duration(days: 7)),
+                              firstDate: DateTime(2020),
+                              lastDate: DateTime(2030),
+                            );
+                            if (date != null) {
+                              setDialogState(() => endDate = date);
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.grey.shade300),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.calendar_today, size: 14, color: AppColors.primary),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    endDate == null 
+                                        ? 'تاريخ الانتهاء' 
+                                        : '${endDate!.year}/${endDate!.month.toString().padLeft(2, '0')}/${endDate!.day.toString().padLeft(2, '0')}',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: endDate == null ? Colors.grey.shade600 : theme.colorScheme.onSurface,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  SwitchListTile(
+                    title: Text(
+                      'تفعيل شرط على العرض',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
+                    ),
+                    subtitle: const Text(
+                      'مثال: للطلبات التي تتجاوز مبلغاً معيناً',
+                      style: TextStyle(fontSize: 10, color: AppColors.textLight),
+                    ),
+                    value: hasCondition,
+                    activeThumbColor: AppColors.primary,
+                    activeTrackColor: AppColors.primary.withValues(alpha: 0.5),
+                    contentPadding: EdgeInsets.zero,
+                    onChanged: (val) {
+                      setDialogState(() => hasCondition = val);
+                    },
+                  ),
+                  if (hasCondition) ...[
+                    const SizedBox(height: AppSpacing.xs),
+                    CustomTextField(
+                      hintText: 'الحد الأدنى لقيمة الطلب بالريال (مثال: 5000)',
+                      controller: minAmountController,
+                      keyboardType: TextInputType.number,
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                titleController.dispose();
-                codeController.dispose();
-                discountController.dispose();
-                minAmountController.dispose();
-                Navigator.pop(context);
-              },
-              child: const Text('إلغاء', style: TextStyle(color: AppColors.textLight)),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (titleController.text.isEmpty || codeController.text.isEmpty) {
-                  return;
-                }
+            actions: [
+              TextButton(
+                onPressed: () {
+                  titleController.dispose();
+                  codeController.dispose();
+                  discountController.dispose();
+                  minAmountController.dispose();
+                  Navigator.pop(context);
+                },
+                child: const Text('إلغاء', style: TextStyle(color: AppColors.textLight)),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  if (titleController.text.isEmpty || codeController.text.isEmpty) {
+                    ScaffoldMessenger.of(context).clearSnackBars();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('الرجاء تعبئة اسم العرض وكود الخصم')),
+                    );
+                    return;
+                  }
 
-                // Validate discount field
-                if (discountController.text.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('يجب إدخال قيمة الخصم')),
-                  );
-                  return;
-                }
+                  // Validate discount field
+                  if (discountController.text.isEmpty) {
+                    ScaffoldMessenger.of(context).clearSnackBars();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('يجب إدخال قيمة الخصم')),
+                    );
+                    return;
+                  }
 
-                // Validate discount is a valid number
-                final discountValue = double.tryParse(discountController.text.trim());
-                if (discountValue == null) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('قيمة الخصم يجب أن تكون رقم صحيح')),
-                  );
-                  return;
-                }
+                  // Validate discount is a valid number
+                  final discountValue = double.tryParse(discountController.text.trim());
+                  if (discountValue == null) {
+                    ScaffoldMessenger.of(context).clearSnackBars();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('قيمة الخصم يجب أن تكون رقماً صالحاً')),
+                    );
+                    return;
+                  }
 
-                // Check for duplicate codes
-                final upperCode = codeController.text.toUpperCase();
-                final isDuplicate = _coupons.any((c) => c['code'] == upperCode);
-                if (isDuplicate) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('كود الكوبون موجود بالفعل')),
-                  );
-                  return;
-                }
+                  // If percentage, validate it is between 1 and 100
+                  if (selectedOfferType == 'Percentage' && (discountValue <= 0 || discountValue > 100)) {
+                    ScaffoldMessenger.of(context).clearSnackBars();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('النسبة المئوية للخصم يجب أن تكون بين 1 و 100')),
+                    );
+                    return;
+                  }
 
-                setState(() {
-                  _coupons.add({
-                    'title': titleController.text,
-                    'code': upperCode,
-                    'discount': discountController.text,
-                    'target': selectedTarget,
-                    'status': 'نشط',
-                    'startDate': startDate != null
-                        ? '${startDate!.year}/${startDate!.month.toString().padLeft(2, '0')}/${startDate!.day.toString().padLeft(2, '0')}'
-                        : 'غير محدد',
-                    'endDate': endDate != null
-                        ? '${endDate!.year}/${endDate!.month.toString().padLeft(2, '0')}/${endDate!.day.toString().padLeft(2, '0')}'
-                        : 'غير محدد',
-                    'minAmount': hasCondition ? minAmountController.text : null,
+                  // Enforce date checks
+                  if (startDate == null || endDate == null) {
+                    ScaffoldMessenger.of(context).clearSnackBars();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('يجب تحديد تاريخ البدء وتاريخ الانتهاء')),
+                    );
+                    return;
+                  }
+
+                  if (!endDate!.isAfter(startDate!)) {
+                    ScaffoldMessenger.of(context).clearSnackBars();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('تاريخ الانتهاء يجب أن يكون بعد تاريخ البدء')),
+                    );
+                    return;
+                  }
+
+                  // Check for duplicate codes
+                  final upperCode = codeController.text.toUpperCase();
+                  final isDuplicate = _coupons.any((c) => c['code'] == upperCode);
+                  if (isDuplicate) {
+                    ScaffoldMessenger.of(context).clearSnackBars();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('كود الكوبون موجود بالفعل')),
+                    );
+                    return;
+                  }
+
+                  // Format discount representation
+                  String finalDiscount = discountController.text.trim();
+                  if (selectedOfferType == 'Percentage') {
+                    if (!finalDiscount.endsWith('%')) {
+                      finalDiscount = '${discountValue.toStringAsFixed(0)}%';
+                    }
+                  } else {
+                    finalDiscount = '${discountValue.toStringAsFixed(0)} ريال';
+                  }
+
+                  setState(() {
+                    _coupons.add({
+                      'title': titleController.text,
+                      'code': upperCode,
+                      'discount': finalDiscount,
+                      'target': selectedTarget,
+                      'status': 'نشط',
+                      'startDate': '${startDate!.year}/${startDate!.month.toString().padLeft(2, '0')}/${startDate!.day.toString().padLeft(2, '0')}',
+                      'endDate': '${endDate!.year}/${endDate!.month.toString().padLeft(2, '0')}/${endDate!.day.toString().padLeft(2, '0')}',
+                      'minAmount': hasCondition ? minAmountController.text : null,
+                      'type': selectedOfferType,
+                    });
                   });
-                });
-                _logActivity(
-                  'تم إضافة عرض/كوبون جديد ($upperCode) بخصم ${discountController.text}',
-                  'add_coupon',
-                  Icons.local_offer,
-                  AppColors.primary,
-                );
-                titleController.dispose();
-                codeController.dispose();
-                discountController.dispose();
-                minAmountController.dispose();
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('تم إضافة العرض بنجاح')),
-                );
-              },
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-              child: const Text('إضافة العرض', style: TextStyle(color: Colors.white)),
-            ),
-          ],
-        ),
+                  _logActivity(
+                    'تم إضافة عرض/كوبون جديد ($upperCode) بخصم $finalDiscount',
+                    'add_coupon',
+                    Icons.local_offer,
+                    AppColors.primary,
+                  );
+                  titleController.dispose();
+                  codeController.dispose();
+                  discountController.dispose();
+                  minAmountController.dispose();
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).clearSnackBars();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('تم إضافة العرض بنجاح')),
+                  );
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+                child: const Text('إضافة العرض', style: TextStyle(color: Colors.white)),
+              ),
+            ],
+          );
+        }
       ),
     );
   }

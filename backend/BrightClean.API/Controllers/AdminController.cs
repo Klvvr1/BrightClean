@@ -65,5 +65,26 @@ namespace BrightClean.API.Controllers
 
             return Ok(new { message = "تم تفعيل الحساب بنجاح.", userId = user.UserID, isApproved = user.IsApproved });
         }
+
+        // GET: /api/admin/staff
+        [HttpGet("staff")]
+        public async Task<IActionResult> GetApprovedStaff()
+        {
+            var staff = await _context.Users
+                .Where(u => u.IsApproved && (u.Role == UserRole.LaundryAgent || u.Role == UserRole.DeliveryStaff))
+                .Select(u => new
+                {
+                    u.UserID,
+                    u.FirstName,
+                    u.LastName,
+                    u.Email,
+                    u.PhoneNo,
+                    u.Role,
+                    u.CreatedAt
+                })
+                .ToListAsync();
+
+            return Ok(staff);
+        }
     }
 }

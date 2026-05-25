@@ -13,6 +13,7 @@ namespace BrightClean.API.DTOs
 
         [Required]
         [EmailAddress]
+        [RegularExpression(@"^[a-zA-Z0-9._%+-]+@(gmail\.com|hotmail\.com|yahoo\.com|outlook\.com)$", ErrorMessage = "Only gmail.com, hotmail.com, yahoo.com, and outlook.com email domains are allowed.")]
         public string Email { get; set; } = string.Empty;
 
         [Required]
@@ -20,6 +21,7 @@ namespace BrightClean.API.DTOs
         public string Password { get; set; } = string.Empty;
 
         [Required]
+        [RegularExpression(@"^[0-9]{9}$", ErrorMessage = "Phone number must be exactly 9 digits.")]
         public string PhoneNo { get; set; } = string.Empty;
 
         [Required]

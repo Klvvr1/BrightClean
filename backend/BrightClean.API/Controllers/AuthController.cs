@@ -3,6 +3,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
+using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -61,7 +62,7 @@ namespace BrightClean.API.Controllers
 
         // POST: /api/auth/register/agent
         [HttpPost("register/agent")]
-        public async Task<IActionResult> RegisterAgent([FromBody] RegisterAgentDto dto)
+        public async Task<IActionResult> RegisterAgent([FromForm] RegisterAgentDto dto, IFormFile commercialRegisterImage, IFormFile nationalIdImage)
         {
             if (await _context.Users.AnyAsync(u => u.Email == dto.Email))
                 return BadRequest(new { message = "البريد الإلكتروني مسجل بالفعل." });
@@ -74,6 +75,37 @@ namespace BrightClean.API.Controllers
 
             if (await _context.LaundryAgents.AnyAsync(la => la.CommercialRegister == dto.CommercialRegister))
                 return BadRequest(new { message = "السجل التجاري مسجل بالفعل." });
+
+            if (commercialRegisterImage == null || commercialRegisterImage.Length == 0)
+                return BadRequest(new { message = "صورة السجل التجاري مطلوبة." });
+
+            if (nationalIdImage == null || nationalIdImage.Length == 0)
+                return BadRequest(new { message = "صورة الهوية الوطنية مطلوبة." });
+
+            // Ensure directory exists
+            var uploadDir = System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+            if (!System.IO.Directory.Exists(uploadDir))
+            {
+                System.IO.Directory.CreateDirectory(uploadDir);
+            }
+
+            // Save Commercial Register Image
+            var crFileName = $"{Guid.NewGuid()}_{System.IO.Path.GetFileName(commercialRegisterImage.FileName)}";
+            var crFilePath = System.IO.Path.Combine(uploadDir, crFileName);
+            using (var stream = new System.IO.FileStream(crFilePath, System.IO.FileMode.Create))
+            {
+                await commercialRegisterImage.CopyToAsync(stream);
+            }
+            var crRelativeUrl = $"/uploads/{crFileName}";
+
+            // Save National ID Image
+            var idFileName = $"{Guid.NewGuid()}_{System.IO.Path.GetFileName(nationalIdImage.FileName)}";
+            var idFilePath = System.IO.Path.Combine(uploadDir, idFileName);
+            using (var stream = new System.IO.FileStream(idFilePath, System.IO.FileMode.Create))
+            {
+                await nationalIdImage.CopyToAsync(stream);
+            }
+            var idRelativeUrl = $"/uploads/{idFileName}";
 
             // Create agent address first
             var address = new Address
@@ -105,6 +137,20 @@ namespace BrightClean.API.Controllers
                 AccountStatus = AccountStatus.PendingVerification,
                 IsApproved = false // Requires Admin approval
             };
+
+            agent.Documents.Add(new UserDocument
+            {
+                Type = DocumentType.CommercialRegistration,
+                FileURL = crRelativeUrl,
+                UploadedAt = DateTime.UtcNow
+            });
+
+            agent.Documents.Add(new UserDocument
+            {
+                Type = DocumentType.NationalID,
+                FileURL = idRelativeUrl,
+                UploadedAt = DateTime.UtcNow
+            });
 
             _context.LaundryAgents.Add(agent);
             await _context.SaveChangesAsync();
@@ -183,7 +229,8 @@ namespace BrightClean.API.Controllers
                 email = user.Email,
                 role = user.Role.ToString(),
                 firstName = user.FirstName,
-                lastName = user.LastName
+                lastName = user.LastName,
+                phoneNo = user.PhoneNo
             });
         }
 
@@ -219,5 +266,85 @@ namespace BrightClean.API.Controllers
 
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
+
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, (string Token, DateTime Expires)> _resetTokens = new();
+
+        // POST: /api/auth/forgot-password
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto dto)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
+            if (user == null)
+            {
+                return BadRequest(new { message = "البريد الإلكتروني غير مسجل لدينا." });
+            }
+
+            // Generate a 6-digit OTP code
+            var random = new Random();
+            var otp = random.Next(100000, 999999).ToString();
+            
+            // Store it with a 15-minute expiry
+            _resetTokens[dto.Email] = (otp, DateTime.UtcNow.AddMinutes(15));
+
+            // Stub email sending: log to console
+            Console.WriteLine($"Password reset OTP for {dto.Email} is {otp}");
+
+            return Ok(new { 
+                message = "تم إرسال رمز إعادة تعيين كلمة المرور إلى بريدك الإلكتروني.",
+                otp = otp // Return OTP in response so frontend can easily capture and pre-fill or use in debug
+            });
+        }
+
+        // POST: /api/auth/reset-password
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto dto)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
+            if (user == null)
+            {
+                return BadRequest(new { message = "البريد الإلكتروني غير صحيح." });
+            }
+
+            if (!_resetTokens.TryGetValue(dto.Email, out var tokenData) || tokenData.Token != dto.Token)
+            {
+                return BadRequest(new { message = "رمز التحقق غير صحيح." });
+            }
+
+            if (DateTime.UtcNow > tokenData.Expires)
+            {
+                _resetTokens.TryRemove(dto.Email, out _);
+                return BadRequest(new { message = "انتهت صلاحية رمز التحقق." });
+            }
+
+            // Valid! Reset password
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
+            await _context.SaveChangesAsync();
+
+            // Clear token
+            _resetTokens.TryRemove(dto.Email, out _);
+
+            return Ok(new { message = "تم إعادة تعيين كلمة المرور بنجاح." });
+        }
+    }
+
+    public class ForgotPasswordDto
+    {
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; } = string.Empty;
+    }
+
+    public class ResetPasswordDto
+    {
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; } = string.Empty;
+
+        [Required]
+        public string Token { get; set; } = string.Empty;
+
+        [Required]
+        [MinLength(6, ErrorMessage = "Password must be at least 6 characters.")]
+        public string NewPassword { get; set; } = string.Empty;
     }
 }

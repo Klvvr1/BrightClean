@@ -155,20 +155,63 @@ namespace BrightClean.Infrastructure
                 AdminID = admin.UserID
             };
 
-            context.ServiceCatalogItems.Add(service);
+            var maawazService = new ServiceCatalogItem
+            {
+                ServiceName = "المعوز",
+                Category = ServiceCategory.Laundry,
+                Type = ServiceType.WashAndIron,
+                Price = 1500.00m,
+                PricingModel = PricingModel.PerItem,
+                DeliveryModel = DeliveryModel.TwoStage,
+                IsAvailable = true,
+                AdminID = admin.UserID
+            };
+
+            var imamaService = new ServiceCatalogItem
+            {
+                ServiceName = "العمامة",
+                Category = ServiceCategory.Laundry,
+                Type = ServiceType.WashAndIron,
+                Price = 1000.00m,
+                PricingModel = PricingModel.PerItem,
+                DeliveryModel = DeliveryModel.TwoStage,
+                IsAvailable = true,
+                AdminID = admin.UserID
+            };
+
+            context.ServiceCatalogItems.AddRange(service, maawazService, imamaService);
             context.SaveChanges();
 
             // 4. Seed AgentService Subscription
-            var agentService = new AgentService
+            var agentServices = new[]
             {
-                LaundryAgentID = agent.UserID,
-                ServiceID = service.ServiceID,
-                IsActive = true,
-                ActivatedAt = DateTime.UtcNow,
-                Notes = "Subscribed via DB Seeding"
+                new AgentService
+                {
+                    LaundryAgentID = agent.UserID,
+                    ServiceID = service.ServiceID,
+                    IsActive = true,
+                    ActivatedAt = DateTime.UtcNow,
+                    Notes = "Subscribed via DB Seeding"
+                },
+                new AgentService
+                {
+                    LaundryAgentID = agent.UserID,
+                    ServiceID = maawazService.ServiceID,
+                    IsActive = true,
+                    ActivatedAt = DateTime.UtcNow,
+                    Notes = "Subscribed via DB Seeding"
+                },
+                new AgentService
+                {
+                    LaundryAgentID = agent.UserID,
+                    ServiceID = imamaService.ServiceID,
+                    IsActive = true,
+                    ActivatedAt = DateTime.UtcNow,
+                    Notes = "Subscribed via DB Seeding"
+                }
             };
 
-            context.AgentServices.Add(agentService);
+            context.AgentServices.AddRange(agentServices);
             context.SaveChanges();
 
             // 5. Seed Draft Booking (BookingID = 1)
@@ -198,6 +241,42 @@ namespace BrightClean.Infrastructure
             };
 
             context.BookingItems.Add(bookingItem);
+            context.SaveChanges();
+
+            // 7. Seed Notifications
+            var notifications = new[]
+            {
+                new Notification
+                {
+                    UserID = client.UserID,
+                    Title = "تم استلام طلبك",
+                    Message = "لقد بدأنا العمل على طلب غسيل السجاد الخاص بك.",
+                    Date = DateTime.UtcNow.AddMinutes(-10)
+                },
+                new Notification
+                {
+                    UserID = client.UserID,
+                    Title = "السائق في الطريق",
+                    Message = "السائق أحمد في طريقه لاستلام الملابس من موقعك.",
+                    Date = DateTime.UtcNow.AddHours(-1)
+                },
+                new Notification
+                {
+                    UserID = agent.UserID,
+                    Title = "طلب جديد متاح",
+                    Message = "هناك طلب غسيل جديد ينتظر قبولك.",
+                    Date = DateTime.UtcNow.AddMinutes(-5)
+                },
+                new Notification
+                {
+                    UserID = agent.UserID,
+                    Title = "تحديث النظام",
+                    Message = "تم تحديث تطبيق المغسلة لإصدار أسرع وأكثر استقراراً.",
+                    Date = DateTime.UtcNow.AddDays(-1)
+                }
+            };
+
+            context.Notifications.AddRange(notifications);
             context.SaveChanges();
 
                 transaction.Commit();

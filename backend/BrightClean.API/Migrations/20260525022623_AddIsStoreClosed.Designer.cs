@@ -4,6 +4,7 @@ using BrightClean.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BrightClean.API.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260525022623_AddIsStoreClosed")]
+    partial class AddIsStoreClosed
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -291,37 +294,6 @@ namespace BrightClean.API.Migrations
                         .IsUnique();
 
                     b.ToTable("DeliveryTasks");
-                });
-
-            modelBuilder.Entity("BrightClean.Domain.Entities.Notification", b =>
-                {
-                    b.Property<int>("NotificationID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("NotificationID"));
-
-                    b.Property<DateTime>("Date")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Message")
-                        .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<int>("UserID")
-                        .HasColumnType("int");
-
-                    b.HasKey("NotificationID");
-
-                    b.HasIndex("UserID");
-
-                    b.ToTable("Notifications");
                 });
 
             modelBuilder.Entity("BrightClean.Domain.Entities.Offer", b =>
@@ -828,17 +800,6 @@ namespace BrightClean.API.Migrations
                     b.Navigation("DropoffAddress");
 
                     b.Navigation("PickupAddress");
-                });
-
-            modelBuilder.Entity("BrightClean.Domain.Entities.Notification", b =>
-                {
-                    b.HasOne("BrightClean.Domain.Entities.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("BrightClean.Domain.Entities.Offer", b =>

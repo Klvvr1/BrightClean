@@ -9,6 +9,7 @@ import '../../features/auth/presentation/role_selection_screen.dart';
 import '../../features/auth/presentation/customer_registration_screen.dart';
 import '../../features/auth/presentation/agent_registration_screen.dart';
 import '../../features/auth/presentation/driver_registration_screen.dart';
+import '../../features/auth/presentation/forgot_password_screen.dart';
 import '../../features/customer/presentation/customer_main_layout.dart';
 import '../../features/customer/presentation/service_details_screen.dart';
 import '../../features/customer/domain/models/cart_item.dart';
@@ -54,7 +55,8 @@ class AppRouter {
         '/role_selection',
         '/register/customer',
         '/register/agent',
-        '/register/driver'
+        '/register/driver',
+        '/forgot_password',
       ];
 
       // If not logged in and trying to access a private route, redirect to /login
@@ -63,7 +65,7 @@ class AppRouter {
       }
 
       // If logged in and trying to go to login or registration pages, redirect to their home
-      if (isLoggedIn && (location == '/login' || location == '/role_selection' || location.startsWith('/register'))) {
+      if (isLoggedIn && (location == '/login' || location == '/role_selection' || location.startsWith('/register') || location == '/forgot_password')) {
         return _getHomeRouteForRole(authProvider.role);
       }
 
@@ -126,6 +128,10 @@ class AppRouter {
       GoRoute(
         path: '/register/driver',
         builder: (context, state) => const DriverRegistrationScreen(),
+      ),
+      GoRoute(
+        path: '/forgot_password',
+        builder: (context, state) => const ForgotPasswordScreen(),
       ),
       GoRoute(
         path: '/customer_home',

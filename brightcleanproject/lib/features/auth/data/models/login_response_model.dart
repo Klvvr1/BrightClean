@@ -5,6 +5,7 @@ class LoginResponseModel {
   final String email;
   final String firstName;
   final String lastName;
+  final String phoneNo;
 
   LoginResponseModel({
     required this.token,
@@ -13,6 +14,7 @@ class LoginResponseModel {
     required this.email,
     required this.firstName,
     required this.lastName,
+    this.phoneNo = '',
   });
 
   factory LoginResponseModel.fromJson(Map<String, dynamic> json) {
@@ -21,7 +23,7 @@ class LoginResponseModel {
       throw const FormatException('Invalid or missing token in LoginResponseModel');
     }
 
-    final rawUserId = json['userId'];
+    final rawUserId = json['userId'] ?? json['userID'];
     int? parsedUserId;
     if (rawUserId is int) {
       parsedUserId = rawUserId;
@@ -40,6 +42,7 @@ class LoginResponseModel {
       email: json['email'] as String? ?? '',
       firstName: json['firstName'] as String? ?? '',
       lastName: json['lastName'] as String? ?? '',
+      phoneNo: json['phoneNo'] as String? ?? '',
     );
   }
 
@@ -51,6 +54,7 @@ class LoginResponseModel {
       'email': email,
       'firstName': firstName,
       'lastName': lastName,
+      'phoneNo': phoneNo,
     };
   }
 }

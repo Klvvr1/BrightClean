@@ -5,6 +5,7 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_styles.dart';
 import '../data/providers/cart_provider.dart';
+import '../data/providers/order_provider.dart';
 
 class CartScreen extends StatelessWidget {
   const CartScreen({super.key});
@@ -116,7 +117,48 @@ class CartScreen extends StatelessWidget {
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: () => context.push('/checkout'),
+                          onPressed: () async {
+                            final scaffoldMessenger = ScaffoldMessenger.of(context);
+                            final orderProvider = Provider.of<OrderProvider>(context, listen: false);
+                            final router = GoRouter.of(context);
+
+                            // Show progress dialog
+                            showDialog(
+                              context: context,
+                              barrierDismissible: false,
+                              builder: (ctx) => const Center(
+                                child: CircularProgressIndicator(),
+                              ),
+                            );
+
+                            try {
+                              final itemsDto = cart.items.map((item) => {
+                                'serviceID': 1, // Default ID
+                                'quantity': item.quantity,
+                              }).toList();
+
+                              // Call createBooking with laundryAgentID = 2 (default seeded agent)
+                              await orderProvider.createBooking(2, itemsDto);
+
+                              // Pop progress dialog
+                              if (context.mounted) {
+                                Navigator.of(context).pop();
+                                router.push('/checkout');
+                              }
+                            } catch (e) {
+                              // Pop progress dialog
+                              if (context.mounted) {
+                                Navigator.of(context).pop();
+                              }
+                              scaffoldMessenger.clearSnackBars();
+                              scaffoldMessenger.showSnackBar(
+                                SnackBar(
+                                  content: Text('حدث خطأ أثناء الانتقال للدفع: $e'),
+                                  backgroundColor: theme.colorScheme.error,
+                                ),
+                              );
+                            }
+                          },
                           style: ElevatedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
                           ),
