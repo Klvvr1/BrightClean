@@ -24,7 +24,7 @@ namespace BrightClean.API.Controllers
 
         // GET: /api/notifications
         [HttpGet]
-        public async Task<IActionResult> GetNotifications()
+        public async Task<IActionResult> GetNotifications([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 50)
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
             if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out var userId))
@@ -32,9 +32,16 @@ namespace BrightClean.API.Controllers
                 return Unauthorized();
             }
 
+            // Enforce sane defaults and maximum
+            if (pageNumber < 1) pageNumber = 1;
+            if (pageSize < 1) pageSize = 50;
+            if (pageSize > 100) pageSize = 100;
+
             var notifications = await _context.Notifications
                 .Where(n => n.UserID == userId)
                 .OrderByDescending(n => n.Date)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
                 .Select(n => new
                 {
                     notificationID = n.NotificationID,

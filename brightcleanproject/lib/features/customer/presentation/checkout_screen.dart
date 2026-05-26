@@ -547,7 +547,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         const SizedBox(width: AppSpacing.xs),
                         Expanded(
                           child: Text(
-                            'تم تطبيق الكوبون بنجاح: ${_appliedCoupon!['title']} (${_appliedCoupon!['discount']})',
+                            'تم تطبيق الكوبون بنجاح: ${_appliedCoupon!['title']} (${_appliedCoupon!['displayDiscount'] ?? _appliedCoupon!['discount']})',
                             style: theme.textTheme.labelSmall?.copyWith(
                               color: AppColors.success,
                               fontWeight: FontWeight.bold,

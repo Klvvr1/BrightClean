@@ -107,55 +107,78 @@ namespace BrightClean.API.Controllers
             }
             var idRelativeUrl = $"/uploads/{idFileName}";
 
-            // Create agent address first
-            var address = new Address
+            // Wrap DB inserts in a transaction
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
             {
-                Area = dto.Area,
-                Street = dto.Street,
-                Latitude = dto.Latitude,
-                Longitude = dto.Longitude
-            };
+                // Create agent address first
+                var address = new Address
+                {
+                    Area = dto.Area,
+                    Street = dto.Street,
+                    Latitude = dto.Latitude,
+                    Longitude = dto.Longitude
+                };
 
-            _context.Addresses.Add(address);
-            await _context.SaveChangesAsync();
+                _context.Addresses.Add(address);
+                await _context.SaveChangesAsync();
 
-            var agent = new LaundryAgent
+                var agent = new LaundryAgent
+                {
+                    FirstName = dto.FirstName,
+                    LastName = dto.LastName,
+                    Email = dto.Email,
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
+                    PhoneNo = dto.PhoneNo,
+                    DateOfBirth = dto.DateOfBirth,
+                    FatherName = dto.FatherName,
+                    GrandfatherName = dto.GrandfatherName,
+                    NationalIDNumber = dto.NationalIDNumber,
+                    BusinessName = dto.BusinessName,
+                    CommercialRegister = dto.CommercialRegister,
+                    BankAcc = dto.BankAcc,
+                    AddressID = address.AddressID,
+                    AccountStatus = AccountStatus.PendingVerification,
+                    IsApproved = false // Requires Admin approval
+                };
+
+                agent.Documents.Add(new UserDocument
+                {
+                    Type = DocumentType.CommercialRegistration,
+                    FileURL = crRelativeUrl,
+                    UploadedAt = DateTime.UtcNow
+                });
+
+                agent.Documents.Add(new UserDocument
+                {
+                    Type = DocumentType.NationalID,
+                    FileURL = idRelativeUrl,
+                    UploadedAt = DateTime.UtcNow
+                });
+
+                _context.LaundryAgents.Add(agent);
+                await _context.SaveChangesAsync();
+
+                await transaction.CommitAsync();
+
+                return Ok(new { message = "تم تسجيل طلبك بنجاح، وهو قيد المراجعة حالياً." });
+            }
+            catch
             {
-                FirstName = dto.FirstName,
-                LastName = dto.LastName,
-                Email = dto.Email,
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
-                PhoneNo = dto.PhoneNo,
-                DateOfBirth = dto.DateOfBirth,
-                FatherName = dto.FatherName,
-                GrandfatherName = dto.GrandfatherName,
-                NationalIDNumber = dto.NationalIDNumber,
-                BusinessName = dto.BusinessName,
-                CommercialRegister = dto.CommercialRegister,
-                BankAcc = dto.BankAcc,
-                AddressID = address.AddressID,
-                AccountStatus = AccountStatus.PendingVerification,
-                IsApproved = false // Requires Admin approval
-            };
+                await transaction.RollbackAsync();
 
-            agent.Documents.Add(new UserDocument
-            {
-                Type = DocumentType.CommercialRegistration,
-                FileURL = crRelativeUrl,
-                UploadedAt = DateTime.UtcNow
-            });
+                // Clean up uploaded files on transaction failure
+                if (System.IO.File.Exists(crFilePath))
+                {
+                    System.IO.File.Delete(crFilePath);
+                }
+                if (System.IO.File.Exists(idFilePath))
+                {
+                    System.IO.File.Delete(idFilePath);
+                }
 
-            agent.Documents.Add(new UserDocument
-            {
-                Type = DocumentType.NationalID,
-                FileURL = idRelativeUrl,
-                UploadedAt = DateTime.UtcNow
-            });
-
-            _context.LaundryAgents.Add(agent);
-            await _context.SaveChangesAsync();
-
-            return Ok(new { message = "تم تسجيل طلبك بنجاح، وهو قيد المراجعة حالياً." });
+                throw;
+            }
         }
 
         // POST: /api/auth/register/driver
@@ -274,24 +297,31 @@ namespace BrightClean.API.Controllers
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto dto)
         {
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
-            if (user == null)
+
+            // Always return the same generic message regardless of whether user exists
+            if (user != null)
             {
-                return BadRequest(new { message = "البريد الإلكتروني غير مسجل لدينا." });
+                // Generate a 6-digit OTP code using cryptographically secure RNG
+                var otp = System.Security.Cryptography.RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
+
+                // Store it with a 15-minute expiry
+                _resetTokens[dto.Email] = (otp, DateTime.UtcNow.AddMinutes(15));
+
+                // Stub email sending: log to console (without OTP value)
+                Console.WriteLine($"Password reset OTP generated for {dto.Email}");
+
+                // In debug/development, include OTP in response for testing
+                #if DEBUG
+                return Ok(new {
+                    message = "إذا كان الحساب موجوداً، سوف تستلم تعليمات إعادة تعيين كلمة المرور.",
+                    otp = otp // Only in debug builds
+                });
+                #endif
             }
 
-            // Generate a 6-digit OTP code
-            var random = new Random();
-            var otp = random.Next(100000, 999999).ToString();
-            
-            // Store it with a 15-minute expiry
-            _resetTokens[dto.Email] = (otp, DateTime.UtcNow.AddMinutes(15));
-
-            // Stub email sending: log to console
-            Console.WriteLine($"Password reset OTP for {dto.Email} is {otp}");
-
-            return Ok(new { 
-                message = "تم إرسال رمز إعادة تعيين كلمة المرور إلى بريدك الإلكتروني.",
-                otp = otp // Return OTP in response so frontend can easily capture and pre-fill or use in debug
+            // Return generic message (no user existence information leaked)
+            return Ok(new {
+                message = "إذا كان الحساب موجوداً، سوف تستلم تعليمات إعادة تعيين كلمة المرور."
             });
         }
 
@@ -300,20 +330,17 @@ namespace BrightClean.API.Controllers
         public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto dto)
         {
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
-            if (user == null)
-            {
-                return BadRequest(new { message = "البريد الإلكتروني غير صحيح." });
-            }
 
-            if (!_resetTokens.TryGetValue(dto.Email, out var tokenData) || tokenData.Token != dto.Token)
+            // Generic message for invalid token/expired token/missing user
+            if (user == null || !_resetTokens.TryGetValue(dto.Email, out var tokenData) || tokenData.Token != dto.Token)
             {
-                return BadRequest(new { message = "رمز التحقق غير صحيح." });
+                return BadRequest(new { message = "رمز التحقق غير صحيح أو منتهي الصلاحية." });
             }
 
             if (DateTime.UtcNow > tokenData.Expires)
             {
                 _resetTokens.TryRemove(dto.Email, out _);
-                return BadRequest(new { message = "انتهت صلاحية رمز التحقق." });
+                return BadRequest(new { message = "رمز التحقق غير صحيح أو منتهي الصلاحية." });
             }
 
             // Valid! Reset password

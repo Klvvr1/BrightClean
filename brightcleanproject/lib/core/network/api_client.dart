@@ -155,7 +155,17 @@ class BaseApiClient {
     request.files.addAll(files);
 
     debugPrint('--> POST MULTIPART ${url.toString()}');
-    debugPrint('Fields: ${request.fields}');
+
+    // Check if endpoint is sensitive and redact field values if so
+    final path = url.path;
+    final isSensitive = path.contains('/register') || path.contains('/login');
+
+    if (isSensitive) {
+      debugPrint('Fields: [REDACTED - sensitive endpoint, keys: ${request.fields.keys.toList()}]');
+    } else {
+      debugPrint('Fields: ${request.fields}');
+    }
+
     debugPrint('Files: ${request.files.map((f) => "${f.field}: ${f.filename}").toList()}');
 
     try {

@@ -7,7 +7,7 @@
 >
 > **Changelog v6.4 (Phase 1 & Phase 2 Updates):**
 > - Added `IsStoreClosed` state boolean to `LaundryAgent` domain entity
-> - Added `ResetToken` (OTP code) and `ResetTokenExpires` properties to `User / Auth` scope for the Forgot Password flow
+> - Password reset uses transient in-memory OTP storage (not persisted to User model) via thread-safe dictionary for temporary token/expiry pairs
 > - Detailed `UserDocument` with specific image uploads for `CommercialRegistration` and `NationalID`, documenting `UserID_FK` relationship
 > - Documented Frontend Architecture Providers (`OrderProvider`, `AdminProvider`, `AuthProvider`) and Repositories in a new dedicated section
 >
@@ -424,12 +424,14 @@ Root identity table shared across all actors. No concrete `User` record exists i
 
 ### 5.1.1 Forgot Password Flow State (Transient / In-Memory)
 
-Authentication operations manage password recovery state in-memory via a thread-safe dictionary associating user emails with verification OTP tokens.
+Authentication operations manage password recovery state **in-memory only** (not persisted to database) via a thread-safe `ConcurrentDictionary` that associates user emails with verification OTP tokens. These entries are temporary and do not appear in the User model or API schema.
 
 | Field | Type | Constraints | Description |
 |---|---|---|---|
-| `Token` | string | 6-character OTP | Temporary random numeric string sent to user's email |
+| `Token` | string | 6-character OTP | Temporary random numeric string (cryptographically generated) sent to user's email |
 | `Expires` | datetime | NOT NULL | Token expiration deadline (15 minutes from generation) |
+
+**Note:** OTPs are never persisted to the database. They exist only in the application's memory and are automatically cleared upon successful password reset or expiration.
 
 **Password Policy (enforced pre-hash at application layer):**
 - Minimum 8 characters

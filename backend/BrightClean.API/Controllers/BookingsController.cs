@@ -41,11 +41,7 @@ namespace BrightClean.API.Controllers
             var agent = await _context.LaundryAgents.FindAsync(dto.LaundryAgentID);
             if (agent == null)
             {
-                agent = await _context.LaundryAgents.FirstOrDefaultAsync();
-                if (agent == null)
-                {
-                    return BadRequest(new { message = "وكيل الغسيل غير موجود." });
-                }
+                return BadRequest(new { message = "وكيل الغسيل غير موجود." });
             }
 
             int addressId = dto.AddressID ?? 0;
@@ -57,6 +53,16 @@ namespace BrightClean.API.Controllers
                     return BadRequest(new { message = "يجب تسجيل عنوان العميل أولاً لإنشاء الحجز." });
                 }
                 addressId = defaultAddress.AddressID;
+            }
+            else
+            {
+                // Verify the provided address belongs to the authenticated client
+                var addressOwnership = await _context.Addresses
+                    .FirstOrDefaultAsync(a => a.AddressID == addressId && a.ClientID == clientId);
+                if (addressOwnership == null)
+                {
+                    return BadRequest(new { message = "العنوان المحدد غير موجود أو لا ينتمي لهذا العميل." });
+                }
             }
 
             var booking = new Booking
@@ -71,14 +77,16 @@ namespace BrightClean.API.Controllers
 
             foreach (var itemDto in dto.Items)
             {
+                // Validate quantity is positive
+                if (itemDto.Quantity <= 0)
+                {
+                    return BadRequest(new { message = "الكمية يجب أن تكون أكبر من صفر." });
+                }
+
                 var service = await _context.ServiceCatalogItems.FindAsync(itemDto.ServiceID);
                 if (service == null)
                 {
-                    service = await _context.ServiceCatalogItems.FirstOrDefaultAsync();
-                    if (service == null)
-                    {
-                        return BadRequest(new { message = "الخدمة المطلوبة غير موجودة في النظام." });
-                    }
+                    return BadRequest(new { message = "الخدمة المطلوبة غير موجودة في النظام." });
                 }
 
                 var bookingItem = new BookingItem

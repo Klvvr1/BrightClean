@@ -2542,21 +2542,24 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     return;
                   }
 
-                  // Format discount representation
-                  String finalDiscount = discountController.text.trim();
+                  // Store raw numeric discount value, format only for display
+                  String storedDiscount;
+                  String displayDiscount;
                   if (selectedOfferType == 'Percentage') {
-                    if (!finalDiscount.endsWith('%')) {
-                      finalDiscount = '${discountValue.toStringAsFixed(0)}%';
-                    }
+                    storedDiscount = '${discountValue.toStringAsFixed(0)}%';
+                    displayDiscount = storedDiscount;
                   } else {
-                    finalDiscount = '${discountValue.toStringAsFixed(0)} ريال';
+                    // Store raw numeric value for FixedAmount
+                    storedDiscount = discountValue.toStringAsFixed(0);
+                    displayDiscount = '$storedDiscount ريال';
                   }
 
                   setState(() {
                     _coupons.add({
                       'title': titleController.text,
                       'code': upperCode,
-                      'discount': finalDiscount,
+                      'discount': storedDiscount,
+                      'displayDiscount': displayDiscount,
                       'target': selectedTarget,
                       'status': 'نشط',
                       'startDate': '${startDate!.year}/${startDate!.month.toString().padLeft(2, '0')}/${startDate!.day.toString().padLeft(2, '0')}',

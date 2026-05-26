@@ -13,7 +13,7 @@ namespace BrightClean.API.DTOs
 
         [Required]
         [EmailAddress]
-        [RegularExpression(@"^[a-zA-Z0-9._%+-]+@(gmail\.com|hotmail\.com|yahoo\.com|outlook\.com)$", ErrorMessage = "Only gmail.com, hotmail.com, yahoo.com, and outlook.com email domains are allowed.")]
+        [RegularExpression(@"^[a-zA-Z0-9._%+-]+@(?i:gmail\.com|hotmail\.com|yahoo\.com|outlook\.com)$", ErrorMessage = "Only gmail.com, hotmail.com, yahoo.com, and outlook.com email domains are allowed.")]
         public string Email { get; set; } = string.Empty;
 
         [Required]

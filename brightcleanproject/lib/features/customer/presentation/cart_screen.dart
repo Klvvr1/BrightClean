@@ -132,13 +132,28 @@ class CartScreen extends StatelessWidget {
                             );
 
                             try {
-                              final itemsDto = cart.items.map((item) => {
-                                'serviceID': 1, // Default ID
-                                'quantity': item.quantity,
+                              // TODO: Cart items need to store actual service IDs and user needs to select an agent
+                              // Currently using placeholder values - this needs to be replaced with actual runtime data
+                              // when service selection and agent selection UI is implemented
+                              final itemsDto = cart.items.map((item) {
+                                // FIXME: Hardcoded serviceID - should come from item.serviceId
+                                final serviceId = 1; // int.tryParse(item.id);
+                                if (serviceId == null || serviceId <= 0) {
+                                  throw Exception('رقم الخدمة غير صالح');
+                                }
+                                return {
+                                  'serviceID': serviceId,
+                                  'quantity': item.quantity,
+                                };
                               }).toList();
 
-                              // Call createBooking with laundryAgentID = 2 (default seeded agent)
-                              await orderProvider.createBooking(2, itemsDto);
+                              // FIXME: Hardcoded laundryAgentID - should come from selected agent in UI
+                              final selectedAgentId = 2; // Should be from state/provider
+                              if (selectedAgentId <= 0) {
+                                throw Exception('يجب اختيار وكيل غسيل');
+                              }
+
+                              await orderProvider.createBooking(selectedAgentId, itemsDto);
 
                               // Pop progress dialog
                               if (context.mounted) {

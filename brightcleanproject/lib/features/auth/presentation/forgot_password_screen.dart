@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -55,9 +56,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           );
           setState(() {
             _isOtpSent = true;
-            _debugOtp = otp.isNotEmpty ? otp : null;
-            // Pre-fill OTP in debug mode for easier testing
-            if (otp.isNotEmpty) {
+            // Only store and pre-fill OTP in debug mode
+            if (kDebugMode && otp.isNotEmpty) {
+              _debugOtp = otp;
               _otpController.text = otp;
             }
           });
@@ -247,7 +248,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
-          if (_debugOtp != null) ...[
+          if (kDebugMode && _debugOtp != null) ...[
             const SizedBox(height: AppSpacing.md),
             Container(
               padding: const EdgeInsets.all(AppSpacing.sm),
