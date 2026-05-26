@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using BrightClean.Infrastructure;
 using BrightClean.Domain.Entities;
+using BrightClean.Domain.Enums;
 using System.ComponentModel.DataAnnotations;
 
 namespace BrightClean.API.Controllers
@@ -56,14 +57,35 @@ namespace BrightClean.API.Controllers
                 role = user.Role.ToString()
             });
         }
+
+        // GET: /api/users/agents
+        // CRIT-009: Returns all active, approved laundry agents so the cart screen
+        // can let the user choose an agent dynamically instead of using a hardcoded ID.
+        [HttpGet("agents")]
+        [AllowAnonymous] // Allow guests/clients to load agents before logging in or during checkout
+        public async Task<IActionResult> GetApprovedAgents()
+        {
+            var agents = await _context.LaundryAgents
+                .Where(a => a.IsApproved && a.AccountStatus == AccountStatus.Active && !a.IsStoreClosed)
+                .Select(a => new
+                {
+                    id = a.UserID,
+                    businessName = a.BusinessName
+                })
+                .ToListAsync();
+
+            return Ok(agents);
+        }
     }
 
     public class UpdateProfileDto
     {
         [Required]
+        [MinLength(1, ErrorMessage = "First name cannot be empty or whitespace.")]
         public string FirstName { get; set; } = string.Empty;
 
         [Required]
+        [MinLength(1, ErrorMessage = "Last name cannot be empty or whitespace.")]
         public string LastName { get; set; } = string.Empty;
 
         [Required]

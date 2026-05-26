@@ -15,13 +15,24 @@ class OrderProvider extends ChangeNotifier {
   bool _isActionLoading = false;
   bool _isCheckoutLoading = false;
   String? _errorMessage;
-  int? _currentBookingId = 1; // Mock/default booking ID for PoC
+  int? _currentBookingId;
 
   int? get currentBookingId => _currentBookingId;
 
   set currentBookingId(int? value) {
     _currentBookingId = value;
     notifyListeners();
+  }
+
+  Future<void> clearOrders() async {
+    try {
+      final db = await DatabaseHelper.instance.database;
+      await db.delete('orders');
+      _orders = [];
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error clearing orders: $e');
+    }
   }
 
   bool get isActionLoading => _isActionLoading;

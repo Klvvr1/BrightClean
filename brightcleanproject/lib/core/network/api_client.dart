@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -120,10 +121,17 @@ class BaseApiClient {
     final headers = await _getHeaders();
     _logRequest('GET', url, headers);
     try {
-      final response = await _client.get(url, headers: headers).timeout(const Duration(seconds: 30));
+      final response = await _client
+          .get(url, headers: headers)
+          .timeout(const Duration(seconds: 15));
       return _processResponse(response);
     } catch (e) {
       if (e is ServerException) rethrow;
+      if (e is TimeoutException) {
+        throw ServerException(
+          message: 'انتهت مهلة الاتصال بالخادم. يرجى المحاولة مرة أخرى.',
+        );
+      }
       throw ServerException(message: e.toString());
     }
   }
@@ -134,14 +142,21 @@ class BaseApiClient {
     final headers = await _getHeaders();
     _logRequest('POST', url, headers, body: requestBody);
     try {
-      final response = await _client.post(
-        url,
-        headers: headers,
-        body: requestBody,
-      ).timeout(const Duration(seconds: 30));
+      final response = await _client
+          .post(
+            url,
+            headers: headers,
+            body: requestBody,
+          )
+          .timeout(const Duration(seconds: 15));
       return _processResponse(response);
     } catch (e) {
       if (e is ServerException) rethrow;
+      if (e is TimeoutException) {
+        throw ServerException(
+          message: 'انتهت مهلة الاتصال بالخادم. يرجى المحاولة مرة أخرى.',
+        );
+      }
       throw ServerException(message: e.toString());
     }
   }
@@ -175,11 +190,18 @@ class BaseApiClient {
     debugPrint('Files: ${request.files.map((f) => "${f.field}: ${f.filename}").toList()}');
 
     try {
-      final streamedResponse = await _client.send(request);
+      final streamedResponse = await _client
+          .send(request)
+          .timeout(const Duration(seconds: 15));
       final response = await http.Response.fromStream(streamedResponse);
       return _processResponse(response);
     } catch (e) {
       if (e is ServerException) rethrow;
+      if (e is TimeoutException) {
+        throw ServerException(
+          message: 'انتهت مهلة الاتصال بالخادم. يرجى المحاولة مرة أخرى.',
+        );
+      }
       throw ServerException(message: e.toString());
     }
   }
@@ -190,14 +212,21 @@ class BaseApiClient {
     final headers = await _getHeaders();
     _logRequest('PUT', url, headers, body: requestBody);
     try {
-      final response = await _client.put(
-        url,
-        headers: headers,
-        body: requestBody,
-      ).timeout(const Duration(seconds: 30));
+      final response = await _client
+          .put(
+            url,
+            headers: headers,
+            body: requestBody,
+          )
+          .timeout(const Duration(seconds: 15));
       return _processResponse(response);
     } catch (e) {
       if (e is ServerException) rethrow;
+      if (e is TimeoutException) {
+        throw ServerException(
+          message: 'انتهت مهلة الاتصال بالخادم. يرجى المحاولة مرة أخرى.',
+        );
+      }
       throw ServerException(message: e.toString());
     }
   }
@@ -207,10 +236,17 @@ class BaseApiClient {
     final headers = await _getHeaders();
     _logRequest('DELETE', url, headers);
     try {
-      final response = await _client.delete(url, headers: headers).timeout(const Duration(seconds: 30));
+      final response = await _client
+          .delete(url, headers: headers)
+          .timeout(const Duration(seconds: 15));
       return _processResponse(response);
     } catch (e) {
       if (e is ServerException) rethrow;
+      if (e is TimeoutException) {
+        throw ServerException(
+          message: 'انتهت مهلة الاتصال بالخادم. يرجى المحاولة مرة أخرى.',
+        );
+      }
       throw ServerException(message: e.toString());
     }
   }

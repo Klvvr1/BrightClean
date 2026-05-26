@@ -58,6 +58,12 @@ namespace BrightClean.API.Controllers
                 return BadRequest(new { message = "الحساب مفعل بالفعل." });
             }
 
+            // CRIT-006: Only LaundryAgent and DeliveryStaff accounts require admin approval
+            if (user.Role != UserRole.LaundryAgent && user.Role != UserRole.DeliveryStaff)
+            {
+                return BadRequest(new { message = "لا يمكن تفعيل هذا النوع من الحسابات من هنا." });
+            }
+
             user.IsApproved = true;
             user.AccountStatus = AccountStatus.Active;
 

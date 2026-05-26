@@ -7,6 +7,7 @@ import '../../data/models/register_client_model.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../repositories/auth_repository_impl.dart';
 import '../../../customer/data/providers/cart_provider.dart';
+import '../../../customer/data/providers/order_provider.dart';
 
 class AuthProvider with ChangeNotifier {
   final AuthRepository _authRepository;
@@ -133,7 +134,7 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  Future<void> logout([CartProvider? cartProvider]) async {
+  Future<void> logout([CartProvider? cartProvider, OrderProvider? orderProvider]) async {
     try {
       // Delete token from secure storage first
       await _secureStorage.delete(key: 'auth_token');
@@ -160,6 +161,10 @@ class AuthProvider with ChangeNotifier {
 
       if (cartProvider != null) {
         await cartProvider.clearCart();
+      }
+
+      if (orderProvider != null) {
+        await orderProvider.clearOrders();
       }
 
       notifyListeners();

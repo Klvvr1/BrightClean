@@ -6,9 +6,11 @@ namespace BrightClean.API.DTOs
     public class RegisterAgentDto
     {
         [Required]
+        [MinLength(1, ErrorMessage = "First name cannot be empty or whitespace.")]
         public string FirstName { get; set; } = string.Empty;
 
         [Required]
+        [MinLength(1, ErrorMessage = "Last name cannot be empty or whitespace.")]
         public string LastName { get; set; } = string.Empty;
 
         [Required]
@@ -28,15 +30,18 @@ namespace BrightClean.API.DTOs
         public DateTime DateOfBirth { get; set; }
 
         [Required]
+        [MinLength(1, ErrorMessage = "Father name cannot be empty or whitespace.")]
         public string FatherName { get; set; } = string.Empty;
 
         [Required]
+        [MinLength(1, ErrorMessage = "Grandfather name cannot be empty or whitespace.")]
         public string GrandfatherName { get; set; } = string.Empty;
 
         [Required]
         public string NationalIDNumber { get; set; } = string.Empty;
 
         [Required]
+        [MinLength(1, ErrorMessage = "Business name cannot be empty or whitespace.")]
         public string BusinessName { get; set; } = string.Empty;
 
         [Required]

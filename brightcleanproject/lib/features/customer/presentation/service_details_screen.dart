@@ -519,6 +519,12 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
     );
   }
 
+  int _resolveServiceId(String itemName) {
+    if (itemName == 'المعوز') return 2;
+    if (itemName == 'العمامة') return 3;
+    return 1;
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -901,6 +907,7 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
                         quantity: entry.value,
                         pricePerUnit: basePrice * selectedOption.priceMultiplier,
                         totalPrice: basePrice * selectedOption.priceMultiplier * entry.value,
+                        serviceId: _resolveServiceId(entry.key),
                       );
                     }
                   }
@@ -962,6 +969,7 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
                           quantity: 1,
                           pricePerUnit: itemPrice,
                           totalPrice: itemPrice,
+                          serviceId: 1,
                         );
                       }
                     }

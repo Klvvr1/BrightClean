@@ -163,8 +163,16 @@ namespace BrightClean.API.Controllers
 
         // GET: /api/bookings/agent/{agentId}/pending
         [HttpGet("agent/{agentId}/pending")]
+        [Authorize(Roles = "LaundryAgent")]
         public async Task<IActionResult> GetPendingBookings(int agentId)
         {
+            // CRIT-004: Verify the requesting user is the same agent they are querying for
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out var callerId) || callerId != agentId)
+            {
+                return Forbid();
+            }
+
             var bookings = await _context.Bookings
                 .Include(b => b.BookingItems)
                     .ThenInclude(bi => bi.ServiceCatalogItem)
@@ -179,38 +187,42 @@ namespace BrightClean.API.Controllers
         [Authorize(Roles = "LaundryAgent")]
         public async Task<IActionResult> AcceptBooking(int bookingId)
         {
+            // CRIT-002: All read-only guards run BEFORE opening the transaction so that early
+            // returns are clean and do not leave an uncommitted transaction open.
+
+            var booking = await _context.Bookings
+                .Include(b => b.BookingItems)
+                    .ThenInclude(bi => bi.ServiceCatalogItem)
+                .FirstOrDefaultAsync(b => b.BookingID == bookingId);
+
+            if (booking == null)
+            {
+                return NotFound($"Booking with ID {bookingId} not found.");
+            }
+
+            // Verify caller is the Laundry Agent assigned to the booking
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out var agentId) || booking.LaundryAgentID != agentId)
+            {
+                return Forbid();
+            }
+
+            // Check store status
+            var agent = await _context.LaundryAgents.FindAsync(agentId);
+            if (agent != null && agent.IsStoreClosed)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new { message = "المغسلة مغلقة حالياً. لا يمكن قبول الطلبات." });
+            }
+
+            if (booking.Status != BookingStatus.Pending)
+            {
+                return BadRequest("Only pending bookings can be accepted.");
+            }
+
+            // All guards passed — open transaction only for the mutation
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
-                var booking = await _context.Bookings
-                    .Include(b => b.BookingItems)
-                        .ThenInclude(bi => bi.ServiceCatalogItem)
-                    .FirstOrDefaultAsync(b => b.BookingID == bookingId);
-
-                if (booking == null)
-                {
-                    return NotFound($"Booking with ID {bookingId} not found.");
-                }
-
-                // Verify caller is the Laundry Agent assigned to the booking
-                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
-                if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out var agentId) || booking.LaundryAgentID != agentId)
-                {
-                    return Forbid();
-                }
-
-                // Check store status
-                var agent = await _context.LaundryAgents.FindAsync(agentId);
-                if (agent != null && agent.IsStoreClosed)
-                {
-                    return StatusCode(StatusCodes.Status403Forbidden, new { message = "المغسلة مغلقة حالياً. لا يمكن قبول الطلبات." });
-                }
-
-                if (booking.Status != BookingStatus.Pending)
-                {
-                    return BadRequest("Only pending bookings can be accepted.");
-                }
-
                 booking.Status = BookingStatus.Accepted;
 
                 // Save status change first
@@ -224,6 +236,7 @@ namespace BrightClean.API.Controllers
                     var laundryAgent = await _context.LaundryAgents.FindAsync(booking.LaundryAgentID);
                     if (laundryAgent == null)
                     {
+                        await transaction.RollbackAsync();
                         return BadRequest("Laundry Agent associated with booking does not exist.");
                     }
 

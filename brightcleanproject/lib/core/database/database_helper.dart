@@ -22,7 +22,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 3,
+      version: 4,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
       onOpen: (db) async {
@@ -56,6 +56,15 @@ class DatabaseHelper {
 
       if (!columnNames.contains('category')) {
         await db.execute("ALTER TABLE orders ADD COLUMN category TEXT;");
+      }
+    }
+
+    // CRIT-008: Version 4 adds serviceId to cart_items for real backend service IDs
+    if (oldVersion < 4) {
+      final cartColumns = await db.rawQuery("PRAGMA table_info(cart_items)");
+      final cartColumnNames = cartColumns.map((c) => c['name'] as String).toSet();
+      if (!cartColumnNames.contains('serviceId')) {
+        await db.execute("ALTER TABLE cart_items ADD COLUMN serviceId INTEGER NOT NULL DEFAULT 1;");
       }
     }
   }
@@ -120,7 +129,8 @@ CREATE TABLE IF NOT EXISTS cart_items (
   selectedType TEXT NOT NULL,
   quantity INTEGER NOT NULL,
   pricePerUnit REAL NOT NULL,
-  totalPrice REAL NOT NULL
+  totalPrice REAL NOT NULL,
+  serviceId INTEGER NOT NULL DEFAULT 1
 )
 ''');
 

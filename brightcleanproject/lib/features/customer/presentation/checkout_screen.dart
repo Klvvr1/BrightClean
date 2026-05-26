@@ -4,6 +4,8 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_shadows.dart';
 import '../../../../core/theme/app_styles.dart';
+import '../../../../core/network/api_client.dart';
+import '../../../../core/error/exceptions.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:uuid/uuid.dart';
@@ -12,7 +14,6 @@ import 'order_success_screen.dart';
 import 'package:brightcleanproject/features/customer/domain/models/cart_item.dart';
 import 'package:brightcleanproject/features/customer/domain/models/order.dart';
 import 'package:brightcleanproject/features/customer/data/providers/order_provider.dart';
-import 'package:brightcleanproject/features/admin/presentation/admin_dashboard_screen.dart';
 import '../data/providers/cart_provider.dart';
 import 'package:latlong2/latlong.dart';
 import '../../../../core/widgets/map_picker_screen.dart';
@@ -52,14 +53,54 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   final TextEditingController _locationDescriptionController =
       TextEditingController();
 
+  final BaseApiClient _apiClient = BaseApiClient();
+  List<Map<String, dynamic>> _agents = [];
+  int? _selectedAgentId;
+  bool _isLoadingAgents = false;
+  double _apiDiscountAmount = 0.0;
+
   Map<String, dynamic>? _appliedCoupon;
   final TextEditingController _couponController = TextEditingController();
   String? _couponErrorMessage;
   bool _isCouponApplied = false;
   bool _couponEnteredButConditionNotMet = false;
 
-  void _applyCouponCode() {
-    final cart = Provider.of<CartProvider>(context, listen: false);
+  Future<void> _loadAgents() async {
+    if (!mounted) return;
+    setState(() {
+      _isLoadingAgents = true;
+    });
+    try {
+      final response = await _apiClient.get('/api/users/agents');
+      if (response is List) {
+        if (!mounted) return;
+        setState(() {
+          _agents = response.map((a) => {
+            'id': a['id'] as int,
+            'businessName': a['businessName'] as String,
+          }).toList();
+          
+          if (_agents.isNotEmpty) {
+            _selectedAgentId = _agents.first['id'] as int;
+          }
+          _isLoadingAgents = false;
+        });
+      } else {
+        if (!mounted) return;
+        setState(() {
+          _isLoadingAgents = false;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoadingAgents = false;
+      });
+      debugPrint('Error fetching agents: $e');
+    }
+  }
+
+  Future<void> _applyCouponCode() async {
     final code = _couponController.text.trim();
 
     if (code.isEmpty) {
@@ -72,100 +113,137 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       return;
     }
 
-    final matchingCoupons = AdminDashboardScreen.couponsList.where(
-      (c) {
-        if (c['code'].toString().toLowerCase() != code.toLowerCase()) {
-          return false;
-        }
+    final orderProvider = Provider.of<OrderProvider>(context, listen: false);
+    var bookingId = orderProvider.currentBookingId;
 
-        if (c['status'] != null && c['status'] != 'نشط') {
-          return false;
-        }
+    // Direct checkout flow: if bookingId is null, we must create a draft booking on the fly
+    if (bookingId == null) {
+      if (widget.directItems != null && widget.directItems!.isNotEmpty) {
+        // Show progress indicator
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (ctx) => const Center(
+            child: CircularProgressIndicator(),
+          ),
+        );
+        try {
+          final itemsDto = widget.directItems!.map((item) {
+            return {
+              'serviceID': item.serviceId,
+              'quantity': item.quantity,
+            };
+          }).toList();
 
-        final endDateStr = c['endDate'];
-        if (endDateStr != null && endDateStr != 'غير محدد') {
-          try {
-            final parts = endDateStr.toString().split('/');
-            if (parts.length == 3) {
-              final year = int.tryParse(parts[0]);
-              final month = int.tryParse(parts[1]);
-              final day = int.tryParse(parts[2]);
-              if (year != null && month != null && day != null) {
-                final expiryDate = DateTime(year, month, day, 23, 59, 59);
-                if (DateTime.now().isAfter(expiryDate)) {
-                  return false;
-                }
-              }
-            }
-          } catch (e) {
-            return false;
+          final agentId = _selectedAgentId ?? 2;
+          bookingId = await orderProvider.createBooking(agentId, itemsDto);
+          if (mounted) {
+            Navigator.of(context).pop(); // pop progress dialog
           }
+        } catch (e) {
+          if (mounted) {
+            Navigator.of(context).pop(); // pop progress dialog
+          }
+          setState(() {
+            _couponErrorMessage = 'فشل إنشاء الحجز لتطبيق الكوبون: $e';
+            _appliedCoupon = null;
+            _isCouponApplied = false;
+            _couponEnteredButConditionNotMet = false;
+          });
+          return;
         }
+      } else {
+        setState(() {
+          _couponErrorMessage = 'لا يوجد حجز نشط لتطبيق الكوبون عليه.';
+          _appliedCoupon = null;
+          _isCouponApplied = false;
+          _couponEnteredButConditionNotMet = false;
+        });
+        return;
+      }
+    }
 
-        return true;
-      },
-    ).toList();
+    setState(() {
+      _couponErrorMessage = null;
+    });
 
-    if (matchingCoupons.isEmpty) {
+    try {
+      final result = await _apiClient.post(
+        '/api/offers/validate',
+        body: {
+          'code': code,
+          'bookingId': bookingId,
+        },
+      );
+
+      if (result != null && result['isValid'] == true) {
+        setState(() {
+          _isCouponApplied = true;
+          _apiDiscountAmount = (result['discountAmount'] as num).toDouble();
+          _appliedCoupon = {
+            'code': code,
+            'title': result['displayText'] ?? 'خصم الكوبون',
+            'discount': result['displayText'] ?? 'خصم الكوبون',
+            'displayDiscount': result['displayText'] ?? 'خصم الكوبون',
+          };
+          _couponErrorMessage = null;
+          _couponEnteredButConditionNotMet = false;
+        });
+      } else {
+        setState(() {
+          _couponErrorMessage = 'كود الكوبون غير صحيح أو منتهي الصلاحية';
+          _appliedCoupon = null;
+          _isCouponApplied = false;
+          _couponEnteredButConditionNotMet = false;
+        });
+      }
+    } on ServerException catch (e) {
       setState(() {
-        _couponErrorMessage = 'كود الكوبون غير صحيح أو منتهي الصلاحية';
+        _couponErrorMessage = e.message ?? 'فشل التحقق من الكوبون';
         _appliedCoupon = null;
         _isCouponApplied = false;
         _couponEnteredButConditionNotMet = false;
       });
-      return;
-    }
-
-    final coupon = matchingCoupons.first;
-    final minAmountStr = coupon['minAmount'];
-
-    double minAmount = 0.0;
-    if (minAmountStr != null && minAmountStr.toString().isNotEmpty) {
-      minAmount = double.tryParse(minAmountStr.toString()) ?? 0.0;
-    }
-
-    final totalAmount = widget.directItems != null
-        ? widget.directItems!.fold<double>(0.0, (sum, item) => sum + item.totalPrice)
-        : cart.totalAmount;
-
-    setState(() {
-      _appliedCoupon = coupon;
-      _couponErrorMessage = null;
-
-      if (totalAmount >= minAmount) {
-        _isCouponApplied = true;
-        _couponEnteredButConditionNotMet = false;
-      } else {
+    } catch (e) {
+      setState(() {
+        _couponErrorMessage = 'حدث خطأ غير متوقع: $e';
+        _appliedCoupon = null;
         _isCouponApplied = false;
-        _couponEnteredButConditionNotMet = true;
-      }
-    });
+        _couponEnteredButConditionNotMet = false;
+      });
+    }
   }
 
-  void _removeCoupon() {
+  Future<void> _removeCoupon() async {
+    final orderProvider = Provider.of<OrderProvider>(context, listen: false);
+    final bookingId = orderProvider.currentBookingId;
+    if (bookingId != null) {
+      try {
+        await _apiClient.post(
+          '/api/offers/remove',
+          body: {
+            'bookingId': bookingId,
+          },
+        );
+      } catch (e) {
+        debugPrint('Error removing coupon from backend: $e');
+      }
+    }
     setState(() {
       _couponController.clear();
       _appliedCoupon = null;
       _isCouponApplied = false;
+      _apiDiscountAmount = 0.0;
       _couponErrorMessage = null;
       _couponEnteredButConditionNotMet = false;
     });
   }
 
   double _calculateDiscount(double totalAmount) {
-    if (!_isCouponApplied || _appliedCoupon == null) {
+    if (!_isCouponApplied) {
       return 0.0;
     }
-
-    final discountStr = _appliedCoupon!['discount'].toString();
-
-    if (discountStr.endsWith('%')) {
-      final pct =
-          double.tryParse(discountStr.replaceAll('%', '').trim()) ?? 0.0;
-      return totalAmount * (pct / 100);
-    }
-
-    return double.tryParse(discountStr) ?? 0.0;
+    return _apiDiscountAmount;
   }
 
   double _calculateFinalPrice(double totalAmount) {
@@ -185,6 +263,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   void initState() {
     super.initState();
     _initializeDateFormatting();
+    if (widget.directItems != null) {
+      _loadAgents();
+    }
   }
 
   Future<void> _initializeDateFormatting() async {
@@ -268,7 +349,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     final canCompleteOrder = _isLocationVerified &&
         _selectedDate != null &&
         _selectedTimeSlot != null &&
-        itemsToCheckout.isNotEmpty;
+        itemsToCheckout.isNotEmpty &&
+        (widget.directItems == null || _selectedAgentId != null);
 
     return Scaffold(
       appBar: AppBar(title: const Text('إتمام الطلب')),
@@ -295,6 +377,41 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                             color: theme.colorScheme.primary)),
                   ),
                 )),
+
+            if (widget.directItems != null) ...[
+              const SizedBox(height: AppSpacing.xl),
+              Text(
+                'اختر مغسلة (الوكيل)',
+                style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              if (_isLoadingAgents)
+                const Center(child: Padding(
+                  padding: EdgeInsets.all(8.0),
+                  child: CircularProgressIndicator(),
+                ))
+              else if (_agents.isEmpty)
+                const Text('لا يوجد وكلاء متوفرين حالياً', style: TextStyle(color: Colors.grey))
+              else
+                DropdownButtonFormField<int>(
+                  initialValue: _selectedAgentId,
+                  items: _agents.map((agent) {
+                    return DropdownMenuItem<int>(
+                      value: agent['id'] as int,
+                      child: Text(agent['businessName'] as String),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    setState(() {
+                      _selectedAgentId = val;
+                    });
+                  },
+                  decoration: InputDecoration(
+                    border: OutlineInputBorder(borderRadius: AppRadius.button),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+                  ),
+                ),
+            ],
 
             const SizedBox(height: AppSpacing.xl),
 
@@ -716,13 +833,25 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                             pickupTimeSlot: _selectedTimeSlot,
                           );
 
-                          try {
-                            // Use the actual booking ID from the order provider's current booking
-                            final bookingId = orderProvider.currentBookingId;
-                            if (bookingId == null) {
-                              throw Exception('No active booking found');
-                            }
-                            await orderProvider.submitOrder(bookingId, localOrder: newOrder);
+                           try {
+                             // Use the actual booking ID from the order provider's current booking
+                             var bookingId = orderProvider.currentBookingId;
+                             if (bookingId == null) {
+                               if (widget.directItems != null && widget.directItems!.isNotEmpty) {
+                                 final itemsDto = widget.directItems!.map((item) {
+                                   return {
+                                     'serviceID': item.serviceId,
+                                     'quantity': item.quantity,
+                                   };
+                                 }).toList();
+
+                                 final agentId = _selectedAgentId ?? 2;
+                                 bookingId = await orderProvider.createBooking(agentId, itemsDto);
+                               } else {
+                                 throw Exception('No active booking found');
+                               }
+                             }
+                             await orderProvider.submitOrder(bookingId, localOrder: newOrder);
 
                             if (widget.directItems == null) {
                               await cart.clearCart();
