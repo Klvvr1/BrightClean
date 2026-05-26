@@ -2514,6 +2514,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     return;
                   }
 
+                  // If fixed amount, validate it is greater than 0
+                  if (selectedOfferType == 'FixedAmount' && discountValue <= 0) {
+                    ScaffoldMessenger.of(context).clearSnackBars();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('يجب أن تكون قيمة الخصم أكبر من صفر')),
+                    );
+                    return;
+                  }
+
                   // Enforce date checks
                   if (startDate == null || endDate == null) {
                     ScaffoldMessenger.of(context).clearSnackBars();
@@ -2569,7 +2578,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     });
                   });
                   _logActivity(
-                    'تم إضافة عرض/كوبون جديد ($upperCode) بخصم $finalDiscount',
+                    'تم إضافة عرض/كوبون جديد ($upperCode) بخصم $displayDiscount',
                     'add_coupon',
                     Icons.local_offer,
                     AppColors.primary,
