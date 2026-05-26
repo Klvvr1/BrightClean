@@ -7,8 +7,11 @@ import '../../../../core/widgets/custom_text_field.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_radius.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/widgets/map_picker_screen.dart';
-import '../../../../core/database/database_helper.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+
 
 class DriverRegistrationScreen extends StatefulWidget {
   const DriverRegistrationScreen({super.key});
@@ -41,6 +44,7 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
   XFile? _carImage;
 
   String? _selectedAddress;
+  // ignore: unused_field
   LatLng? _selectedCoordinates;
 
   String? _selectedVehicleType;
@@ -201,48 +205,83 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
       setState(() => _isSubmitting = true);
 
       try {
-        final dbHelper = DatabaseHelper.instance;
-        final userData = {
-          'first_name': _firstNameController.text.trim(),
-          'father_name': _fatherNameController.text.trim(),
-          'grandfather_name': _grandfatherNameController.text.trim(),
-          'last_name': _lastNameController.text.trim(),
-          'phone': _phoneController.text.trim(),
-          'email': _emailController.text.trim(),
-          'password': dbHelper.hashPassword(_passwordController.text),
-          'dob': _dobController.text.trim(),
-          'vehicle_type': _selectedVehicleType,
-          'car_company': _selectedVehicleType == 'سيارة' ? _carCompanyController.text.trim() : null,
-          'car_model': _selectedVehicleType == 'سيارة' ? _carModelController.text.trim() : null,
-          'car_year': _selectedVehicleType == 'سيارة' ? _carYearController.text.trim() : null,
-          'plate_number': _plateNumberController.text.trim(),
-          'role': 'driver',
-          'address_string': _selectedAddress,
-          'latitude': _selectedCoordinates?.latitude,
-          'longitude': _selectedCoordinates?.longitude,
-          'id_image_path': _idImage?.path,
-          'license_image_path': _licenseImage?.path,
-          'car_image_path': _carImage?.path,
-          'status': 'pending',
-          'created_at': DateTime.now().toIso8601String(),
+        int vehicleTypeVal = 0;
+        if (_selectedVehicleType == 'دراجة نارية') {
+          vehicleTypeVal = 1;
+        } else if (_selectedVehicleType == 'تك تك') {
+          vehicleTypeVal = 2;
+        }
+
+        final String phoneNo = _phoneController.text.trim();
+
+        // Construct exact payload for RegisterDriverDto
+        final Map<String, dynamic> payload = {
+          'FirstName': _firstNameController.text.trim(),
+          'LastName': _lastNameController.text.trim(),
+          'Email': _emailController.text.trim(),
+          'Password': _passwordController.text, // raw password
+          'PhoneNo': phoneNo,
+          'DateOfBirth': _dobController.text.trim(),
+          'FatherName': _fatherNameController.text.trim(),
+          'GrandfatherName': _grandfatherNameController.text.trim(),
+          'NationalIDNumber': phoneNo, // Unique and 10 digits
+          'VehicleType': vehicleTypeVal,
+          'VehicleMake': _selectedVehicleType == 'سيارة' ? _carCompanyController.text.trim() : (_selectedVehicleType ?? ''),
+          'VehicleModel': _selectedVehicleType == 'سيارة' ? _carModelController.text.trim() : (_selectedVehicleType ?? ''),
+          'PlateNumber': _plateNumberController.text.trim(),
+          'BankAcc': 'SA$phoneNo',
         };
 
-        await dbHelper.registerUser(userData);
+        final response = await http.post(
+          Uri.parse('http://localhost:5135/api/auth/register/driver'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: json.encode(payload),
+        );
 
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('تم التسجيل بنجاح!'),
-              backgroundColor: AppColors.success,
-            ),
-          );
-          Navigator.pushReplacementNamed(context, '/login');
+        // Required Logs
+        // ignore: avoid_print
+        print('DRIVER REGISTER STATUS: ${response.statusCode}');
+        // ignore: avoid_print
+        print('DRIVER REGISTER BODY: ${response.body}');
+
+        if (response.statusCode == 200 || response.statusCode == 201) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('تم التسجيل بنجاح!'),
+                backgroundColor: AppColors.success,
+              ),
+            );
+            context.go('/login');
+          }
+        } else {
+          String errorMsg = response.body;
+          try {
+            final Map<String, dynamic> decoded = json.decode(response.body);
+            if (decoded.containsKey('message')) {
+              errorMsg = decoded['message'].toString();
+            } else if (decoded.containsKey('error')) {
+              errorMsg = decoded['error'].toString();
+            }
+          } catch (_) {}
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('فشل التسجيل: $errorMsg'),
+                backgroundColor: Theme.of(context).colorScheme.error,
+              ),
+            );
+          }
         }
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('حدث خطأ أثناء التسجيل: $e'),
+              content: Text('حدث خطأ أثناء الاتصال بالخادم: $e'),
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
           );
