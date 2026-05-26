@@ -81,11 +81,11 @@ namespace BrightClean.API.Controllers
     public class UpdateProfileDto
     {
         [Required]
-        [MinLength(1, ErrorMessage = "First name cannot be empty or whitespace.")]
+        [RegularExpression(@"^(?=.*\S).+$", ErrorMessage = "First name cannot be empty or contain only whitespace.")]
         public string FirstName { get; set; } = string.Empty;
 
         [Required]
-        [MinLength(1, ErrorMessage = "Last name cannot be empty or whitespace.")]
+        [RegularExpression(@"^(?=.*\S).+$", ErrorMessage = "Last name cannot be empty or contain only whitespace.")]
         public string LastName { get; set; } = string.Empty;
 
         [Required]

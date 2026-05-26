@@ -59,6 +59,12 @@ namespace BrightClean.API.Controllers
                 return Forbid();
             }
 
+            // Only allow offer modification on draft bookings
+            if (booking.Status != BookingStatus.Draft)
+            {
+                return BadRequest(new { message = "لا يمكن تعديل الكوبون على حجز غير مسودة" });
+            }
+
             // Compute order subtotal
             decimal subtotal = booking.BookingItems.Sum(bi => bi.SubTotal);
 
@@ -122,6 +128,12 @@ namespace BrightClean.API.Controllers
             if (booking.ClientID != clientId)
             {
                 return Forbid();
+            }
+
+            // Only allow offer modification on draft bookings
+            if (booking.Status != BookingStatus.Draft)
+            {
+                return BadRequest(new { message = "لا يمكن تعديل الكوبون على حجز غير مسودة" });
             }
 
             booking.OfferID = null;

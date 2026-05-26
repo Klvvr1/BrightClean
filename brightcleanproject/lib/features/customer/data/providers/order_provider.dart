@@ -29,6 +29,7 @@ class OrderProvider extends ChangeNotifier {
       final db = await DatabaseHelper.instance.database;
       await db.delete('orders');
       _orders = [];
+      _currentBookingId = null;
       notifyListeners();
     } catch (e) {
       debugPrint('Error clearing orders: $e');

@@ -79,10 +79,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             'id': a['id'] as int,
             'businessName': a['businessName'] as String,
           }).toList();
-          
-          if (_agents.isNotEmpty) {
-            _selectedAgentId = _agents.first['id'] as int;
-          }
+
+          // Do not pre-select an agent - let user explicitly choose
           _isLoadingAgents = false;
         });
       } else {
@@ -119,6 +117,17 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     // Direct checkout flow: if bookingId is null, we must create a draft booking on the fly
     if (bookingId == null) {
       if (widget.directItems != null && widget.directItems!.isNotEmpty) {
+        // Validate that an agent is selected
+        if (_selectedAgentId == null) {
+          setState(() {
+            _couponErrorMessage = 'يرجى اختيار مغسلة (وكيل) أولاً';
+            _appliedCoupon = null;
+            _isCouponApplied = false;
+            _couponEnteredButConditionNotMet = false;
+          });
+          return;
+        }
+
         // Show progress indicator
         showDialog(
           context: context,
@@ -135,8 +144,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             };
           }).toList();
 
-          final agentId = _selectedAgentId ?? 2;
-          bookingId = await orderProvider.createBooking(agentId, itemsDto);
+          bookingId = await orderProvider.createBooking(_selectedAgentId!, itemsDto);
           if (mounted) {
             Navigator.of(context).pop(); // pop progress dialog
           }
@@ -394,18 +402,29 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 const Text('لا يوجد وكلاء متوفرين حالياً', style: TextStyle(color: Colors.grey))
               else
                 DropdownButtonFormField<int>(
-                  initialValue: _selectedAgentId,
+                  value: _selectedAgentId,
+                  hint: const Text('اختر المغسلة'),
                   items: _agents.map((agent) {
                     return DropdownMenuItem<int>(
                       value: agent['id'] as int,
                       child: Text(agent['businessName'] as String),
                     );
                   }).toList(),
-                  onChanged: (val) {
-                    setState(() {
-                      _selectedAgentId = val;
-                    });
-                  },
+                  onChanged: orderProvider.currentBookingId != null
+                      ? null  // Disable dropdown if booking already created
+                      : (val) {
+                          setState(() {
+                            _selectedAgentId = val;
+                          });
+                        },
+                  disabledHint: _selectedAgentId != null
+                      ? Text(
+                          _agents.firstWhere(
+                            (agent) => agent['id'] == _selectedAgentId,
+                            orElse: () => {'businessName': 'مغسلة محددة'},
+                          )['businessName'] as String,
+                        )
+                      : const Text('اختر المغسلة'),
                   decoration: InputDecoration(
                     border: OutlineInputBorder(borderRadius: AppRadius.button),
                     contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
@@ -838,6 +857,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                              var bookingId = orderProvider.currentBookingId;
                              if (bookingId == null) {
                                if (widget.directItems != null && widget.directItems!.isNotEmpty) {
+                                 // Validate that an agent is selected
+                                 if (_selectedAgentId == null) {
+                                   throw Exception('يرجى اختيار مغسلة (وكيل) أولاً');
+                                 }
+
                                  final itemsDto = widget.directItems!.map((item) {
                                    return {
                                      'serviceID': item.serviceId,
@@ -845,8 +869,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                    };
                                  }).toList();
 
-                                 final agentId = _selectedAgentId ?? 2;
-                                 bookingId = await orderProvider.createBooking(agentId, itemsDto);
+                                 bookingId = await orderProvider.createBooking(_selectedAgentId!, itemsDto);
                                } else {
                                  throw Exception('No active booking found');
                                }
