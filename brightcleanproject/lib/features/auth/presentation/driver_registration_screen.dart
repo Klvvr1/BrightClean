@@ -129,17 +129,30 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
   }
 
   String? _validatePhone(String? value) {
-    if (value == null || value.isEmpty) return 'رقم الهاتف مطلوب';
-    if (!RegExp(r'^[0-9]{9,10}$').hasMatch(value)) {
-      return 'أدخل رقم هاتف صالح (9-10 أرقام)';
+    if (value == null || value.isEmpty) {
+      return 'الرجاء إدخال رقم الهاتف';
+    }
+    if (value.length != 9) {
+      return 'رقم الهاتف يجب أن يتكون من 9 أرقام بالضبط';
+    }
+    if (!RegExp(r'^[0-9]{9}$').hasMatch(value)) {
+      return 'الرجاء إدخال رقم هاتف يمني صالح مكون من 9 أرقام';
     }
     return null;
   }
 
   String? _validateEmail(String? value) {
-    if (value == null || value.trim().isEmpty) return 'البريد الإلكتروني مطلوب';
-    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-      return 'أدخل بريد إلكتروني صحيح';
+    if (value == null || value.trim().isEmpty) {
+      return 'الرجاء إدخال البريد الإلكتروني';
+    }
+    final email = value.trim().toLowerCase();
+    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
+      return 'الرجاء إدخال بريد إلكتروني صحيح';
+    }
+    final allowedDomains = ['gmail.com', 'hotmail.com', 'yahoo.com', 'outlook.com'];
+    final parts = email.split('@');
+    if (parts.length != 2 || !allowedDomains.contains(parts[1])) {
+      return 'البريد الإلكتروني يجب أن يكون من النطاقات المسموحة فقط (gmail.com, hotmail.com, yahoo.com, outlook.com)';
     }
     return null;
   }
@@ -418,7 +431,10 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
                   controller: _phoneController,
                   hintText: 'رقم الهاتف',
                   keyboardType: TextInputType.phone,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(9),
+                  ],
                   validator: _validatePhone,
                 ),
                 const SizedBox(height: AppSpacing.md),

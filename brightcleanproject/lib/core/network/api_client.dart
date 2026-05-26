@@ -144,6 +144,44 @@ class BaseApiClient {
     }
   }
 
+  Future<dynamic> postMultipart(
+    String endpoint, {
+    required Map<String, String> fields,
+    required List<http.MultipartFile> files,
+  }) async {
+    final url = _buildUrl(endpoint);
+    final headers = await _getHeaders();
+    headers.remove('Content-Type'); // http.MultipartRequest handles this boundary automatically
+
+    final request = http.MultipartRequest('POST', url);
+    request.headers.addAll(headers);
+    request.fields.addAll(fields);
+    request.files.addAll(files);
+
+    debugPrint('--> POST MULTIPART ${url.toString()}');
+
+    // Check if endpoint is sensitive and redact field values if so
+    final path = url.path;
+    final isSensitive = path.contains('/register') || path.contains('/login');
+
+    if (isSensitive) {
+      debugPrint('Fields: [REDACTED - sensitive endpoint, keys: ${request.fields.keys.toList()}]');
+    } else {
+      debugPrint('Fields: ${request.fields}');
+    }
+
+    debugPrint('Files: ${request.files.map((f) => "${f.field}: ${f.filename}").toList()}');
+
+    try {
+      final streamedResponse = await _client.send(request);
+      final response = await http.Response.fromStream(streamedResponse);
+      return _processResponse(response);
+    } catch (e) {
+      if (e is ServerException) rethrow;
+      throw ServerException(message: e.toString());
+    }
+  }
+
   Future<dynamic> put(String endpoint, {Map<String, dynamic>? body}) async {
     final url = _buildUrl(endpoint);
     final requestBody = body != null ? json.encode(body) : null;

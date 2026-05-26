@@ -708,7 +708,9 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
             actions: [
               IconButton(
                 icon: const Icon(Icons.notifications_outlined),
-                onPressed: () {},
+                onPressed: () {
+                  context.push('/notifications');
+                },
               ),
               const SizedBox(width: 8),
             ],

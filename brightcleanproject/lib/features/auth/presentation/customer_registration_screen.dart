@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:flutter/foundation.dart';
 import '../../../../core/widgets/custom_text_field.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_radius.dart';
-import '../../../../core/database/database_helper.dart';
+import 'package:provider/provider.dart';
+import '../data/providers/auth_provider.dart';
+import '../data/models/register_client_model.dart';
+import '../../../../core/error/exceptions.dart';
 import '../../../../core/widgets/map_picker_screen.dart';
 
 class CustomerRegistrationScreen extends StatefulWidget {
@@ -108,30 +110,19 @@ class _CustomerRegistrationScreenState
       });
 
       try {
-        final dbHelper = DatabaseHelper.instance;
-        final userData = {
-          'first_name': _firstNameController.text.trim(),
-          'last_name': _lastNameController.text.trim(),
-          'phone': _phoneController.text.trim(),
-          'email': _emailController.text.trim(),
-          'password': dbHelper.hashPassword(_passwordController.text),
-          'gender': _selectedGender ?? '',
-          'dob': _dobController.text.trim(),
-          'role': 'customer',
-          'address_string': _selectedAddress,
-          'latitude': _selectedCoordinates?.latitude,
-          'longitude': _selectedCoordinates?.longitude,
-          'status': 'active',
-          'created_at': DateTime.now().toIso8601String(),
-        };
+        final String mappedGender = _selectedGender == 'M' ? 'Male' : 'Female';
+        final clientModel = RegisterClientModel(
+          firstName: _firstNameController.text.trim(),
+          lastName: _lastNameController.text.trim(),
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+          phoneNo: _phoneController.text.trim(),
+          dateOfBirth: _dobController.text.trim(),
+          gender: mappedGender,
+        );
 
-        if (kIsWeb) {
-          debugPrint(
-            "Web mode detected: Geocoding bypassed. Saving raw coordinates: $_selectedCoordinates",
-          );
-        }
-
-        await dbHelper.registerUser(userData);
+        final authProvider = Provider.of<AuthProvider>(context, listen: false);
+        await authProvider.registerClient(clientModel);
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -147,9 +138,12 @@ class _CustomerRegistrationScreenState
         }
       } catch (e) {
         if (mounted) {
-          final errorMessage = e.toString().contains('تعذر')
-              ? 'تعذر الاتصال بقاعدة البيانات المحلية'
-              : 'حدث خطأ أثناء التسجيل: $e';
+          String errorMessage = 'حدث خطأ أثناء التسجيل';
+          if (e is ServerException) {
+            errorMessage = e.message ?? errorMessage;
+          } else {
+            errorMessage = '$errorMessage: $e';
+          }
 
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -182,14 +176,14 @@ class _CustomerRegistrationScreenState
     if (value == null || value.isEmpty) {
       return 'الرجاء إدخال رقم الهاتف';
     }
-    if (value.length > 10) {
-      return 'رقم الهاتف يجب ألا يتجاوز 10 أرقام';
+    if (value.length != 9) {
+      return 'رقم الهاتف يجب أن يتكون من 9 أرقام بالضبط';
     }
     if (value.contains(RegExp(r'[a-zA-Z]'))) {
       return 'الرجاء إدخال رقم صالح';
     }
-    if (!RegExp(r'^[0-9]{9,10}$').hasMatch(value)) {
-      return 'الرجاء إدخال رقم هاتف صالح (9 أو 10 أرقام)';
+    if (!RegExp(r'^[0-9]{9}$').hasMatch(value)) {
+      return 'الرجاء إدخال رقم هاتف يمني صالح مكون من 9 أرقام';
     }
     return null;
   }
@@ -198,8 +192,14 @@ class _CustomerRegistrationScreenState
     if (value == null || value.trim().isEmpty) {
       return 'الرجاء إدخال البريد الإلكتروني';
     }
-    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+    final email = value.trim().toLowerCase();
+    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
       return 'الرجاء إدخال بريد إلكتروني صحيح';
+    }
+    final allowedDomains = ['gmail.com', 'hotmail.com', 'yahoo.com', 'outlook.com'];
+    final parts = email.split('@');
+    if (parts.length != 2 || !allowedDomains.contains(parts[1])) {
+      return 'البريد الإلكتروني يجب أن يكون من النطاقات المسموحة فقط (gmail.com, hotmail.com, yahoo.com, outlook.com)';
     }
     return null;
   }
@@ -274,7 +274,7 @@ class _CustomerRegistrationScreenState
                     keyboardType: TextInputType.phone,
                     inputFormatters: [
                       FilteringTextInputFormatter.digitsOnly,
-                      LengthLimitingTextInputFormatter(10),
+                      LengthLimitingTextInputFormatter(9),
                     ],
                     validator: _validatePhone,
                   ),

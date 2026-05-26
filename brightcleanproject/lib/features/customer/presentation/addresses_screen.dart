@@ -64,7 +64,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
     // If the user selected a location and didn't just go back
     if (selectedAddress != null && selectedAddress.isNotEmpty) {
       await _saveAddress(selectedAddress); // Persist!
-      
+
       if (mounted) {
         final theme = Theme.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -85,14 +85,15 @@ class _AddressesScreenState extends State<AddressesScreen> {
       appBar: AppBar(
         title: const Text('العناوين المحفوظة'),
       ),
-      body: _isLoading 
-          ? const Center(child: CircularProgressIndicator()) 
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
           : (_addresses.isEmpty ? _buildEmptyState() : _buildAddressesList()),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _navigateAndAddNewAddress,
         backgroundColor: theme.colorScheme.primary,
         icon: Icon(Icons.add, color: theme.colorScheme.onPrimary),
-        label: Text('إضافة عنوان جديد', style: TextStyle(color: theme.colorScheme.onPrimary)),
+        label: Text('إضافة عنوان جديد',
+            style: TextStyle(color: theme.colorScheme.onPrimary)),
       ),
     );
   }
@@ -103,7 +104,9 @@ class _AddressesScreenState extends State<AddressesScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.location_off, size: 80, color: theme.colorScheme.onSurface.withValues(alpha: 0.2)),
+          Icon(Icons.location_off,
+              size: 80,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.2)),
           const SizedBox(height: AppSpacing.md),
           Text(
             'لا توجد عناوين محفوظة',
@@ -115,7 +118,8 @@ class _AddressesScreenState extends State<AddressesScreen> {
           const SizedBox(height: AppSpacing.sm),
           Text(
             'قم بإضافة عنوان جديد لتسهيل وصول المندوب إليك',
-            style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
+            style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
             textAlign: TextAlign.center,
           ),
         ],
@@ -128,7 +132,8 @@ class _AddressesScreenState extends State<AddressesScreen> {
     return ListView.separated(
       padding: const EdgeInsets.all(AppSpacing.md),
       itemCount: _addresses.length,
-      separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
+      separatorBuilder: (context, index) =>
+          const SizedBox(height: AppSpacing.sm),
       itemBuilder: (context, index) {
         return Container(
           decoration: AppStyles.surface(context),
@@ -137,7 +142,8 @@ class _AddressesScreenState extends State<AddressesScreen> {
             title: Text(_addresses[index], style: theme.textTheme.bodyLarge),
             trailing: IconButton(
               icon: Icon(Icons.delete_outline, color: theme.colorScheme.error),
-              onPressed: () => _removeAddress(index), // Remove completely from memory
+              onPressed: () =>
+                  _removeAddress(index), // Remove completely from memory
             ),
           ),
         );

@@ -14,6 +14,8 @@ import 'package:brightcleanproject/features/customer/domain/models/order.dart';
 import 'package:brightcleanproject/features/customer/data/providers/order_provider.dart';
 import 'package:brightcleanproject/features/admin/presentation/admin_dashboard_screen.dart';
 import '../data/providers/cart_provider.dart';
+import 'package:latlong2/latlong.dart';
+import '../../../../core/widgets/map_picker_screen.dart';
 
 class CheckoutScreen extends StatefulWidget {
   final List<CartItem>? directItems;
@@ -28,6 +30,24 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   String? _selectedTimeSlot;
   String _selectedPaymentMethod = 'cash';
   bool _isLocationVerified = false;
+  String? _selectedAddress;
+  // ignore: unused_field
+  LatLng? _selectedCoordinates;
+
+  Future<void> _selectLocation() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const MapPickerScreen()),
+    );
+
+    if (result != null && result is Map<String, dynamic>) {
+      setState(() {
+        _selectedCoordinates = result['coordinates'] as LatLng;
+        _selectedAddress = result['address'] as String;
+        _isLocationVerified = true;
+      });
+    }
+  }
 
   final TextEditingController _locationDescriptionController =
       TextEditingController();
@@ -321,21 +341,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   Icons.location_on,
                   color: _isLocationVerified ? AppColors.success : theme.colorScheme.primary,
                 ),
-                title: Text('المنزل', style: theme.textTheme.titleMedium),
-                subtitle: Text('شارع الزبيري، صنعاء', style: theme.textTheme.bodyMedium),
+                title: Text(_isLocationVerified ? 'الموقع المحدد' : 'الموقع', style: theme.textTheme.titleMedium),
+                subtitle: Text(_selectedAddress ?? 'اضغط لتحديد العنوان على الخريطة', style: theme.textTheme.bodyMedium),
                 trailing: TextButton(
-                  onPressed: () {
-                    setState(() {
-                      _isLocationVerified = true;
-                    });
-
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('تم التحقق من الموقع بنجاح'),
-                      ),
-                    );
-                  },
-                  child: Text(_isLocationVerified ? 'تغيير' : 'تأكيد الموقع'),
+                  onPressed: _selectLocation,
+                  child: Text(_isLocationVerified ? 'تغيير' : 'تحديد الموقع'),
                 ),
               ),
             ),
@@ -537,7 +547,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         const SizedBox(width: AppSpacing.xs),
                         Expanded(
                           child: Text(
-                            'تم تطبيق الكوبون بنجاح: ${_appliedCoupon!['title']} (${_appliedCoupon!['discount']})',
+                            'تم تطبيق الكوبون بنجاح: ${_appliedCoupon!['title']} (${_appliedCoupon!['displayDiscount'] ?? _appliedCoupon!['discount']})',
                             style: theme.textTheme.labelSmall?.copyWith(
                               color: AppColors.success,
                               fontWeight: FontWeight.bold,
@@ -724,6 +734,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                               ),
                             );
                           } catch (e) {
+                            scaffoldMessenger.clearSnackBars();
                             scaffoldMessenger.showSnackBar(
                               SnackBar(
                                 content: Text('فشل تأكيد الطلب: $e'),
@@ -735,6 +746,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       : (orderProvider.isCheckoutLoading
                           ? null
                           : () {
+                              ScaffoldMessenger.of(context).clearSnackBars();
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: const Text(

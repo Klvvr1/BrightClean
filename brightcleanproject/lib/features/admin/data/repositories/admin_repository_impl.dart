@@ -24,4 +24,13 @@ class AdminRepositoryImpl implements AdminRepository {
   Future<void> approveUser(int userId) async {
     await _apiClient.post('/api/admin/approve/$userId');
   }
+
+  @override
+  Future<List<dynamic>> getApprovedStaff() async {
+    final response = await _apiClient.get('/api/admin/staff');
+    if (response is List) {
+      return response;
+    }
+    throw ServerException(message: 'Invalid API response format for approved staff');
+  }
 }
