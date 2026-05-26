@@ -10,7 +10,7 @@ class BaseApiClient {
   final FlutterSecureStorage _secureStorage;
 
   BaseApiClient({
-    this.baseUrl = 'http://localhost:5000',
+    this.baseUrl = 'http://localhost:5135',
     http.Client? client,
     FlutterSecureStorage? secureStorage,
   })  : _client = client ?? http.Client(),
@@ -32,7 +32,8 @@ class BaseApiClient {
     return headers;
   }
 
-  void _logRequest(String method, Uri url, Map<String, String> headers, {String? body}) {
+  void _logRequest(String method, Uri url, Map<String, String> headers,
+      {String? body}) {
     debugPrint('--> $method ${url.toString()}');
     final loggedHeaders = Map<String, String>.from(headers);
     if (loggedHeaders.containsKey('Authorization')) {
@@ -62,7 +63,8 @@ class BaseApiClient {
     // Check if response is from sensitive endpoint
     final requestUrl = response.request?.url;
     final isSensitive = requestUrl != null &&
-        (requestUrl.path.endsWith('/login') || requestUrl.path.endsWith('/register'));
+        (requestUrl.path.endsWith('/login') ||
+            requestUrl.path.endsWith('/register'));
 
     if (isSensitive) {
       debugPrint('Response Body: [REDACTED - sensitive endpoint]');
@@ -72,7 +74,8 @@ class BaseApiClient {
   }
 
   Uri _buildUrl(String endpoint) {
-    final normalizedEndpoint = endpoint.startsWith('/') ? endpoint : '/$endpoint';
+    final normalizedEndpoint =
+        endpoint.startsWith('/') ? endpoint : '/$endpoint';
     return Uri.parse('$baseUrl$normalizedEndpoint');
   }
 
@@ -85,7 +88,8 @@ class BaseApiClient {
       }
       return null;
     } else {
-      String errorMessage = 'Server responded with status code ${response.statusCode}';
+      String errorMessage =
+          'Server responded with status code ${response.statusCode}';
       try {
         if (response.body.isNotEmpty) {
           final decodedBody = json.decode(response.body);
