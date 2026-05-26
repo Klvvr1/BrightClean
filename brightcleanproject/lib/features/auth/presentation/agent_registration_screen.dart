@@ -7,6 +7,7 @@ import '../../../../core/widgets/custom_text_field.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_radius.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/widgets/map_picker_screen.dart';
 import 'package:provider/provider.dart';
 import '../data/providers/auth_provider.dart';
@@ -413,7 +414,7 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
             backgroundColor: AppColors.success,
           ),
         );
-        Navigator.pushReplacementNamed(context, '/login');
+        context.go('/login');
       }
     } catch (e) {
       if (mounted) {
