@@ -8,6 +8,7 @@ class AdminProvider with ChangeNotifier {
   final AdminRepository adminRepository;
 
   List<PendingUserModel> _pendingUsers = [];
+  List<dynamic> _approvedStaff = [];
   bool _isLoading = false;
   bool _isActionLoading = false;
   String? _errorMessage;
@@ -16,9 +17,27 @@ class AdminProvider with ChangeNotifier {
       : adminRepository = adminRepository ?? AdminRepositoryImpl();
 
   List<PendingUserModel> get pendingUsers => _pendingUsers;
+  List<dynamic> get approvedStaff => _approvedStaff;
   bool get isLoading => _isLoading;
   bool get isActionLoading => _isActionLoading;
   String? get errorMessage => _errorMessage;
+
+  Future<void> fetchApprovedStaff() async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      _approvedStaff = await adminRepository.getApprovedStaff();
+    } on ServerException catch (e) {
+      _errorMessage = e.message ?? 'حدث خطأ أثناء تحميل الموظفين المعتمدين';
+    } catch (e) {
+      _errorMessage = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
 
   Future<void> fetchPendingUsers() async {
     _isLoading = true;

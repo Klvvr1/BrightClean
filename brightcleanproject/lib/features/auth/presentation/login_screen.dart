@@ -209,6 +209,21 @@ class _LoginScreenState extends State<LoginScreen> {
                         return null;
                       },
                     ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: TextButton(
+                        onPressed: () {
+                          context.push('/forgot_password');
+                        },
+                        style: TextButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          minimumSize: const Size(0, 0),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: const Text('هل نسيت كلمة المرور؟'),
+                      ),
+                    ),
                     const SizedBox(height: AppSpacing.lg),
                     ElevatedButton(
                       // Disable button interaction when loading

@@ -37,4 +37,40 @@ class AuthRepositoryImpl implements AuthRepository {
       body: clientModel.toJson(),
     );
   }
+
+  @override
+  Future<String> forgotPassword(String email) async {
+    final response = await _apiClient.post(
+      '/api/auth/forgot-password',
+      body: {'email': email},
+    );
+    if (response is Map<String, dynamic>) {
+      return response['otp']?.toString() ?? '';
+    }
+    return '';
+  }
+
+  @override
+  Future<void> resetPassword(String email, String token, String newPassword) async {
+    await _apiClient.post(
+      '/api/auth/reset-password',
+      body: {
+        'email': email,
+        'token': token,
+        'newPassword': newPassword,
+      },
+    );
+  }
+
+  @override
+  Future<void> updateProfile(String firstName, String lastName, String phone) async {
+    await _apiClient.put(
+      '/api/users/profile',
+      body: {
+        'firstName': firstName,
+        'lastName': lastName,
+        'phoneNo': phone,
+      },
+    );
+  }
 }

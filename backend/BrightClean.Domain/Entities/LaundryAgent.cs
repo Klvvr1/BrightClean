@@ -27,6 +27,9 @@ namespace BrightClean.Domain.Entities
         [Required]
         public string BankAcc { get; set; } = string.Empty;
 
+        [Required]
+        public bool IsStoreClosed { get; set; } = false;
+
         public int AddressID { get; set; }
         
         [ForeignKey(nameof(AddressID))]

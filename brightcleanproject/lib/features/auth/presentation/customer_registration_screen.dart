@@ -176,14 +176,14 @@ class _CustomerRegistrationScreenState
     if (value == null || value.isEmpty) {
       return 'الرجاء إدخال رقم الهاتف';
     }
-    if (value.length > 10) {
-      return 'رقم الهاتف يجب ألا يتجاوز 10 أرقام';
+    if (value.length != 9) {
+      return 'رقم الهاتف يجب أن يتكون من 9 أرقام بالضبط';
     }
     if (value.contains(RegExp(r'[a-zA-Z]'))) {
       return 'الرجاء إدخال رقم صالح';
     }
-    if (!RegExp(r'^[0-9]{9,10}$').hasMatch(value)) {
-      return 'الرجاء إدخال رقم هاتف صالح (9 أو 10 أرقام)';
+    if (!RegExp(r'^[0-9]{9}$').hasMatch(value)) {
+      return 'الرجاء إدخال رقم هاتف يمني صالح مكون من 9 أرقام';
     }
     return null;
   }
@@ -192,8 +192,14 @@ class _CustomerRegistrationScreenState
     if (value == null || value.trim().isEmpty) {
       return 'الرجاء إدخال البريد الإلكتروني';
     }
-    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+    final email = value.trim().toLowerCase();
+    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
       return 'الرجاء إدخال بريد إلكتروني صحيح';
+    }
+    final allowedDomains = ['gmail.com', 'hotmail.com', 'yahoo.com', 'outlook.com'];
+    final parts = email.split('@');
+    if (parts.length != 2 || !allowedDomains.contains(parts[1])) {
+      return 'البريد الإلكتروني يجب أن يكون من النطاقات المسموحة فقط (gmail.com, hotmail.com, yahoo.com, outlook.com)';
     }
     return null;
   }
@@ -268,7 +274,7 @@ class _CustomerRegistrationScreenState
                     keyboardType: TextInputType.phone,
                     inputFormatters: [
                       FilteringTextInputFormatter.digitsOnly,
-                      LengthLimitingTextInputFormatter(10),
+                      LengthLimitingTextInputFormatter(9),
                     ],
                     validator: _validatePhone,
                   ),

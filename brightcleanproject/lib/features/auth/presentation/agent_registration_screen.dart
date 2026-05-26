@@ -246,13 +246,23 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
 
   String? _validateCR(String? value) {
     if (value == null || value.trim().isEmpty) return 'رقم السجل التجاري مطلوب';
+    final val = value.trim();
+    // Enforce 4-6 digits OR custom formats (e.g. CR-XXXX or alphanumeric with dashes, length 3-20)
+    final crRegex = RegExp(r'^([0-9]{4,6}|[a-zA-Z0-9\-\/]{3,20})$');
+    if (!crRegex.hasMatch(val)) {
+      return 'الرجاء إدخال رقم سجل تجاري صحيح (4-6 أرقام أو صيغة معتمدة)';
+    }
     return null;
   }
 
   String? _validateBankAccount(String? value) {
     if (value == null || value.trim().isEmpty) return 'رقم الحساب البنكي مطلوب';
-    if (value.trim().length < 15) {
-      return 'أدخل رقم حساب بنكي/آيبان صحيح';
+    final val = value.trim();
+    // Accept 9-10 digits (Kuraimi format) or 30-char Yemeni IBANs starting with YE
+    final kuraimiRegex = RegExp(r'^[0-9]{9,10}$');
+    final ibanRegex = RegExp(r'^[yY][eE][0-9a-zA-Z]{28}$');
+    if (!kuraimiRegex.hasMatch(val) && !ibanRegex.hasMatch(val)) {
+      return 'يجب إدخال حساب الكريمي (9-10 أرقام) أو آيبان يمني (30 حرفاً)';
     }
     return null;
   }
@@ -266,17 +276,30 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
   }
 
   String? _validatePhone(String? value) {
-    if (value == null || value.isEmpty) return 'رقم الهاتف مطلوب';
-    if (!RegExp(r'^[0-9]{9,10}$').hasMatch(value)) {
-      return 'أدخل رقم هاتف صالح (9-10 أرقام)';
+    if (value == null || value.isEmpty) {
+      return 'الرجاء إدخال رقم الهاتف';
+    }
+    if (value.length != 9) {
+      return 'رقم الهاتف يجب أن يتكون من 9 أرقام بالضبط';
+    }
+    if (!RegExp(r'^[0-9]{9}$').hasMatch(value)) {
+      return 'الرجاء إدخال رقم هاتف يمني صالح مكون من 9 أرقام';
     }
     return null;
   }
 
   String? _validateEmail(String? value) {
-    if (value == null || value.trim().isEmpty) return 'البريد الإلكتروني مطلوب';
-    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-      return 'أدخل بريد إلكتروني صحيح';
+    if (value == null || value.trim().isEmpty) {
+      return 'الرجاء إدخال البريد الإلكتروني';
+    }
+    final email = value.trim().toLowerCase();
+    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
+      return 'الرجاء إدخال بريد إلكتروني صحيح';
+    }
+    final allowedDomains = ['gmail.com', 'hotmail.com', 'yahoo.com', 'outlook.com'];
+    final parts = email.split('@');
+    if (parts.length != 2 || !allowedDomains.contains(parts[1])) {
+      return 'البريد الإلكتروني يجب أن يكون من النطاقات المسموحة فقط (gmail.com, hotmail.com, yahoo.com, outlook.com)';
     }
     return null;
   }
@@ -506,7 +529,10 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
                   controller: _phoneController,
                   hintText: 'رقم الهاتف',
                   keyboardType: TextInputType.phone,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(9),
+                  ],
                   validator: _validatePhone,
                 ),
                 const SizedBox(height: AppSpacing.md),

@@ -53,4 +53,26 @@ class BookingRepositoryImpl implements BookingRepository {
       rethrow;
     }
   }
+
+  @override
+  Future<int> createBooking(int laundryAgentID, List<Map<String, int>> items) async {
+    try {
+      final response = await apiClient.post(
+        '/api/bookings',
+        body: {
+          'laundryAgentID': laundryAgentID,
+          'items': items,
+        },
+      );
+      if (response != null && response is Map<String, dynamic>) {
+        final bookingId = response['bookingID'] ?? response['bookingId'];
+        if (bookingId != null) {
+          return bookingId as int;
+        }
+      }
+      throw Exception('فشل إنشاء الحجز في الخادم.');
+    } catch (e) {
+      rethrow;
+    }
+  }
 }
