@@ -343,6 +343,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   @override
   Widget build(BuildContext context) {
     final cart = Provider.of<CartProvider>(context);
+    final orderProvider = Provider.of<OrderProvider>(context, listen: false);
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
