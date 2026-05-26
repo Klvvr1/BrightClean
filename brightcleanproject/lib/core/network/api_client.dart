@@ -5,12 +5,14 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../error/exceptions.dart';
 
 class BaseApiClient {
+  static const String defaultBaseUrl = 'http://localhost:5135';
+
   final http.Client _client;
   final String baseUrl;
   final FlutterSecureStorage _secureStorage;
 
   BaseApiClient({
-    this.baseUrl = 'http://localhost:5135',
+    this.baseUrl = defaultBaseUrl,
     http.Client? client,
     FlutterSecureStorage? secureStorage,
   })  : _client = client ?? http.Client(),
@@ -41,7 +43,7 @@ class BaseApiClient {
     }
     debugPrint('Headers: $loggedHeaders');
     final path = url.path;
-    final isSensitive = path.endsWith('/login') || path.endsWith('/register');
+    final isSensitive = path.endsWith('/login') || path.contains('/register');
     if (body != null && !isSensitive) {
       debugPrint('Body: $body');
     }
@@ -64,7 +66,7 @@ class BaseApiClient {
     final requestUrl = response.request?.url;
     final isSensitive = requestUrl != null &&
         (requestUrl.path.endsWith('/login') ||
-            requestUrl.path.endsWith('/register'));
+            requestUrl.path.contains('/register'));
 
     if (isSensitive) {
       debugPrint('Response Body: [REDACTED - sensitive endpoint]');
@@ -118,7 +120,7 @@ class BaseApiClient {
     final headers = await _getHeaders();
     _logRequest('GET', url, headers);
     try {
-      final response = await _client.get(url, headers: headers);
+      final response = await _client.get(url, headers: headers).timeout(const Duration(seconds: 30));
       return _processResponse(response);
     } catch (e) {
       if (e is ServerException) rethrow;
@@ -136,7 +138,7 @@ class BaseApiClient {
         url,
         headers: headers,
         body: requestBody,
-      );
+      ).timeout(const Duration(seconds: 30));
       return _processResponse(response);
     } catch (e) {
       if (e is ServerException) rethrow;
@@ -192,7 +194,7 @@ class BaseApiClient {
         url,
         headers: headers,
         body: requestBody,
-      );
+      ).timeout(const Duration(seconds: 30));
       return _processResponse(response);
     } catch (e) {
       if (e is ServerException) rethrow;
@@ -205,7 +207,7 @@ class BaseApiClient {
     final headers = await _getHeaders();
     _logRequest('DELETE', url, headers);
     try {
-      final response = await _client.delete(url, headers: headers);
+      final response = await _client.delete(url, headers: headers).timeout(const Duration(seconds: 30));
       return _processResponse(response);
     } catch (e) {
       if (e is ServerException) rethrow;

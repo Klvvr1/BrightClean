@@ -11,6 +11,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/widgets/map_picker_screen.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../../../../core/network/api_client.dart';
 
 
 class DriverRegistrationScreen extends StatefulWidget {
@@ -246,19 +247,16 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
         };
 
         final response = await http.post(
-          Uri.parse('http://localhost:5135/api/auth/register/driver'),
+          Uri.parse('${BaseApiClient.defaultBaseUrl}/api/auth/register/driver'),
           headers: {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
           },
           body: json.encode(payload),
-        );
+        ).timeout(const Duration(seconds: 30));
 
-        // Required Logs
-        // ignore: avoid_print
-        print('DRIVER REGISTER STATUS: ${response.statusCode}');
-        // ignore: avoid_print
-        print('DRIVER REGISTER BODY: ${response.body}');
+        // Log non-sensitive metadata only
+        debugPrint('Driver registration response: status ${response.statusCode}');
 
         if (response.statusCode == 200 || response.statusCode == 201) {
           if (mounted) {
