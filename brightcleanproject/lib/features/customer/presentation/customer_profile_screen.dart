@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../auth/data/providers/auth_provider.dart';
 import '../data/providers/cart_provider.dart';
+import '../data/providers/order_provider.dart';
 import 'edit_account_screen.dart';
 import 'change_password_screen.dart';
 import 'addresses_screen.dart';
@@ -86,7 +87,8 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
 
     if (confirm == true && mounted) {
       await Provider.of<AuthProvider>(context, listen: false).logout(
-        Provider.of<CartProvider>(context, listen: false)
+        Provider.of<CartProvider>(context, listen: false),
+        Provider.of<OrderProvider>(context, listen: false),
       );
       if (mounted) context.go('/login');
     }

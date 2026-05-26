@@ -20,6 +20,7 @@ class CartProvider with ChangeNotifier {
         quantity: map['quantity'] as int,
         pricePerUnit: map['pricePerUnit'] as double,
         totalPrice: map['totalPrice'] as double,
+        serviceId: map['serviceId'] as int? ?? 1,
       )).toList();
       notifyListeners();
     } catch (e) {
@@ -45,6 +46,7 @@ class CartProvider with ChangeNotifier {
     required int quantity,
     required double pricePerUnit,
     required double totalPrice,
+    required int serviceId,
   }) async {
     // Validate inputs
     if (quantity <= 0) {
@@ -74,6 +76,7 @@ class CartProvider with ChangeNotifier {
         quantity: newQuantity,
         pricePerUnit: pricePerUnit,
         totalPrice: newTotal,
+        serviceId: serviceId,
       );
     } else {
       // Add new item
@@ -85,6 +88,7 @@ class CartProvider with ChangeNotifier {
           quantity: quantity,
           pricePerUnit: pricePerUnit,
           totalPrice: expectedTotal,
+          serviceId: serviceId,
         ),
       );
     }
@@ -107,6 +111,7 @@ class CartProvider with ChangeNotifier {
             'quantity': item.quantity,
             'pricePerUnit': item.pricePerUnit,
             'totalPrice': item.totalPrice,
+            'serviceId': item.serviceId,
           });
         }
       });

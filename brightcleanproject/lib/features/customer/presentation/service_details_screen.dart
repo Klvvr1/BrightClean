@@ -519,6 +519,25 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
     );
   }
 
+  // TODO: Replace with proper catalog lookup from backend API
+  // Currently using hardcoded mapping based on DbInitializer seed data:
+  // ServiceID 1: Wash & Iron (default)
+  // ServiceID 2: المعوز
+  // ServiceID 3: العمامة
+  int _resolveServiceId(String itemName) {
+    // Map specific Arabic clothing items to their ServiceIDs
+    switch (itemName) {
+      case 'المعوز':
+        return 2;
+      case 'العمامة':
+        return 3;
+      default:
+        // Default to ServiceID 1 (Wash & Iron) for all other items
+        // This is a temporary solution until a proper catalog API is implemented
+        return 1;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -901,6 +920,7 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
                         quantity: entry.value,
                         pricePerUnit: basePrice * selectedOption.priceMultiplier,
                         totalPrice: basePrice * selectedOption.priceMultiplier * entry.value,
+                        serviceId: _resolveServiceId(entry.key),
                       );
                     }
                   }
@@ -962,6 +982,7 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
                           quantity: 1,
                           pricePerUnit: itemPrice,
                           totalPrice: itemPrice,
+                          serviceId: _resolveServiceId(entry.key),
                         );
                       }
                     }

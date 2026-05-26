@@ -4,11 +4,66 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_styles.dart';
+import '../../../../core/network/api_client.dart';
 import '../data/providers/cart_provider.dart';
 import '../data/providers/order_provider.dart';
 
-class CartScreen extends StatelessWidget {
+class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
+
+  @override
+  State<CartScreen> createState() => _CartScreenState();
+}
+
+class _CartScreenState extends State<CartScreen> {
+  List<Map<String, dynamic>> _agents = [];
+  int? _selectedAgentId;
+  bool _isLoadingAgents = false;
+  String? _agentError;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAgents();
+  }
+
+  Future<void> _loadAgents() async {
+    if (!mounted) return;
+    setState(() {
+      _isLoadingAgents = true;
+      _agentError = null;
+    });
+    try {
+      final apiClient = BaseApiClient();
+      final response = await apiClient.get('/api/users/agents');
+      if (response is List) {
+        if (!mounted) return;
+        setState(() {
+          _agents = response.map((a) => {
+            'id': a['id'] as int,
+            'businessName': a['businessName'] as String,
+          }).toList();
+          
+          if (_agents.isNotEmpty) {
+            _selectedAgentId = _agents.first['id'] as int;
+          }
+          _isLoadingAgents = false;
+        });
+      } else {
+        if (!mounted) return;
+        setState(() {
+          _agentError = 'فشل في تحميل قائمة الوكلاء';
+          _isLoadingAgents = false;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _agentError = 'خطأ في الاتصال بالخادم. يرجى المحاولة مرة أخرى.';
+        _isLoadingAgents = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -80,11 +135,11 @@ class CartScreen extends StatelessWidget {
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
-                                Text('${item.totalPrice} ر.ي', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-                                IconButton(
-                                  icon: Icon(Icons.delete_outline, color: theme.colorScheme.error),
-                                  onPressed: () => cart.removeItem(item.id),
-                                ),
+                                  Text('${item.totalPrice} ر.ي', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                                  IconButton(
+                                    icon: Icon(Icons.delete_outline, color: theme.colorScheme.error),
+                                    onPressed: () => cart.removeItem(item.id),
+                                  ),
                               ],
                             ),
                           ],
@@ -105,7 +160,44 @@ class CartScreen extends StatelessWidget {
                 ),
                 child: SafeArea(
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      Text('اختر مغسلة (الوكيل)', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                      const SizedBox(height: AppSpacing.sm),
+                      if (_isLoadingAgents)
+                        const Center(child: Padding(
+                          padding: EdgeInsets.all(8.0),
+                          child: CircularProgressIndicator(),
+                        ))
+                      else if (_agentError != null)
+                        Row(
+                          children: [
+                            Expanded(child: Text(_agentError!, style: TextStyle(color: theme.colorScheme.error))),
+                            IconButton(icon: const Icon(Icons.refresh), onPressed: _loadAgents),
+                          ],
+                        )
+                      else if (_agents.isEmpty)
+                        const Text('لا يوجد وكلاء متوفرين حالياً', style: TextStyle(color: Colors.grey))
+                      else
+                        DropdownButtonFormField<int>(
+                          initialValue: _selectedAgentId,
+                          items: _agents.map((agent) {
+                            return DropdownMenuItem<int>(
+                              value: agent['id'] as int,
+                              child: Text(agent['businessName'] as String),
+                            );
+                          }).toList(),
+                          onChanged: (val) {
+                            setState(() {
+                              _selectedAgentId = val;
+                            });
+                          },
+                          decoration: InputDecoration(
+                            border: OutlineInputBorder(borderRadius: AppRadius.button),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+                          ),
+                        ),
+                      const SizedBox(height: AppSpacing.lg),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -117,7 +209,7 @@ class CartScreen extends StatelessWidget {
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: () async {
+                          onPressed: (_selectedAgentId == null) ? null : () async {
                             final scaffoldMessenger = ScaffoldMessenger.of(context);
                             final orderProvider = Provider.of<OrderProvider>(context, listen: false);
                             final router = GoRouter.of(context);
@@ -132,26 +224,14 @@ class CartScreen extends StatelessWidget {
                             );
 
                             try {
-                              // TODO: Cart items need to store actual service IDs and user needs to select an agent
-                              // Currently using placeholder values - this needs to be replaced with actual runtime data
-                              // when service selection and agent selection UI is implemented
                               final itemsDto = cart.items.map((item) {
-                                // FIXME: Hardcoded serviceID - should come from item.serviceId
-                                final serviceId = 1; // int.tryParse(item.id);
-                                if (serviceId == null || serviceId <= 0) {
-                                  throw Exception('رقم الخدمة غير صالح');
-                                }
                                 return {
-                                  'serviceID': serviceId,
+                                  'serviceID': item.serviceId,
                                   'quantity': item.quantity,
                                 };
                               }).toList();
 
-                              // FIXME: Hardcoded laundryAgentID - should come from selected agent in UI
-                              final selectedAgentId = 2; // Should be from state/provider
-                              if (selectedAgentId <= 0) {
-                                throw Exception('يجب اختيار وكيل غسيل');
-                              }
+                              final selectedAgentId = _selectedAgentId!;
 
                               await orderProvider.createBooking(selectedAgentId, itemsDto);
 

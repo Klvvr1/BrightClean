@@ -7,9 +7,11 @@ namespace BrightClean.API.DTOs
     public class RegisterClientDto
     {
         [Required]
+        [MinLength(1, ErrorMessage = "First name cannot be empty or whitespace.")]
         public string FirstName { get; set; } = string.Empty;
 
         [Required]
+        [MinLength(1, ErrorMessage = "Last name cannot be empty or whitespace.")]
         public string LastName { get; set; } = string.Empty;
 
         [Required]
