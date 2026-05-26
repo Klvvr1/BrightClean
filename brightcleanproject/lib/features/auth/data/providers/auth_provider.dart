@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../../core/error/exceptions.dart';
 import '../../data/models/register_agent_model.dart';
+import '../../data/models/register_client_model.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../repositories/auth_repository_impl.dart';
 import '../../../customer/data/providers/cart_provider.dart';
@@ -94,6 +95,28 @@ class AuthProvider with ChangeNotifier {
 
     try {
       await _authRepository.registerAgent(model);
+      _isLoading = false;
+      notifyListeners();
+    } on ServerException catch (e) {
+      _errorMessage = e.message;
+      _isLoading = false;
+      notifyListeners();
+      rethrow;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      throw ServerException(message: e.toString());
+    }
+  }
+
+  Future<void> registerClient(RegisterClientModel model) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await _authRepository.registerClient(model);
       _isLoading = false;
       notifyListeners();
     } on ServerException catch (e) {

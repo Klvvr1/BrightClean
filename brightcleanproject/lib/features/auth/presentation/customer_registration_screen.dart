@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:flutter/foundation.dart';
 import '../../../../core/widgets/custom_text_field.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_radius.dart';
-import '../../../../core/database/database_helper.dart';
+import 'package:provider/provider.dart';
+import '../data/providers/auth_provider.dart';
+import '../data/models/register_client_model.dart';
+import '../../../../core/error/exceptions.dart';
 import '../../../../core/widgets/map_picker_screen.dart';
 
 class CustomerRegistrationScreen extends StatefulWidget {
@@ -108,30 +110,19 @@ class _CustomerRegistrationScreenState
       });
 
       try {
-        final dbHelper = DatabaseHelper.instance;
-        final userData = {
-          'first_name': _firstNameController.text.trim(),
-          'last_name': _lastNameController.text.trim(),
-          'phone': _phoneController.text.trim(),
-          'email': _emailController.text.trim(),
-          'password': dbHelper.hashPassword(_passwordController.text),
-          'gender': _selectedGender ?? '',
-          'dob': _dobController.text.trim(),
-          'role': 'customer',
-          'address_string': _selectedAddress,
-          'latitude': _selectedCoordinates?.latitude,
-          'longitude': _selectedCoordinates?.longitude,
-          'status': 'active',
-          'created_at': DateTime.now().toIso8601String(),
-        };
+        final String mappedGender = _selectedGender == 'M' ? 'Male' : 'Female';
+        final clientModel = RegisterClientModel(
+          firstName: _firstNameController.text.trim(),
+          lastName: _lastNameController.text.trim(),
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+          phoneNo: _phoneController.text.trim(),
+          dateOfBirth: _dobController.text.trim(),
+          gender: mappedGender,
+        );
 
-        if (kIsWeb) {
-          debugPrint(
-            "Web mode detected: Geocoding bypassed. Saving raw coordinates: $_selectedCoordinates",
-          );
-        }
-
-        await dbHelper.registerUser(userData);
+        final authProvider = Provider.of<AuthProvider>(context, listen: false);
+        await authProvider.registerClient(clientModel);
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -147,9 +138,12 @@ class _CustomerRegistrationScreenState
         }
       } catch (e) {
         if (mounted) {
-          final errorMessage = e.toString().contains('تعذر')
-              ? 'تعذر الاتصال بقاعدة البيانات المحلية'
-              : 'حدث خطأ أثناء التسجيل: $e';
+          String errorMessage = 'حدث خطأ أثناء التسجيل';
+          if (e is ServerException) {
+            errorMessage = e.message ?? errorMessage;
+          } else {
+            errorMessage = '$errorMessage: $e';
+          }
 
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
