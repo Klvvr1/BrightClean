@@ -1,9 +1,15 @@
 # Laundry Platform — Class Diagram Documentation
 
-> **Version:** 6.3 — Final
+> **Version:** 6.4 — Phase 2 Updated
 > **Last Updated:** May 2026
 > **Diagram Type:** UML Class Diagram
 > **Architecture Pattern:** Table Per Type (TPT) Inheritance + Rich Junction Entities
+>
+> **Changelog v6.4 (Phase 1 & Phase 2 Updates):**
+> - Added `IsStoreClosed` state boolean to `LaundryAgent` domain entity
+> - Password reset uses transient in-memory OTP storage (not persisted to User model) via thread-safe dictionary for temporary token/expiry pairs
+> - Detailed `UserDocument` with specific image uploads for `CommercialRegistration` and `NationalID`, documenting `UserID_FK` relationship
+> - Documented Frontend Architecture Providers (`OrderProvider`, `AdminProvider`, `AuthProvider`) and Repositories in a new dedicated section
 >
 > **Changelog v6.2:**
 > - `SystemStatus.Reason` removed — `Message` is the sole public-facing explanation shown on the login screen
@@ -37,6 +43,7 @@
 15. [Delivery Model Matrix](#15-delivery-model-matrix)
 16. [Booking Status State Machine](#16-booking-status-state-machine)
 17. [Registration Compatibility](#17-registration-compatibility)
+18. [Frontend Architecture (Providers & Repositories)](#18-frontend-architecture-providers--repositories)
 
 ---
 
@@ -406,7 +413,7 @@ Root identity table shared across all actors. No concrete `User` record exists i
 | `LastName` | string | NOT NULL | Legal last (family) name |
 | `Email` | string | NOT NULL, UNIQUE | Login identifier |
 | `PasswordHash` | string | NOT NULL | bcrypt/argon2 hash — never plaintext |
-| `PhoneNo` | string | NOT NULL, 9–10 digits | Contact number |
+| `PhoneNo` | string | NOT NULL, 9 digits | Contact number (validated to exactly 9 digits for Yemeni phone numbers) |
 | `DateOfBirth` | date | NOT NULL | Used for age verification |
 | `ProfilePhotoURL` | string? | NULLABLE | CDN URL of profile photo |
 | `TermsAccepted` | boolean | NOT NULL, DEFAULT false | T&C acceptance at registration |
@@ -414,6 +421,17 @@ Root identity table shared across all actors. No concrete `User` record exists i
 | `Role` | UserRole | NOT NULL | Inheritance discriminator |
 | `VerifiedAt` | datetime? | NULLABLE | Stamped when admin approves account |
 | `CreatedAt` | datetime | NOT NULL, DEFAULT NOW() | Registration timestamp |
+
+### 5.1.1 Forgot Password Flow State (Transient / In-Memory)
+
+Authentication operations manage password recovery state **in-memory only** (not persisted to database) via a thread-safe `ConcurrentDictionary` that associates user emails with verification OTP tokens. These entries are temporary and do not appear in the User model or API schema.
+
+| Field | Type | Constraints | Description |
+|---|---|---|---|
+| `Token` | string | 6-character OTP | Temporary random numeric string (cryptographically generated) sent to user's email |
+| `Expires` | datetime | NOT NULL | Token expiration deadline (15 minutes from generation) |
+
+**Note:** OTPs are never persisted to the database. They exist only in the application's memory and are automatically cleared upon successful password reset or expiration.
 
 **Password Policy (enforced pre-hash at application layer):**
 - Minimum 8 characters
@@ -477,6 +495,7 @@ The central service provider. Offers a platform-admin-approved subset of the ser
 | `BusinessName` | string | NOT NULL | Trading name of the business |
 | `CommercialRegister` | string | NOT NULL, UNIQUE | Government business license number |
 | `BankAcc` | string | NOT NULL | Bank account for service revenue |
+| `IsStoreClosed` | boolean | NOT NULL, DEFAULT false | Toggle status of the agent's storefront (true = closed, false = open) |
 | `/averageRating()` | decimal | Derived | Computed from `BookingRating.AgentRating` |
 | `/totalRatings()` | int | Derived | Count of non-null `AgentRating` records |
 
@@ -545,13 +564,18 @@ Stores uploaded verification document references for `DeliveryStaff` and `Laundr
 | Field | Type | Constraints | Description |
 |---|---|---|---|
 | `DocumentID_PK` | int | PK, Auto-increment | Unique identifier |
-| `UserID_FK` | int | FK → User, NOT NULL | Document owner |
+| `UserID_FK` | int | FK → User, NOT NULL | Foreign key referencing the parent `User` who uploaded the document |
 | `Type` | DocumentType | NOT NULL | NationalID, DriverLicense, VehicleImage, CommercialRegistration |
-| `FileURL` | string | NOT NULL | CDN or storage URL of the uploaded file |
-| `UploadedAt` | datetime | NOT NULL, DEFAULT NOW() | Upload timestamp |
+| `FileURL` | string | NOT NULL | Relative URL/path of the uploaded file on the server's local file storage (`wwwroot/uploads`) |
+| `UploadedAt` | datetime | NOT NULL, DEFAULT NOW() | Document upload timestamp |
 
-**Relationships:**
-- `User "1" --> "0..*" UserDocument` — one user can have multiple documents
+**Verification Document Types & Images:**
+
+* **Commercial Register Image**: Represented by a `UserDocument` record where the `Type` field equals `DocumentType.CommercialRegistration` and the `FileURL` field holds the file path. Sent from frontend via `commercialRegisterImage` multipart form data.
+* **National ID Image**: Represented by a `UserDocument` record where the `Type` field equals `DocumentType.NationalID` and the `FileURL` field holds the file path. Sent from frontend via `nationalIdImage` multipart form data.
+
+**Key Relationship:**
+- **Foreign Key constraint**: The `UserID_FK` database column establishes a **Many-to-One** relationship linking each document back to a unique record in the `User` table, representing the document's owner.
 
 **Document Requirements by Role:**
 
@@ -866,7 +890,7 @@ LIMIT 1
 
 ---
 
-## 12. Relationship Map
+## 13. Relationship Map
 
 | # | From | Cardinality | To | Label | Type |
 |---|---|---|---|---|---|
@@ -897,7 +921,7 @@ LIMIT 1
 
 ---
 
-## 13. Business Rules
+## 14. Business Rules
 
 ### Cart Rules
 - A `Draft` booking is created automatically when the client opens the cart — no explicit action needed
@@ -957,7 +981,7 @@ LIMIT 1
 
 ---
 
-## 14. Delivery Model Matrix
+## 15. Delivery Model Matrix
 
 | Service | Category | DeliveryModel | Tasks | ScheduledAt | Agent Action |
 |---|---|---|---|---|---|
@@ -977,7 +1001,7 @@ LIMIT 1
 
 ---
 
-## 15. Booking Status State Machine
+## 16. Booking Status State Machine
 
 ```
                    ┌───────┐
@@ -1017,7 +1041,7 @@ LIMIT 1
 
 ---
 
-## 16. Registration Compatibility
+## 17. Registration Compatibility
 
 ### Compatibility Score: 95 / 100
 
@@ -1047,3 +1071,48 @@ LIMIT 1
 | Commercial Register | — | — | ✅ `LaundryAgent.CommercialRegister` |
 | Reg. Document Image | — | — | ✅ `UserDocument (CommercialRegistration)` |
 | Service Selection | — | — | ✅ `AgentService` junction |
+
+
+---
+
+## 18. Frontend Architecture (Providers & Repositories)
+
+This section documents the structure and key methods of the state providers and repositories in the Flutter frontend, capturing the changes made during Phase 1 and Phase 2.
+
+### 18.1 State Providers & Repositories
+
+State providers manage application state and coordinate data flow between the user interface and domain layers.
+
+| Provider | Purpose / Scope | Key Method | Description |
+|---|---|---|---|
+| `OrderProvider` | Manages cart state, active bookings, and checkout transactions | `createBooking(int laundryAgentID, List<Map<String, int>> items)` | Contacts the checkout API to create a booking draft and stores the resulting booking ID in local state. |
+| `AdminProvider` | Handles administrative tasks such as pending users and active staff oversight | `fetchApprovedStaff()` | Retrieves the list of all approved laundry agents and drivers from the administrative staff API. |
+| `AuthProvider` | Coordinates login session persistence, user profiles, registration, and password recovery | `updateProfile(String name, String phone)` | Splits the full name into first/last components, updates user info via the profile API, and refreshes local SharedPreferences. |
+| | | `forgotPassword(String email)` | Triggers the forgot password flow, generating an OTP sent to the user's email. |
+| | | `resetPassword(String email, String token, String newPassword)` | Validates the OTP token and updates the user's password on the backend. |
+
+### 18.2 Repositories
+
+Repositories serve as the data access layer, abstracting direct API communication with the backend.
+
+* **Order / Booking Repository**:
+  * `BookingRepository.createBooking(int laundryAgentID, List<Map<String, int>> items)`: Submits items to the booking creation API.
+* **Admin Repository**:
+  * `AdminRepository.getApprovedStaff()`: Fetches the list of approved drivers and agents from `/api/admin/staff`.
+* **Auth Repository**:
+  * `AuthRepository.updateProfile(String firstName, String lastName, String phone)`: Calls `PUT /api/users/profile` to update user account info.
+  * `AuthRepository.forgotPassword(String email)`: Calls `POST /api/auth/forgot-password` to initiate recovery.
+  * `AuthRepository.resetPassword(String email, String token, String newPassword)`: Calls `POST /api/auth/reset-password` to update credentials.
+
+### 18.3 Core Methods List
+
+* **OrderProvider**:
+  * `createBooking`: Sends a request to the backend with selected service items and laundry agent ID, creating a new `Draft` booking and saving the `BookingID` in local state.
+
+* **AdminProvider**:
+  * `fetchApprovedStaff`: Calls the admin repository to retrieve all approved laundry agents and delivery staff, caching the results in local state for dashboard views.
+
+* **AuthProvider**:
+  * `updateProfile`: Updates the logged-in user's first name, last name, and phone number on the server, and updates the local storage cache (`user_name` and `user_phone`).
+  * `forgotPassword`: Submits the user's email to request a temporary OTP code for password reset.
+  * `resetPassword`: Submits the verified OTP code alongside the new password to complete the password reset flow.

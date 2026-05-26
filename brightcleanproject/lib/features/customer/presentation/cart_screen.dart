@@ -5,6 +5,7 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_styles.dart';
 import '../data/providers/cart_provider.dart';
+import '../data/providers/order_provider.dart';
 
 class CartScreen extends StatelessWidget {
   const CartScreen({super.key});
@@ -116,7 +117,63 @@ class CartScreen extends StatelessWidget {
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: () => context.push('/checkout'),
+                          onPressed: () async {
+                            final scaffoldMessenger = ScaffoldMessenger.of(context);
+                            final orderProvider = Provider.of<OrderProvider>(context, listen: false);
+                            final router = GoRouter.of(context);
+
+                            // Show progress dialog
+                            showDialog(
+                              context: context,
+                              barrierDismissible: false,
+                              builder: (ctx) => const Center(
+                                child: CircularProgressIndicator(),
+                              ),
+                            );
+
+                            try {
+                              // TODO: Cart items need to store actual service IDs and user needs to select an agent
+                              // Currently using placeholder values - this needs to be replaced with actual runtime data
+                              // when service selection and agent selection UI is implemented
+                              final itemsDto = cart.items.map((item) {
+                                // FIXME: Hardcoded serviceID - should come from item.serviceId
+                                final serviceId = 1; // int.tryParse(item.id);
+                                if (serviceId == null || serviceId <= 0) {
+                                  throw Exception('رقم الخدمة غير صالح');
+                                }
+                                return {
+                                  'serviceID': serviceId,
+                                  'quantity': item.quantity,
+                                };
+                              }).toList();
+
+                              // FIXME: Hardcoded laundryAgentID - should come from selected agent in UI
+                              final selectedAgentId = 2; // Should be from state/provider
+                              if (selectedAgentId <= 0) {
+                                throw Exception('يجب اختيار وكيل غسيل');
+                              }
+
+                              await orderProvider.createBooking(selectedAgentId, itemsDto);
+
+                              // Pop progress dialog
+                              if (context.mounted) {
+                                Navigator.of(context).pop();
+                                router.push('/checkout');
+                              }
+                            } catch (e) {
+                              // Pop progress dialog
+                              if (context.mounted) {
+                                Navigator.of(context).pop();
+                              }
+                              scaffoldMessenger.clearSnackBars();
+                              scaffoldMessenger.showSnackBar(
+                                SnackBar(
+                                  content: Text('حدث خطأ أثناء الانتقال للدفع: $e'),
+                                  backgroundColor: theme.colorScheme.error,
+                                ),
+                              );
+                            }
+                          },
                           style: ElevatedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
                           ),

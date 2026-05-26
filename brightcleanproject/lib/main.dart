@@ -16,6 +16,7 @@ import 'features/customer/data/providers/cart_provider.dart';
 import 'features/driver/data/providers/driver_provider.dart';
 import 'features/auth/data/providers/auth_provider.dart';
 import 'features/admin/data/providers/admin_provider.dart';
+import 'features/customer/data/providers/notification_provider.dart';
 
 void main() {
   // Initialize FFI database factory for desktop platforms (Windows, macOS, Linux)
@@ -33,6 +34,7 @@ void main() {
         ChangeNotifierProvider(create: (_) => CartProvider()),
         ChangeNotifierProvider(create: (_) => DriverProvider()),
         ChangeNotifierProvider(create: (_) => AdminProvider()),
+        ChangeNotifierProvider(create: (_) => NotificationProvider()),
       ],
       child: const BrightCleanApp(),
     ),

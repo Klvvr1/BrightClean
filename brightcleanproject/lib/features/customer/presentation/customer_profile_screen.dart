@@ -16,6 +16,7 @@ import '../../../core/widgets/profile/profile_widgets.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/controllers/theme_controller.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/localization/language_controller.dart';
 
 class CustomerProfileScreen extends StatefulWidget {
   const CustomerProfileScreen({super.key});
@@ -93,9 +94,11 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isArabic = LanguageController().isArabic;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('حسابي'),
+        title: Text(isArabic ? 'حسابي' : 'My Account'),
         centerTitle: true,
       ),
       body: ListView(
@@ -163,12 +166,39 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
           ),
           _buildSettingsTile(
             Icons.lock_outline,
-            'تغيير كلمة المرور',
-            subtitle: 'تحديث كلمة المرور لحماية الحساب',
+            isArabic ? 'تغيير كلمة المرور' : 'Change Password',
+            subtitle: isArabic ? 'تحديث كلمة المرور لحماية الحساب' : 'Update password to protect your account',
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const ChangePasswordScreen()),
               );
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.language, color: theme.brightness == Brightness.dark ? Colors.white : AppColors.primary),
+            title: Text(
+              isArabic ? 'لغة التطبيق' : 'App Language',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            trailing: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: theme.brightness == Brightness.dark ? Colors.white10 : AppColors.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                isArabic ? 'العربية' : 'English', 
+                style: TextStyle(
+                  color: theme.brightness == Brightness.dark ? Colors.white : AppColors.primary, 
+                  fontWeight: FontWeight.bold
+                )
+              ),
+            ),
+            onTap: () {
+              setState(() {
+                LanguageController().toggleLanguage();
+                _loadUserFromPrefs();
+              });
             },
           ),
           

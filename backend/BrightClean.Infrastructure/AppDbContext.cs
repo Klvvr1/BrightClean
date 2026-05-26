@@ -28,6 +28,7 @@ namespace BrightClean.Infrastructure
         public DbSet<Payment> Payments { get; set; } = null!;
         public DbSet<AuditLog> AuditLogs { get; set; } = null!;
         public DbSet<SystemStatus> SystemStatuses { get; set; } = null!;
+        public DbSet<Notification> Notifications { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -180,6 +181,12 @@ namespace BrightClean.Infrastructure
                 .HasOne(ud => ud.User)
                 .WithMany(u => u.Documents)
                 .HasForeignKey(ud => ud.UserID)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Notification>()
+                .HasOne(n => n.User)
+                .WithMany()
+                .HasForeignKey(n => n.UserID)
                 .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<ServiceCatalogItem>()

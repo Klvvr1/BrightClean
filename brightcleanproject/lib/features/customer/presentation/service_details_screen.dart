@@ -80,7 +80,7 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
     'خزان سفلي': [],
   };
 
-  int maidHours = 2;
+  int maidHours = 1;
   int maidPersons = 1;
 
   // List of clothing items for the 'الملابس' service
@@ -126,6 +126,8 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
     'سجاد',
     'فروة',
     'بشت',
+    'المعوز',
+    'العمامة',
   ];
   late String selectedClothingItem;
   final Map<String, int> _clothingQuantities = {};
@@ -409,12 +411,31 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
     );
   }
 
+  double _calculateCarpetPrice(String item, int qty) {
+    if (qty <= 0) return 0.0;
+    final lengthList = _carpetLengthControllers[item];
+    final widthList = _carpetWidthControllers[item];
+    if (lengthList == null || widthList == null) return 0.0;
+    double itemBaseMultiplier = (item == 'غسيل سجاد عادي') ? 1.0 : 1.5;
+    double sum = 0.0;
+    for (int i = 0; i < qty; i++) {
+      if (i >= lengthList.length || i >= widthList.length) break;
+      double l = double.tryParse(lengthList[i].text) ?? 1.0;
+      double w = double.tryParse(widthList[i].text) ?? 1.0;
+      if (l <= 0) l = 1.0;
+      if (w <= 0) w = 1.0;
+      sum += basePrice * selectedOption.priceMultiplier * itemBaseMultiplier * (l * w);
+    }
+    return sum;
+  }
+
   Widget _buildCounterRow({
     required String title,
     required int quantity,
     required VoidCallback onDecrement,
     required VoidCallback onIncrement,
     String? subtitle,
+    double? unitPrice,
   }) {
     final theme = Theme.of(context);
     
@@ -453,6 +474,16 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
               ],
             ),
           ),
+          if (quantity > 0 && unitPrice != null) ...[
+            Text(
+              '${(unitPrice * quantity).toStringAsFixed(2)} ر.ي',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: theme.colorScheme.primary,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.md),
+          ],
           Container(
             decoration: BoxDecoration(
               color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
@@ -509,6 +540,7 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
                   return _buildCounterRow(
                     title: item,
                     quantity: _clothingQuantities[item] ?? 0,
+                    unitPrice: basePrice * selectedOption.priceMultiplier,
                     onDecrement: () {
                       final qty = _clothingQuantities[item] ?? 0;
                       if (qty > 0) {
@@ -533,9 +565,13 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
               const SizedBox(height: 16),
               Column(
                 children: _carpetQuantities.keys.map((item) {
+                  final qty = _carpetQuantities[item] ?? 0;
                   return _buildCounterRow(
                     title: item,
-                    quantity: _carpetQuantities[item] ?? 0,
+                    quantity: qty,
+                    unitPrice: qty > 0
+                        ? (_calculateCarpetPrice(item, qty) / qty)
+                        : (basePrice * selectedOption.priceMultiplier * (item == 'غسيل سجاد عادي' ? 1.0 : 1.5)),
                     onDecrement: () {
                       final qty = _carpetQuantities[item] ?? 0;
                       if (qty > 0) {
@@ -560,6 +596,7 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
                     title: type,
                     quantity: _carQuantities[type] ?? 0,
                     subtitle: 'مضاعف السعر: ${_carTypes[type]}x',
+                    unitPrice: basePrice * selectedOption.priceMultiplier * (_carTypes[type] ?? 1.0),
                     onDecrement: () {
                       final qty = _carQuantities[type] ?? 0;
                       if (qty > 0) {
@@ -588,6 +625,7 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
                     title: type,
                     quantity: _acQuantities[type] ?? 0,
                     subtitle: 'مضاعف السعر: ${_acTypes[type]}x',
+                    unitPrice: basePrice * selectedOption.priceMultiplier * (_acTypes[type] ?? 1.0),
                     onDecrement: () {
                       final qty = _acQuantities[type] ?? 0;
                       if (qty > 0) {
@@ -613,9 +651,10 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
               _buildCounterRow(
                 title: 'عدد الساعات المطلوبة',
                 quantity: maidHours,
-                subtitle: 'الحد الأدنى ساعتان',
+                subtitle: 'الحد الأدنى ساعة واحدة',
+                unitPrice: basePrice * selectedOption.priceMultiplier * maidPersons,
                 onDecrement: () {
-                  if (maidHours > 2) {
+                  if (maidHours > 1) {
                     setState(() {
                       maidHours--;
                     });
@@ -632,6 +671,7 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
                 title: 'عدد العاملات المطلوبة',
                 quantity: maidPersons,
                 subtitle: 'عاملة نظافة أو أكثر',
+                unitPrice: basePrice * selectedOption.priceMultiplier * maidHours,
                 onDecrement: () {
                   if (maidPersons > 1) {
                     setState(() {
@@ -656,6 +696,7 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
                     title: type,
                     quantity: _tankQuantities[type] ?? 0,
                     subtitle: 'مضاعف السعر: ${_tankTypes[type]}x',
+                    unitPrice: basePrice * selectedOption.priceMultiplier * (_tankTypes[type] ?? 1.0),
                     onDecrement: () {
                       final qty = _tankQuantities[type] ?? 0;
                       if (qty > 0) {
@@ -680,6 +721,7 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
                     title: size,
                     quantity: _solarQuantities[size] ?? 0,
                     subtitle: 'مضاعف السعر: ${_solarPanelSizes[size]}x',
+                    unitPrice: basePrice * selectedOption.priceMultiplier * (_solarPanelSizes[size] ?? 1.0),
                     onDecrement: () {
                       final qty = _solarQuantities[size] ?? 0;
                       if (qty > 0) {
