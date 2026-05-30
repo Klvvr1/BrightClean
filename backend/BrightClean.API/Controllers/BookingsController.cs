@@ -23,6 +23,26 @@ namespace BrightClean.API.Controllers
             _context = context;
         }
 
+        // GET: /api/bookings
+        [HttpGet]
+        public async Task<IActionResult> GetBookings()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out var userId))
+            {
+                return Unauthorized();
+            }
+
+            var bookings = await _context.Bookings
+                .Include(b => b.BookingItems)
+                    .ThenInclude(bi => bi.ServiceCatalogItem)
+                .Where(b => b.ClientID == userId)
+                .OrderByDescending(b => b.CreatedAt)
+                .ToListAsync();
+
+            return Ok(bookings);
+        }
+
         // POST: /api/bookings
         [HttpPost]
         public async Task<IActionResult> CreateBooking([FromBody] CreateBookingDto dto)
