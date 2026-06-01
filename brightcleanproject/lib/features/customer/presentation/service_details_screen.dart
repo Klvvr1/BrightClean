@@ -618,14 +618,10 @@ int _resolveServiceId(String itemName) {
     case 'العمامة':
       return 3;
     default:
+      debugPrint('Warning: No catalog services loaded, using fallback ID 1 for item: $itemName');
       return 1;
   }
 }
-
-    // Last resort: return 1 if catalog is completely unavailable
-    debugPrint('Warning: No catalog services loaded, using fallback ID 1 for item: $itemName');
-    return 1;
-  }
 
   @override
   Widget build(BuildContext context) {
