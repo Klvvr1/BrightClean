@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_styles.dart';
+import '../../../../core/network/api_client.dart';
+import '../../../../core/error/exceptions.dart';
 import 'map_picker_screen.dart';
 
 class AddressesScreen extends StatefulWidget {
@@ -12,9 +14,12 @@ class AddressesScreen extends StatefulWidget {
 }
 
 class _AddressesScreenState extends State<AddressesScreen> {
-  // Use SharedPreferences to persist addresses
+  // Use SharedPreferences to persist local address display strings
   List<String> _addresses = [];
   bool _isLoading = true;
+  bool _isSaving = false;
+
+  final BaseApiClient _apiClient = BaseApiClient();
 
   @override
   void initState() {
@@ -22,48 +27,78 @@ class _AddressesScreenState extends State<AddressesScreen> {
     _loadSavedAddresses();
   }
 
-  // 1. Load addresses from memory on initialization
+  // 1. Load addresses from local cache on initialization
   Future<void> _loadSavedAddresses() async {
     final prefs = await SharedPreferences.getInstance();
-    // Use a placeholder user ID - in production, get from auth service
     final userId = prefs.getString('user_id') ?? 'default_user';
     if (!mounted) return;
     setState(() {
       _addresses = prefs.getStringList('user_saved_addresses_$userId') ?? [];
-      _isLoading = false; // Data loaded, update UI dynamically
+      _isLoading = false;
     });
   }
 
-  // 2. Save a new address to persistent memory
-  Future<void> _saveAddress(String address) async {
+  // 2. Persist address label locally (for display)
+  Future<void> _saveAddressLocally(String address) async {
     final prefs = await SharedPreferences.getInstance();
     final userId = prefs.getString('user_id') ?? 'default_user';
     _addresses.add(address);
     await prefs.setStringList('user_saved_addresses_$userId', _addresses);
     if (!mounted) return;
-    setState(() {}); // Rebuild UI
+    setState(() {});
   }
 
-  // 3. Remove an address from persistent memory
+  // 3. Remove an address from local cache
   Future<void> _removeAddress(int index) async {
     final prefs = await SharedPreferences.getInstance();
     final userId = prefs.getString('user_id') ?? 'default_user';
     _addresses.removeAt(index);
     await prefs.setStringList('user_saved_addresses_$userId', _addresses);
     if (!mounted) return;
-    setState(() {}); // Rebuild UI
+    setState(() {});
   }
 
   Future<void> _navigateAndAddNewAddress() async {
-    final selectedAddress = await Navigator.of(context).push<String>(
+    final result = await Navigator.of(context).push<String>(
       MaterialPageRoute(
         builder: (context) => const MapPickerScreen(),
       ),
     );
 
-    // If the user selected a location and didn't just go back
-    if (selectedAddress != null && selectedAddress.isNotEmpty) {
-      await _saveAddress(selectedAddress); // Persist!
+    // MapPickerScreen returns a plain String like 'موقع محدد (lat, lng)'
+    if (result == null || result.isEmpty) return;
+
+    final addressLabel = result;
+
+    // Parse coordinates from the label string if available (format: 'label (lat, lng)')
+    double lat = 0.0;
+    double lng = 0.0;
+    final coordMatch = RegExp(r'\(([-\d.]+),\s*([-\d.]+)\)').firstMatch(result);
+    if (coordMatch != null) {
+      lat = double.tryParse(coordMatch.group(1) ?? '0') ?? 0.0;
+      lng = double.tryParse(coordMatch.group(2) ?? '0') ?? 0.0;
+    }
+
+    // Extract area (everything before first comma or full label) and street (everything after or full label)
+    String area = addressLabel;
+    String street = addressLabel;
+    final commaSplit = addressLabel.split(',');
+    if (commaSplit.length >= 2) {
+      area = commaSplit[0].trim();
+      street = commaSplit.sublist(1).join(',').trim();
+    }
+
+    // Post to API
+    setState(() => _isSaving = true);
+    try {
+      await _apiClient.post('/api/addresses', body: {
+        'area': area,
+        'street': street,
+        'latitude': lat,
+        'longitude': lng,
+      });
+
+      await _saveAddressLocally(addressLabel);
 
       if (mounted) {
         final theme = Theme.of(context);
@@ -74,6 +109,26 @@ class _AddressesScreenState extends State<AddressesScreen> {
           ),
         );
       }
+    } on ServerException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('فشل حفظ العنوان: ${e.message ?? "خطأ في الخادم"}'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('حدث خطأ غير متوقع: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
     }
   }
 
@@ -89,9 +144,18 @@ class _AddressesScreenState extends State<AddressesScreen> {
           ? const Center(child: CircularProgressIndicator())
           : (_addresses.isEmpty ? _buildEmptyState() : _buildAddressesList()),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _navigateAndAddNewAddress,
+        onPressed: _isSaving ? null : _navigateAndAddNewAddress,
         backgroundColor: theme.colorScheme.primary,
-        icon: Icon(Icons.add, color: theme.colorScheme.onPrimary),
+        icon: _isSaving
+            ? SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  color: theme.colorScheme.onPrimary,
+                  strokeWidth: 2,
+                ),
+              )
+            : Icon(Icons.add, color: theme.colorScheme.onPrimary),
         label: Text('إضافة عنوان جديد',
             style: TextStyle(color: theme.colorScheme.onPrimary)),
       ),
@@ -142,8 +206,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
             title: Text(_addresses[index], style: theme.textTheme.bodyLarge),
             trailing: IconButton(
               icon: Icon(Icons.delete_outline, color: theme.colorScheme.error),
-              onPressed: () =>
-                  _removeAddress(index), // Remove completely from memory
+              onPressed: () => _removeAddress(index),
             ),
           ),
         );

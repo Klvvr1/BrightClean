@@ -6,6 +6,8 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_styles.dart';
 import '../../../../core/controllers/theme_controller.dart';
+import '../../../../core/network/api_client.dart';
+import '../../../../core/error/exceptions.dart';
 
 class AgentProfileScreen extends StatefulWidget {
   const AgentProfileScreen({super.key});
@@ -72,6 +74,146 @@ class _AgentProfileScreenState extends State<AgentProfileScreen> {
       await prefs.remove('user_role');
       if (mounted) context.go('/login');
     }
+  }
+
+  Future<void> _showSubscribeServicesDialog() async {
+    final TextEditingController serviceIdsController = TextEditingController();
+    bool isSubmitting = false;
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          final theme = Theme.of(ctx);
+          return AlertDialog(
+            title: const Text('اشتراك في خدمات'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'أدخل معرفات الخدمات (IDs) المفصولة بفاصلة',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                TextField(
+                  controller: serviceIdsController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    hintText: 'مثال: 1, 2, 3',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  'سيتم تفعيل الخدمات بعد موافقة المشرف.',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: AppColors.warning,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('إلغاء'),
+              ),
+              ElevatedButton(
+                onPressed: isSubmitting
+                    ? null
+                    : () async {
+                        final raw = serviceIdsController.text.trim();
+
+                        // Capture context-sensitive objects BEFORE any return
+                        final messenger = ScaffoldMessenger.of(context);
+
+                        if (raw.isEmpty) {
+                          messenger.showSnackBar(
+                            const SnackBar(
+                              content: Text('الرجاء إدخال معرفات الخدمات'),
+                              backgroundColor: AppColors.error,
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                          return;
+                        }
+
+                        // Parse comma-separated IDs
+                        final ids = raw
+                            .split(',')
+                            .map((s) => int.tryParse(s.trim()))
+                            .where((id) => id != null)
+                            .map((id) => id!)
+                            .toList();
+
+                        if (ids.isEmpty) {
+                          messenger.showSnackBar(
+                            const SnackBar(
+                              content: Text('الرجاء إدخال معرف خدمة واحد على الأقل رقمي صحيح'),
+                              backgroundColor: AppColors.error,
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                          return;
+                        }
+
+                        // Capture context-sensitive objects BEFORE the async gap
+                        final nav = Navigator.of(ctx);
+                        final messenger = ScaffoldMessenger.of(context);
+
+                        setDialogState(() => isSubmitting = true);
+                        try {
+                          final apiClient = BaseApiClient();
+                          await apiClient.post(
+                            '/api/agentservices',
+                            body: {'serviceIDs': ids},
+                          );
+                          nav.pop();
+                          messenger.showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'تم تقديم طلب الاشتراك. سيتم التفعيل بعد موافقة المشرف.',
+                              ),
+                              backgroundColor: AppColors.success,
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        } on ServerException catch (e) {
+                          setDialogState(() => isSubmitting = false);
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text('فشل الاشتراك: ${e.message ?? "خطأ في الخادم"}'),
+                              backgroundColor: AppColors.error,
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        } catch (e) {
+                          setDialogState(() => isSubmitting = false);
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text('حدث خطأ: $e'),
+                              backgroundColor: AppColors.error,
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        }
+                      },
+                child: isSubmitting
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('تقديم الطلب'),
+              ),
+            ],
+          );
+        },
+      ),
+    ).then((_) => serviceIdsController.dispose());
   }
 
   @override
@@ -200,6 +342,13 @@ class _AgentProfileScreenState extends State<AgentProfileScreen> {
             icon: Icons.notifications_outlined,
             title: 'الإشعارات',
             onTap: () {},
+          ),
+          const Divider(height: 1),
+          ProfileMenuTile(
+            icon: Icons.local_laundry_service_outlined,
+            title: 'اشتراك في خدمات',
+            subtitle: 'أضف خدمات جديدة لمعرض عروضك',
+            onTap: _showSubscribeServicesDialog,
           ),
         ],
       ),

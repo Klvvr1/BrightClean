@@ -103,7 +103,8 @@ namespace BrightClean.Domain.Enums
     {
         CreditCard,
         Cash,
-        Wallet
+        Wallet,
+        BankTransfer
     }
 
     public enum PaymentStatus

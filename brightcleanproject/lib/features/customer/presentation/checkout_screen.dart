@@ -15,7 +15,6 @@ import 'package:brightcleanproject/features/customer/domain/models/cart_item.dar
 import 'package:brightcleanproject/features/customer/domain/models/order.dart';
 import 'package:brightcleanproject/features/customer/data/providers/order_provider.dart';
 import '../data/providers/cart_provider.dart';
-import 'package:latlong2/latlong.dart';
 import '../../../../core/widgets/map_picker_screen.dart';
 
 class CheckoutScreen extends StatefulWidget {
@@ -32,8 +31,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   String _selectedPaymentMethod = 'cash';
   bool _isLocationVerified = false;
   String? _selectedAddress;
-  // ignore: unused_field
-  LatLng? _selectedCoordinates;
 
   Future<void> _selectLocation() async {
     final result = await Navigator.push(
@@ -43,7 +40,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
     if (result != null && result is Map<String, dynamic>) {
       setState(() {
-        _selectedCoordinates = result['coordinates'] as LatLng;
         _selectedAddress = result['address'] as String;
         _isLocationVerified = true;
       });
@@ -403,7 +399,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 const Text('لا يوجد وكلاء متوفرين حالياً', style: TextStyle(color: Colors.grey))
               else
                 DropdownButtonFormField<int>(
-                  value: _selectedAgentId,
+                  initialValue: _selectedAgentId,
                   hint: const Text('اختر المغسلة'),
                   items: _agents.map((agent) {
                     return DropdownMenuItem<int>(
@@ -877,15 +873,32 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                              }
                              await orderProvider.submitOrder(bookingId, localOrder: newOrder);
 
-                            if (widget.directItems == null) {
-                              await cart.clearCart();
-                            }
+                             // POST /api/payments after booking submission - MUST succeed before clearing cart
+                             // Map local payment method string to API enum string
+                             final methodMap = {
+                               'cash': 'Cash',
+                               'bank_transfer': 'BankTransfer',
+                               'wallet': 'Wallet',
+                             };
+                             final apiMethod = methodMap[_selectedPaymentMethod] ?? 'Cash';
 
-                            navigator.pushReplacement(
-                              MaterialPageRoute(
-                                builder: (context) => const OrderSuccessScreen(),
-                              ),
-                            );
+                             await _apiClient.post('/api/payments', body: {
+                               'bookingID': bookingId,
+                               'amount': finalPrice,
+                               'method': apiMethod,
+                               'transactionRef': null,
+                             });
+
+                             // Only clear cart and navigate after successful payment
+                             if (widget.directItems == null) {
+                               await cart.clearCart();
+                             }
+
+                             navigator.pushReplacement(
+                               MaterialPageRoute(
+                                 builder: (context) => const OrderSuccessScreen(),
+                               ),
+                             );
                           } catch (e) {
                             scaffoldMessenger.clearSnackBars();
                             scaffoldMessenger.showSnackBar(
