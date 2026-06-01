@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -24,6 +25,20 @@ void main() {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
   }
+
+  // Global Flutter framework error handler — prevents red screen crashes
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.presentError(details); // MUST be called to render the fallback ErrorWidget
+    debugPrint('🔴 FlutterError: ${details.exceptionAsString()}');
+    debugPrint('🔴 Stack: ${details.stack}');
+  };
+
+  // Catch async errors that escape the Flutter framework (e.g. microtask failures)
+  PlatformDispatcher.instance.onError = (error, stack) {
+    debugPrint('🔴 PlatformDispatcher error: $error');
+    debugPrint('🔴 Stack: $stack');
+    return true; // Prevent the app from terminating
+  };
 
   runApp(
     MultiProvider(

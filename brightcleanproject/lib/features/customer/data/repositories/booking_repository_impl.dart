@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import '../../../../core/network/api_client.dart';
 import '../../domain/repositories/booking_repository.dart';
 import '../models/booking_model.dart';
@@ -49,9 +50,12 @@ class BookingRepositoryImpl implements BookingRepository {
         '/api/bookings/submit',
         body: {'bookingID': bookingId},
       );
+      debugPrint('📦 submitBooking response type: ${response.runtimeType}');
+      debugPrint('📦 submitBooking response: $response');
       // The backend returns the updated booking with FinalTotal
       if (response != null && response is Map<String, dynamic>) {
         final rawTotal = response['finalTotal'] ?? response['FinalTotal'];
+        debugPrint('📦 rawTotal: $rawTotal (type: ${rawTotal?.runtimeType})');
         if (rawTotal != null) {
           return (rawTotal as num).toDouble();
         }
@@ -59,6 +63,7 @@ class BookingRepositoryImpl implements BookingRepository {
       // Return null to indicate server omitted total (distinguishable from genuine zero)
       return null;
     } catch (e) {
+      debugPrint('❌ submitBooking error: $e');
       rethrow;
     }
   }

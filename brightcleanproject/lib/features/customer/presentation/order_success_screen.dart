@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 
@@ -99,7 +100,7 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> with SingleTick
                 child: ElevatedButton(
                   onPressed: () {
                     // Navigate back to home
-                    Navigator.of(context).popUntil((route) => route.isFirst);
+                    context.go('/customer_home');
                   },
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),

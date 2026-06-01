@@ -37,16 +37,16 @@ class DatabaseHelper {
       final columns = await db.rawQuery("PRAGMA table_info(users)");
       final columnNames = columns.map((column) => column['name'] as String).toSet();
 
-      if (!columnNames.contains('car_company')) {
-        await db.execute("ALTER TABLE users ADD COLUMN car_company TEXT;");
-      }
-
-      if (!columnNames.contains('car_model')) {
-        await db.execute("ALTER TABLE users ADD COLUMN car_model TEXT;");
-      }
-
-      if (!columnNames.contains('car_year')) {
-        await db.execute("ALTER TABLE users ADD COLUMN car_year TEXT;");
+      if (columnNames.isNotEmpty) {
+        if (!columnNames.contains('car_company')) {
+          await db.execute("ALTER TABLE users ADD COLUMN car_company TEXT;");
+        }
+        if (!columnNames.contains('car_model')) {
+          await db.execute("ALTER TABLE users ADD COLUMN car_model TEXT;");
+        }
+        if (!columnNames.contains('car_year')) {
+          await db.execute("ALTER TABLE users ADD COLUMN car_year TEXT;");
+        }
       }
     }
 
@@ -54,7 +54,7 @@ class DatabaseHelper {
       final columns = await db.rawQuery("PRAGMA table_info(orders)");
       final columnNames = columns.map((column) => column['name'] as String).toSet();
 
-      if (!columnNames.contains('category')) {
+      if (columnNames.isNotEmpty && !columnNames.contains('category')) {
         await db.execute("ALTER TABLE orders ADD COLUMN category TEXT;");
       }
     }
@@ -63,7 +63,8 @@ class DatabaseHelper {
     if (oldVersion < 4) {
       final cartColumns = await db.rawQuery("PRAGMA table_info(cart_items)");
       final cartColumnNames = cartColumns.map((c) => c['name'] as String).toSet();
-      if (!cartColumnNames.contains('serviceId')) {
+      
+      if (cartColumnNames.isNotEmpty && !cartColumnNames.contains('serviceId')) {
         await db.execute("ALTER TABLE cart_items ADD COLUMN serviceId INTEGER NOT NULL DEFAULT 1;");
       }
     }
