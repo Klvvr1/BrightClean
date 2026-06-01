@@ -1,4 +1,6 @@
+using System;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -46,6 +48,12 @@ namespace BrightClean.API.Controllers
         [HttpPost("approve/{userId}")]
         public async Task<IActionResult> ApproveUser(int userId)
         {
+            var adminIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+            if (adminIdClaim == null || !int.TryParse(adminIdClaim.Value, out var adminId))
+            {
+                return Unauthorized(new { message = "فشلت عملية التحقق من هوية المسؤول." });
+            }
+
             var user = await _context.Users.FirstOrDefaultAsync(u => u.UserID == userId);
 
             if (user == null)
@@ -66,6 +74,18 @@ namespace BrightClean.API.Controllers
 
             user.IsApproved = true;
             user.AccountStatus = AccountStatus.Active;
+
+            // Generate AuditLog entry
+            string action = user.Role == UserRole.LaundryAgent ? "ACTIVATE_AGENT" : "ACTIVATE_DRIVER";
+            var auditLog = new AuditLog
+            {
+                AdminID = adminId,
+                Action = action,
+                TargetEntity = "User",
+                TargetID = user.UserID,
+                PerformedAt = DateTime.UtcNow
+            };
+            _context.AuditLogs.Add(auditLog);
 
             await _context.SaveChangesAsync();
 
@@ -91,6 +111,43 @@ namespace BrightClean.API.Controllers
                 .ToListAsync();
 
             return Ok(staff);
+        }
+
+        // GET: /api/admin/audit-logs
+        [HttpGet("audit-logs")]
+        public async Task<IActionResult> GetAuditLogs(int page = 1, int pageSize = 50)
+        {
+            const int maxPageSize = 200;
+            pageSize = pageSize > maxPageSize ? maxPageSize : pageSize;
+
+            var baseQuery = _context.AuditLogs
+                .Include(al => al.Admin)
+                .OrderByDescending(al => al.PerformedAt);
+
+            var totalCount = await baseQuery.CountAsync();
+
+            var logs = await baseQuery
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Select(al => new
+                {
+                    al.LogID,
+                    al.AdminID,
+                    AdminName = al.Admin.FirstName + " " + al.Admin.LastName,
+                    al.Action,
+                    al.TargetEntity,
+                    al.TargetID,
+                    al.PerformedAt
+                })
+                .ToListAsync();
+
+            return Ok(new
+            {
+                data = logs,
+                currentPage = page,
+                pageSize = pageSize,
+                totalCount = totalCount
+            });
         }
     }
 }
