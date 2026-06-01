@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_radius.dart';
@@ -10,7 +11,6 @@ import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:uuid/uuid.dart';
 import 'package:provider/provider.dart';
-import 'order_success_screen.dart';
 import 'package:brightcleanproject/features/customer/domain/models/cart_item.dart';
 import 'package:brightcleanproject/features/customer/domain/models/order.dart';
 import 'package:brightcleanproject/features/customer/data/providers/order_provider.dart';
@@ -888,8 +888,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 child: ElevatedButton(
                   onPressed: (canCompleteOrder && !orderProvider.isCheckoutLoading && !_isProcessingPayment)
                       ? () async {
-                          final navigator = Navigator.of(context);
-                          final scaffoldMessenger = ScaffoldMessenger.of(context);
+                          // Capture all BuildContext-dependent references BEFORE any async gap
+                          late final ScaffoldMessengerState scaffoldMessenger;
+                          try {
+                            scaffoldMessenger = ScaffoldMessenger.of(context);
+                          } catch (e) {
+                            debugPrint('❌ Context invalid before checkout: $e');
+                            return;
+                          }
+
                           final orderDetails = itemsToCheckout
                               .map((i) => '${i.serviceName} (${i.selectedType})')
                               .join(', ');
@@ -898,28 +905,47 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           // race condition: submitOrder clears cart → rebuild → finalPrice=0
                           final capturedFinalPrice = finalPrice;
                           final capturedPaymentMethod = _selectedPaymentMethod;
+                          final capturedThemeError = theme.colorScheme.error;
 
-                          final newOrder = Order(
-                            orderId: const Uuid().v4(),
-                            date: DateFormat('dd MMMM yyyy', 'ar')
-                                .format(DateTime.now()),
-                            details: orderDetails,
-                            status: 'قيد الانتظار',
-                            activeStepIndex: 0,
-                            locationDescription:
-                                _locationDescriptionController.text,
-                            paymentMethod: capturedPaymentMethod,
-                            pickupDate: _selectedDate,
-                            pickupTimeSlot: _selectedTimeSlot,
-                          );
+                          Order? newOrder;
+                          try {
+                            newOrder = Order(
+                              orderId: const Uuid().v4(),
+                              date: DateFormat('dd MMMM yyyy', 'ar')
+                                  .format(DateTime.now()),
+                              details: orderDetails,
+                              status: 'قيد الانتظار',
+                              activeStepIndex: 0,
+                              locationDescription:
+                                  _locationDescriptionController.text,
+                              paymentMethod: capturedPaymentMethod,
+                              pickupDate: _selectedDate,
+                              pickupTimeSlot: _selectedTimeSlot,
+                            );
+                          } catch (e) {
+                            debugPrint('❌ Error creating Order object: $e');
+                            if (mounted) {
+                              scaffoldMessenger.showSnackBar(
+                                SnackBar(
+                                  content: Text('خطأ في إنشاء الطلب: $e'),
+                                  backgroundColor: capturedThemeError,
+                                ),
+                              );
+                            }
+                            return;
+                          }
 
-                          setState(() {
-                            _isProcessingPayment = true;
-                          });
+                          if (mounted) {
+                            setState(() {
+                              _isProcessingPayment = true;
+                            });
+                          }
 
                           try {
                              // Use the actual booking ID from the order provider's current booking
                              var bookingId = orderProvider.currentBookingId;
+                             debugPrint('🔄 Checkout: currentBookingId=$bookingId');
+
                              if (bookingId == null) {
                                if (widget.directItems != null && widget.directItems!.isNotEmpty) {
                                  // Validate that an agent is selected
@@ -934,19 +960,22 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                    };
                                  }).toList();
 
+                                 debugPrint('🔄 Creating booking with agent=$_selectedAgentId, items=${itemsDto.length}');
                                  final addressId = await _ensureAddressRegistered();
                                  bookingId = await orderProvider.createBooking(_selectedAgentId!, itemsDto, addressID: addressId);
+                                 debugPrint('✅ Booking created: bookingId=$bookingId');
                                } else {
                                  throw Exception('لا يوجد حجز نشط. يرجى إعادة المحاولة.');
                                }
                              }
 
                              // 1. Submit the booking (changes status from Draft → Pending)
-                             // The returned value is the server's authoritative FinalTotal (or null if omitted)
+                             debugPrint('🔄 Submitting booking $bookingId...');
                              final serverFinalTotal = await orderProvider.submitOrder(bookingId, localOrder: newOrder);
-
+                             debugPrint('✅ Booking submitted. serverFinalTotal=$serverFinalTotal');
                              // Use server's FinalTotal for payment; only fallback if null (not if zero)
                              final paymentAmount = serverFinalTotal ?? capturedFinalPrice;
+                             debugPrint('🔄 Creating payment: amount=$paymentAmount, method=$capturedPaymentMethod');
 
                              // POST /api/payments - use server-authoritative amount
                              final methodMap = {
@@ -962,28 +991,37 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                'method': apiMethod,
                                'transactionRef': null,
                              });
+                             debugPrint('✅ Payment created successfully');
 
                              // ✅ Cart DB already cleared inside submitOrder — no need to call cart.clearCart() again
-                             // Just navigate to success screen
-                             navigator.pushReplacement(
-                               MaterialPageRoute(
-                                 builder: (context) => const OrderSuccessScreen(),
-                               ),
-                             );
-                          } catch (e) {
+                             // Defer navigation to the next frame to avoid "Cannot hit test a render box"
+                             if (mounted) {
+                               WidgetsBinding.instance.addPostFrameCallback((_) {
+                                 if (mounted) {
+                                   context.go('/order_success');
+                                 }
+                               });
+                             }
+                          } catch (e, stackTrace) {
+                            debugPrint('❌ Checkout error: $e');
+                            debugPrint('❌ Stack trace: $stackTrace');
                             // Show the actual error from the server (e.g. amount mismatch)
                             final errorText = e.toString()
                                 .replaceAll('Exception: ', '')
                                 .replaceAll('ServerException: ', '');
-                            scaffoldMessenger.clearSnackBars();
-                            scaffoldMessenger.showSnackBar(
-                              SnackBar(
-                                content: Text('فشل تأكيد الطلب: $errorText'),
-                                backgroundColor: theme.colorScheme.error,
-                                duration: const Duration(seconds: 6),
-                                showCloseIcon: true,
-                              ),
-                            );
+                            try {
+                              scaffoldMessenger.clearSnackBars();
+                              scaffoldMessenger.showSnackBar(
+                                SnackBar(
+                                  content: Text('فشل تأكيد الطلب: $errorText'),
+                                  backgroundColor: capturedThemeError,
+                                  duration: const Duration(seconds: 6),
+                                  showCloseIcon: true,
+                                ),
+                              );
+                            } catch (snackBarError) {
+                              debugPrint('❌ Could not show SnackBar: $snackBarError');
+                            }
                           } finally {
                             if (mounted) {
                               setState(() {

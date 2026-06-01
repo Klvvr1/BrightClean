@@ -14,6 +14,7 @@ import '../../features/customer/presentation/customer_main_layout.dart';
 import '../../features/customer/presentation/service_details_screen.dart';
 import '../../features/customer/domain/models/cart_item.dart';
 import '../../features/customer/presentation/checkout_screen.dart';
+import '../../features/customer/presentation/order_success_screen.dart';
 import '../../features/agent/presentation/agent_dashboard_screen.dart';
 import '../../features/agent/presentation/agent_order_management_screen.dart';
 import '../../features/driver/presentation/driver_dashboard_screen.dart';
@@ -154,6 +155,10 @@ class AppRouter {
           }
           return const CheckoutScreen();
         },
+      ),
+      GoRoute(
+        path: '/order_success',
+        builder: (context, state) => const OrderSuccessScreen(),
       ),
       GoRoute(
         path: '/agent_dashboard',
