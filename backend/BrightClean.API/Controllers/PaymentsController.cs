@@ -36,6 +36,7 @@ namespace BrightClean.API.Controllers
             // Validate the Booking exists and belongs to the authenticated client
             var booking = await _context.Bookings
                 .Include(b => b.Payment)
+                .Include(b => b.BookingItems)
                 .FirstOrDefaultAsync(b => b.BookingID == dto.BookingID);
 
             if (booking == null)
@@ -57,7 +58,14 @@ namespace BrightClean.API.Controllers
             // Parse payment method (map string to enum)
             if (!Enum.TryParse<PaymentMethod>(dto.Method, ignoreCase: true, out var paymentMethod))
             {
-                return BadRequest(new { message = $"طريقة الدفع '{dto.Method}' غير مدعومة. الأساليب المتاحة: CreditCard, Cash, Wallet." });
+                return BadRequest(new { message = $"طريقة الدفع '{dto.Method}' غير مدعومة. الأساليب المتاحة: CreditCard, Cash, Wallet, BankTransfer." });
+            }
+
+            // Validate payment amount against server-side booking total
+            decimal bookingTotal = booking.FinalTotal;
+            if (Math.Abs(dto.Amount - bookingTotal) > 0.01m) // Allow for minor rounding differences
+            {
+                return BadRequest(new { message = $"المبلغ المدفوع ({dto.Amount}) لا يطابق المبلغ المستحق ({bookingTotal})." });
             }
 
             // ARCHITECTURAL RULE: Insert Payment record with its own status.
@@ -65,7 +73,7 @@ namespace BrightClean.API.Controllers
             var payment = new Payment
             {
                 BookingID = dto.BookingID,
-                Amount = dto.Amount,
+                Amount = bookingTotal, // Use server-side amount
                 Method = paymentMethod,
                 Status = PaymentStatus.Success,
                 TransactionRef = dto.TransactionRef,
@@ -92,7 +100,7 @@ namespace BrightClean.API.Controllers
         public decimal Amount { get; set; }
 
         /// <summary>
-        /// Accepts: "CreditCard", "Cash", or "Wallet"
+        /// Accepts: "CreditCard", "Cash", "Wallet", or "BankTransfer"
         /// </summary>
         public string Method { get; set; } = "Cash";
         public string? TransactionRef { get; set; }

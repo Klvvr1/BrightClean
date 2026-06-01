@@ -423,6 +423,18 @@ namespace BrightClean.API.Controllers
                 return Conflict(new { message = "تم تقييم هذا الحجز مسبقاً." });
             }
 
+            // Validate AgentRating range (1-5)
+            if (dto.AgentRating.HasValue && (dto.AgentRating.Value < 1 || dto.AgentRating.Value > 5))
+            {
+                return BadRequest(new { message = "تقييم الوكيل يجب أن يكون بين 1 و 5." });
+            }
+
+            // Validate DeliveryRating range (1-5)
+            if (dto.DeliveryRating.HasValue && (dto.DeliveryRating.Value < 1 || dto.DeliveryRating.Value > 5))
+            {
+                return BadRequest(new { message = "تقييم التوصيل يجب أن يكون بين 1 و 5." });
+            }
+
             var rating = new BookingRating
             {
                 BookingID = id,

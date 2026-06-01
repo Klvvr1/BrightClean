@@ -873,29 +873,25 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                              }
                              await orderProvider.submitOrder(bookingId, localOrder: newOrder);
 
+                             // POST /api/payments after booking submission - MUST succeed before clearing cart
+                             // Map local payment method string to API enum string
+                             final methodMap = {
+                               'cash': 'Cash',
+                               'bank_transfer': 'BankTransfer',
+                               'wallet': 'Wallet',
+                             };
+                             final apiMethod = methodMap[_selectedPaymentMethod] ?? 'Cash';
+
+                             await _apiClient.post('/api/payments', body: {
+                               'bookingID': bookingId,
+                               'amount': finalPrice,
+                               'method': apiMethod,
+                               'transactionRef': null,
+                             });
+
+                             // Only clear cart and navigate after successful payment
                              if (widget.directItems == null) {
                                await cart.clearCart();
-                             }
-
-                             // POST /api/payments after booking submission
-                             try {
-                               // Map local payment method string to API enum string
-                               final methodMap = {
-                                 'cash': 'Cash',
-                                 'bank_transfer': 'CreditCard',
-                                 'wallet': 'Wallet',
-                               };
-                               final apiMethod = methodMap[_selectedPaymentMethod] ?? 'Cash';
-
-                               await _apiClient.post('/api/payments', body: {
-                                 'bookingID': bookingId,
-                                 'amount': finalPrice,
-                                 'method': apiMethod,
-                                 'transactionRef': null,
-                               });
-                             } catch (paymentError) {
-                               // Payment recording is non-blocking; log but don't abort checkout
-                               debugPrint('Payment recording failed (non-fatal): $paymentError');
                              }
 
                              navigator.pushReplacement(

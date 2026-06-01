@@ -126,7 +126,20 @@ class _AgentProfileScreenState extends State<AgentProfileScreen> {
                     ? null
                     : () async {
                         final raw = serviceIdsController.text.trim();
-                        if (raw.isEmpty) return;
+
+                        // Capture context-sensitive objects BEFORE any return
+                        final messenger = ScaffoldMessenger.of(context);
+
+                        if (raw.isEmpty) {
+                          messenger.showSnackBar(
+                            const SnackBar(
+                              content: Text('الرجاء إدخال معرفات الخدمات'),
+                              backgroundColor: AppColors.error,
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                          return;
+                        }
 
                         // Parse comma-separated IDs
                         final ids = raw
@@ -136,7 +149,16 @@ class _AgentProfileScreenState extends State<AgentProfileScreen> {
                             .map((id) => id!)
                             .toList();
 
-                        if (ids.isEmpty) return;
+                        if (ids.isEmpty) {
+                          messenger.showSnackBar(
+                            const SnackBar(
+                              content: Text('الرجاء إدخال معرف خدمة واحد على الأقل رقمي صحيح'),
+                              backgroundColor: AppColors.error,
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                          return;
+                        }
 
                         // Capture context-sensitive objects BEFORE the async gap
                         final nav = Navigator.of(ctx);

@@ -79,12 +79,21 @@ class _AddressesScreenState extends State<AddressesScreen> {
       lng = double.tryParse(coordMatch.group(2) ?? '0') ?? 0.0;
     }
 
+    // Extract area (everything before first comma or full label) and street (everything after or full label)
+    String area = addressLabel;
+    String street = addressLabel;
+    final commaSplit = addressLabel.split(',');
+    if (commaSplit.length >= 2) {
+      area = commaSplit[0].trim();
+      street = commaSplit.sublist(1).join(',').trim();
+    }
+
     // Post to API
     setState(() => _isSaving = true);
     try {
       await _apiClient.post('/api/addresses', body: {
-        'area': addressLabel,
-        'street': addressLabel,
+        'area': area,
+        'street': street,
         'latitude': lat,
         'longitude': lng,
       });

@@ -393,17 +393,26 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                   try {
                     final apiClient = BaseApiClient();
                     final bookingIdInt = int.tryParse(orderId);
-                    if (bookingIdInt != null) {
-                      await apiClient.post(
-                        '/api/bookings/$bookingIdInt/rate',
-                        body: {
-                          'agentRating': serviceRating.toInt(),
-                          'agentComment': commentText.isEmpty ? null : commentText,
-                          'deliveryRating': requiresDriverRating ? driverRating.toInt() : null,
-                          'deliveryComment': null,
-                        },
+                    if (bookingIdInt == null) {
+                      messenger.showSnackBar(
+                        const SnackBar(
+                          content: Text('خطأ: معرف الطلب غير صالح، لا يمكن إرسال التقييم.'),
+                          backgroundColor: AppColors.error,
+                          behavior: SnackBarBehavior.floating,
+                        ),
                       );
+                      return;
                     }
+
+                    await apiClient.post(
+                      '/api/bookings/$bookingIdInt/rate',
+                      body: {
+                        'agentRating': serviceRating.toInt(),
+                        'agentComment': commentText.isEmpty ? null : commentText,
+                        'deliveryRating': requiresDriverRating ? driverRating.toInt() : null,
+                        'deliveryComment': null,
+                      },
+                    );
 
                     orderProvider.markOrderAsRated(orderId);
 
@@ -424,14 +433,13 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                         behavior: SnackBarBehavior.floating,
                       ),
                     );
-                  } catch (_) {
-                    // Booking might not be Completed on server yet — mark locally anyway
-                    orderProvider.markOrderAsRated(orderId);
-
+                  } catch (e) {
+                    // Log the error and show appropriate message
+                    debugPrint('Rating submission error: $e');
                     messenger.showSnackBar(
-                      const SnackBar(
-                        content: Text('شكراً لتقييمك! تم إضافة رأيك في القائمة الرئيسية.'),
-                        backgroundColor: AppColors.success,
+                      SnackBar(
+                        content: Text('حدث خطأ غير متوقع أثناء إرسال التقييم: $e'),
+                        backgroundColor: AppColors.error,
                         behavior: SnackBarBehavior.floating,
                       ),
                     );
