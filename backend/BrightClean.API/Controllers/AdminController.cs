@@ -69,7 +69,7 @@ namespace BrightClean.API.Controllers
             // CRIT-006: Only LaundryAgent and DeliveryStaff accounts require admin approval
             if (user.Role != UserRole.LaundryAgent && user.Role != UserRole.DeliveryStaff)
             {
-                return BadRequest(new { message = "لا يمكن تفعيل this type of accounts from here." });
+                return BadRequest(new { message = "لا يمكن تفعيل هذا النوع من الحسابات من هنا." });
             }
 
             user.IsApproved = true;
@@ -115,11 +115,20 @@ namespace BrightClean.API.Controllers
 
         // GET: /api/admin/audit-logs
         [HttpGet("audit-logs")]
-        public async Task<IActionResult> GetAuditLogs()
+        public async Task<IActionResult> GetAuditLogs(int page = 1, int pageSize = 50)
         {
-            var logs = await _context.AuditLogs
+            const int maxPageSize = 200;
+            pageSize = pageSize > maxPageSize ? maxPageSize : pageSize;
+
+            var baseQuery = _context.AuditLogs
                 .Include(al => al.Admin)
-                .OrderByDescending(al => al.PerformedAt)
+                .OrderByDescending(al => al.PerformedAt);
+
+            var totalCount = await baseQuery.CountAsync();
+
+            var logs = await baseQuery
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .Select(al => new
                 {
                     al.LogID,
@@ -132,7 +141,13 @@ namespace BrightClean.API.Controllers
                 })
                 .ToListAsync();
 
-            return Ok(logs);
+            return Ok(new
+            {
+                data = logs,
+                currentPage = page,
+                pageSize = pageSize,
+                totalCount = totalCount
+            });
         }
     }
 }
