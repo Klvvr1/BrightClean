@@ -11,6 +11,7 @@ import '../data/providers/auth_provider.dart';
 import '../data/models/register_client_model.dart';
 import '../../../../core/error/exceptions.dart';
 import '../../../../core/widgets/map_picker_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class CustomerRegistrationScreen extends StatefulWidget {
   const CustomerRegistrationScreen({super.key});
@@ -123,6 +124,16 @@ class _CustomerRegistrationScreenState
 
         final authProvider = Provider.of<AuthProvider>(context, listen: false);
         await authProvider.registerClient(clientModel);
+
+        // Save selected registration address to SharedPreferences (non-fatal)
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          final emailKey = _emailController.text.trim().toLowerCase();
+          await prefs.setString('registration_address_$emailKey', _selectedAddress!);
+        } catch (e) {
+          debugPrint('Warning: Failed to save registration address to preferences: $e');
+          // Non-fatal: registration succeeded, just log the preference save failure
+        }
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

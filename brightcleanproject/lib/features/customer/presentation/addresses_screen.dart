@@ -30,7 +30,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
   // 1. Load addresses from local cache on initialization
   Future<void> _loadSavedAddresses() async {
     final prefs = await SharedPreferences.getInstance();
-    final userId = prefs.getString('user_id') ?? 'default_user';
+    final userId = prefs.get('user_id')?.toString() ?? 'default_user';
     if (!mounted) return;
     setState(() {
       _addresses = prefs.getStringList('user_saved_addresses_$userId') ?? [];
@@ -41,7 +41,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
   // 2. Persist address label locally (for display)
   Future<void> _saveAddressLocally(String address) async {
     final prefs = await SharedPreferences.getInstance();
-    final userId = prefs.getString('user_id') ?? 'default_user';
+    final userId = prefs.get('user_id')?.toString() ?? 'default_user';
     _addresses.add(address);
     await prefs.setStringList('user_saved_addresses_$userId', _addresses);
     if (!mounted) return;
@@ -51,7 +51,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
   // 3. Remove an address from local cache
   Future<void> _removeAddress(int index) async {
     final prefs = await SharedPreferences.getInstance();
-    final userId = prefs.getString('user_id') ?? 'default_user';
+    final userId = prefs.get('user_id')?.toString() ?? 'default_user';
     _addresses.removeAt(index);
     await prefs.setStringList('user_saved_addresses_$userId', _addresses);
     if (!mounted) return;

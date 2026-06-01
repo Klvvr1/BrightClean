@@ -1,19 +1,34 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
+import 'package:provider/provider.dart';
 import 'package:brightcleanproject/main.dart';
+import 'package:brightcleanproject/features/auth/data/providers/auth_provider.dart';
+import 'package:brightcleanproject/features/customer/data/providers/order_provider.dart';
+import 'package:brightcleanproject/features/customer/data/providers/review_provider.dart';
+import 'package:brightcleanproject/features/customer/data/providers/cart_provider.dart';
+import 'package:brightcleanproject/features/driver/data/providers/driver_provider.dart';
+import 'package:brightcleanproject/features/admin/data/providers/admin_provider.dart';
+import 'package:brightcleanproject/features/customer/data/providers/notification_provider.dart';
 
 void main() {
   testWidgets('App starts and displays SplashScreen', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const BrightCleanApp());
+    // Build our app wrapped with all the necessary providers and trigger a frame.
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (_) => AuthProvider()),
+          ChangeNotifierProvider(create: (_) => OrderProvider()),
+          ChangeNotifierProvider(create: (_) => ReviewProvider()),
+          ChangeNotifierProvider(create: (_) => CartProvider()),
+          ChangeNotifierProvider(create: (_) => DriverProvider()),
+          ChangeNotifierProvider(create: (_) => AdminProvider()),
+          ChangeNotifierProvider(create: (_) => NotificationProvider()),
+        ],
+        child: const BrightCleanApp(),
+      ),
+    );
+    await tester.pump(); // Start routing
+    await tester.pump(const Duration(milliseconds: 100)); // Settle routing
 
     // Verify that the SplashScreen title is displayed.
     expect(find.text('برايت كلين'), findsOneWidget);

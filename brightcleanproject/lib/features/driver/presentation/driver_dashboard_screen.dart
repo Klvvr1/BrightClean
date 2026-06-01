@@ -963,23 +963,27 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
   }
 
   Widget _buildSettingsHeader(String title) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Text(title, style: TextStyle(fontSize: 14, color: Colors.grey.shade600, fontWeight: FontWeight.bold)),
+      child: Text(title, style: TextStyle(fontSize: 14, color: isDark ? Colors.white.withValues(alpha: 0.7) : Colors.grey.shade600, fontWeight: FontWeight.bold)),
     );
   }
 
   Widget _buildSwitchTile(String title, bool value, Function(bool) onChanged, {IconData? icon}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return SwitchListTile(
       secondary: Icon(
         icon ?? (value ? Icons.dark_mode : Icons.light_mode), 
-        color: value ? AppColors.primary : Colors.grey
+        color: value 
+            ? (isDark ? Colors.white : AppColors.primary) 
+            : (isDark ? Colors.white38 : Colors.grey)
       ),
-      title: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+      title: Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: isDark ? Colors.white : null)),
       value: value,
       onChanged: onChanged,
-      activeTrackColor: AppColors.primary.withValues(alpha: 0.5),
-      activeThumbColor: AppColors.primary,
+      activeTrackColor: isDark ? Colors.white30 : AppColors.primary.withValues(alpha: 0.5),
+      activeThumbColor: isDark ? Colors.white : AppColors.primary,
     );
   }
 
@@ -1106,8 +1110,8 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
         child: BottomNavigationBar(
           currentIndex: _selectedIndex,
           onTap: _onItemTapped,
-          selectedItemColor: AppColors.primary,
-          unselectedItemColor: isDark ? Colors.white : Colors.grey.shade600,
+          selectedItemColor: isDark ? Colors.white : AppColors.primary,
+          unselectedItemColor: isDark ? Colors.white70 : Colors.grey.shade600,
           showUnselectedLabels: true,
           type: BottomNavigationBarType.fixed,
           backgroundColor: theme.cardColor,

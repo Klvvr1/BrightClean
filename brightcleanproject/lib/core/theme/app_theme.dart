@@ -77,14 +77,23 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
-      primaryColor: AppColors.primary,
+      primaryColor: Colors.white,
       scaffoldBackgroundColor: AppColors.darkBackground,
       colorScheme: const ColorScheme.dark(
-        primary: AppColors.primary,
-        secondary: AppColors.secondary,
+        primary: Colors.white,
+        secondary: AppColors.lightBlue,
         tertiary: AppColors.tertiary,
         surface: AppColors.darkSurface,
         error: AppColors.error,
+        onPrimary: AppColors.darkBackground,
+        onSecondary: AppColors.darkBackground,
+        onSurface: Colors.white,
+      ),
+      iconTheme: const IconThemeData(color: Colors.white),
+      primaryIconTheme: const IconThemeData(color: Colors.white),
+      listTileTheme: const ListTileThemeData(
+        iconColor: Colors.white,
+        textColor: Colors.white,
       ),
       textTheme: AppTextStyles.getTextTheme(context, brightness: Brightness.dark),
       appBarTheme: const AppBarTheme(
@@ -104,7 +113,7 @@ class AppTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
+          backgroundColor: AppColors.tertiary,
           foregroundColor: AppColors.white,
           minimumSize: const Size(double.infinity, 50),
           shape: RoundedRectangleBorder(
@@ -131,7 +140,7 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: AppRadius.input,
-          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+          borderSide: const BorderSide(color: AppColors.tertiary, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: AppRadius.input,

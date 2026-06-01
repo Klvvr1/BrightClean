@@ -157,6 +157,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
 
   Widget _buildCategoryCard(BuildContext context, String title, IconData icon, Color color, {bool isSearch = false}) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     
     return Container(
       width: isSearch ? null : 120,
@@ -177,7 +178,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(icon, size: 40, color: color),
+                Icon(icon, size: 40, color: isDark ? Colors.white : color),
                 const SizedBox(height: AppSpacing.sm),
                 Text(
                   title,
@@ -228,7 +229,9 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
 
   Widget _buildVerticalCategoryCard(BuildContext context, Map<String, dynamic> cat) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final Color catColor = cat['color'] as Color;
+    final Color displayColor = isDark ? Colors.white : catColor;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs),
@@ -254,17 +257,17 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                     width: 52,
                     height: 52,
                     decoration: BoxDecoration(
-                      color: catColor.withValues(alpha: 0.1),
+                      color: displayColor.withValues(alpha: isDark ? 0.15 : 0.1),
                       borderRadius: AppRadius.button,
                       border: Border.all(
-                        color: catColor.withValues(alpha: 0.2),
+                        color: displayColor.withValues(alpha: isDark ? 0.3 : 0.2),
                         width: 1,
                       ),
                     ),
                     child: Icon(
                       cat['icon'] as IconData,
                       size: 28,
-                      color: catColor,
+                      color: displayColor,
                     ),
                   ),
                   const SizedBox(width: AppSpacing.md),

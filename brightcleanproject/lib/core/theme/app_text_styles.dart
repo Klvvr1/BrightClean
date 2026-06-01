@@ -14,27 +14,30 @@ class AppTextStyles {
     final baseTheme = brightness == Brightness.dark ? ThemeData.dark().textTheme : ThemeData.light().textTheme;
     final fontFunction = locale == 'en' ? GoogleFonts.interTextTheme : GoogleFonts.cairoTextTheme;
 
+    final textColor = brightness == Brightness.dark ? Colors.white : null;
+    final secondaryTextColor = brightness == Brightness.dark ? Colors.white.withValues(alpha: 0.9) : null;
+
     // Apply the language-specific font to the base text theme
     return fontFunction(baseTheme).copyWith(
-      displayLarge: fontFunction(baseTheme).displayLarge?.copyWith(fontWeight: FontWeight.bold, fontSize: 57),
-      displayMedium: fontFunction(baseTheme).displayMedium?.copyWith(fontWeight: FontWeight.bold, fontSize: 45),
-      displaySmall: fontFunction(baseTheme).displaySmall?.copyWith(fontWeight: FontWeight.bold, fontSize: 36),
+      displayLarge: fontFunction(baseTheme).displayLarge?.copyWith(fontWeight: FontWeight.bold, fontSize: 57, color: textColor),
+      displayMedium: fontFunction(baseTheme).displayMedium?.copyWith(fontWeight: FontWeight.bold, fontSize: 45, color: textColor),
+      displaySmall: fontFunction(baseTheme).displaySmall?.copyWith(fontWeight: FontWeight.bold, fontSize: 36, color: textColor),
       
-      headlineLarge: fontFunction(baseTheme).headlineLarge?.copyWith(fontWeight: FontWeight.bold, fontSize: 32),
-      headlineMedium: fontFunction(baseTheme).headlineMedium?.copyWith(fontWeight: FontWeight.bold, fontSize: 28),
-      headlineSmall: fontFunction(baseTheme).headlineSmall?.copyWith(fontWeight: FontWeight.bold, fontSize: 24),
+      headlineLarge: fontFunction(baseTheme).headlineLarge?.copyWith(fontWeight: FontWeight.bold, fontSize: 32, color: textColor),
+      headlineMedium: fontFunction(baseTheme).headlineMedium?.copyWith(fontWeight: FontWeight.bold, fontSize: 28, color: textColor),
+      headlineSmall: fontFunction(baseTheme).headlineSmall?.copyWith(fontWeight: FontWeight.bold, fontSize: 24, color: textColor),
       
-      titleLarge: fontFunction(baseTheme).titleLarge?.copyWith(fontWeight: FontWeight.w600, fontSize: 22),
-      titleMedium: fontFunction(baseTheme).titleMedium?.copyWith(fontWeight: FontWeight.w600, fontSize: 16),
-      titleSmall: fontFunction(baseTheme).titleSmall?.copyWith(fontWeight: FontWeight.w600, fontSize: 14),
+      titleLarge: fontFunction(baseTheme).titleLarge?.copyWith(fontWeight: FontWeight.w600, fontSize: 22, color: textColor),
+      titleMedium: fontFunction(baseTheme).titleMedium?.copyWith(fontWeight: FontWeight.w600, fontSize: 16, color: textColor),
+      titleSmall: fontFunction(baseTheme).titleSmall?.copyWith(fontWeight: FontWeight.w600, fontSize: 14, color: textColor),
       
-      bodyLarge: fontFunction(baseTheme).bodyLarge?.copyWith(fontWeight: FontWeight.normal, fontSize: 16),
-      bodyMedium: fontFunction(baseTheme).bodyMedium?.copyWith(fontWeight: FontWeight.normal, fontSize: 14),
-      bodySmall: fontFunction(baseTheme).bodySmall?.copyWith(fontWeight: FontWeight.normal, fontSize: 12),
+      bodyLarge: fontFunction(baseTheme).bodyLarge?.copyWith(fontWeight: FontWeight.normal, fontSize: 16, color: secondaryTextColor),
+      bodyMedium: fontFunction(baseTheme).bodyMedium?.copyWith(fontWeight: FontWeight.normal, fontSize: 14, color: secondaryTextColor),
+      bodySmall: fontFunction(baseTheme).bodySmall?.copyWith(fontWeight: FontWeight.normal, fontSize: 12, color: secondaryTextColor),
       
-      labelLarge: fontFunction(baseTheme).labelLarge?.copyWith(fontWeight: FontWeight.w500, fontSize: 14),
-      labelMedium: fontFunction(baseTheme).labelMedium?.copyWith(fontWeight: FontWeight.w500, fontSize: 12),
-      labelSmall: fontFunction(baseTheme).labelSmall?.copyWith(fontWeight: FontWeight.w500, fontSize: 11),
+      labelLarge: fontFunction(baseTheme).labelLarge?.copyWith(fontWeight: FontWeight.w500, fontSize: 14, color: textColor),
+      labelMedium: fontFunction(baseTheme).labelMedium?.copyWith(fontWeight: FontWeight.w500, fontSize: 12, color: textColor),
+      labelSmall: fontFunction(baseTheme).labelSmall?.copyWith(fontWeight: FontWeight.w500, fontSize: 11, color: textColor),
     );
   }
 }

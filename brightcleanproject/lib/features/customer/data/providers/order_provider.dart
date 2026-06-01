@@ -313,21 +313,23 @@ class OrderProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> submitOrder(int bookingId, {Order? localOrder}) async {
+  Future<double?> submitOrder(int bookingId, {Order? localOrder}) async {
     _isCheckoutLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      await bookingRepository.submitBooking(bookingId);
+      final serverFinalTotal = await bookingRepository.submitBooking(bookingId);
       if (localOrder != null) {
         _orders.insert(0, localOrder);
         await _saveOrderToDb(localOrder);
       }
-      
+
       // On success, clear local cart DB table
       final db = await DatabaseHelper.instance.database;
       await db.delete('cart_items');
+
+      return serverFinalTotal;
     } on ServerException catch (e) {
       _errorMessage = e.message ?? 'حدث خطأ في الخادم';
       rethrow;
@@ -340,13 +342,13 @@ class OrderProvider extends ChangeNotifier {
     }
   }
 
-  Future<int> createBooking(int laundryAgentID, List<Map<String, int>> items) async {
+  Future<int> createBooking(int laundryAgentID, List<Map<String, int>> items, {int? addressID}) async {
     _isCheckoutLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      final bookingId = await bookingRepository.createBooking(laundryAgentID, items);
+      final bookingId = await bookingRepository.createBooking(laundryAgentID, items, addressID: addressID);
       _currentBookingId = bookingId;
       _isCheckoutLoading = false;
       notifyListeners();
