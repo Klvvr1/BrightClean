@@ -27,6 +27,8 @@ class _CartScreenState extends State<CartScreen> {
   String? _selectedLocationAddress;
   String? _registrationAddress;
   bool _isUsingRegistrationLocation = true;
+  double? _selectedLatitude;
+  double? _selectedLongitude;
 
   @override
   void initState() {
@@ -36,7 +38,11 @@ class _CartScreenState extends State<CartScreen> {
 
   Future<void> _loadLocationData() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final userId = authProvider.userId ?? 0;
+    final userId = authProvider.userId;
+    if (userId == null) {
+      debugPrint('Warning: userId is null in _loadLocationData');
+      return;
+    }
     final prefs = await SharedPreferences.getInstance();
     
     // Load registration address
@@ -67,7 +73,15 @@ class _CartScreenState extends State<CartScreen> {
 
   Future<void> _selectCustomLocation() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final userId = authProvider.userId ?? 0;
+    final userId = authProvider.userId;
+    if (userId == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('خطأ: لم يتم تحديد معرف المستخدم')),
+        );
+      }
+      return;
+    }
 
     final result = await Navigator.push(
       context,
@@ -76,14 +90,26 @@ class _CartScreenState extends State<CartScreen> {
 
     if (result != null && result is Map<String, dynamic>) {
       final address = result['address'] as String;
+      final latitude = result['latitude'];
+      final longitude = result['longitude'];
       final prefs = await SharedPreferences.getInstance();
-      
+
       await prefs.setString('current_cart_address_$userId', address);
-      
+
+      // Save coordinates if provided
+      if (latitude != null && longitude != null) {
+        await prefs.setDouble('current_cart_lat_$userId', latitude is double ? latitude : (latitude as num).toDouble());
+        await prefs.setDouble('current_cart_lng_$userId', longitude is double ? longitude : (longitude as num).toDouble());
+      }
+
       if (mounted) {
         setState(() {
           _selectedLocationAddress = address;
           _isUsingRegistrationLocation = false;
+          if (latitude != null && longitude != null) {
+            _selectedLatitude = latitude is double ? latitude : (latitude as num).toDouble();
+            _selectedLongitude = longitude is double ? longitude : (longitude as num).toDouble();
+          }
         });
       }
     }
@@ -91,7 +117,15 @@ class _CartScreenState extends State<CartScreen> {
 
   Future<void> _useRegistrationLocation() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final userId = authProvider.userId ?? 0;
+    final userId = authProvider.userId;
+    if (userId == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('خطأ: لم يتم تحديد معرف المستخدم')),
+        );
+      }
+      return;
+    }
     final prefs = await SharedPreferences.getInstance();
     
     if (_registrationAddress != null) {
@@ -383,7 +417,13 @@ class _CartScreenState extends State<CartScreen> {
                             final orderProvider = Provider.of<OrderProvider>(context, listen: false);
                             final router = GoRouter.of(context);
                             final authProvider = Provider.of<AuthProvider>(context, listen: false);
-                            final userId = authProvider.userId ?? 0;
+                            final userId = authProvider.userId;
+                            if (userId == null) {
+                              scaffoldMessenger.showSnackBar(
+                                const SnackBar(content: Text('خطأ: لم يتم تحديد معرف المستخدم')),
+                              );
+                              return;
+                            }
 
                             // Show progress dialog
                             showDialog(
@@ -418,7 +458,19 @@ class _CartScreenState extends State<CartScreen> {
                                 });
 
                                 if (response != null && response is Map<String, dynamic>) {
-                                  addressId = response['addressID'] as int?;
+                                  // Safe parse addressID: handle int, String, or missing
+                                  if (response.containsKey('addressID')) {
+                                    final rawId = response['addressID'];
+                                    if (rawId is int) {
+                                      addressId = rawId;
+                                    } else if (rawId is String) {
+                                      addressId = int.tryParse(rawId);
+                                    } else {
+                                      addressId = null;
+                                    }
+                                  } else {
+                                    addressId = null;
+                                  }
                                   if (addressId != null) {
                                     await prefs.setInt('last_registered_address_id_$userId', addressId);
                                     await prefs.setString('last_registered_address_string_$userId', _selectedLocationAddress!);

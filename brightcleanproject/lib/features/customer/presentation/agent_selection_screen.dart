@@ -36,9 +36,20 @@ class _AgentSelectionScreenState extends State<AgentSelectionScreen> {
       final response = await apiClient.get('/api/users/agents');
       if (response is List) {
         setState(() {
-          _agents = response.map((a) {
-            final id = a['id'] as int;
-            final businessName = a['businessName'] as String;
+          _agents = response.where((a) {
+            // Validate required fields exist and are of correct type
+            if (a == null || a is! Map) return false;
+            final idValue = a['id'];
+            final nameValue = a['businessName'];
+            if (idValue == null || nameValue == null) return false;
+            // Accept int or parseable String for id
+            if (idValue is! int && (idValue is! String || int.tryParse(idValue) == null)) return false;
+            return true;
+          }).map((a) {
+            // Safe extraction with type coercion
+            final idValue = a['id'];
+            final id = idValue is int ? idValue : int.parse(idValue as String);
+            final businessName = (a['businessName'] ?? '').toString();
             
             // Map realistic mock info depending on the agent ID
             String address = 'شارع بيروت، حولي';
@@ -296,8 +307,9 @@ class _AgentSelectionScreenState extends State<AgentSelectionScreen> {
                   padding: const EdgeInsets.all(AppSpacing.lg),
                   child: ElevatedButton(
                     onPressed: () {
-                      Navigator.pop(context); // Close BottomSheet
-                      Navigator.pop(context, agent); // Pop SelectionScreen returning selected agent
+                      final navigator = Navigator.of(context);
+                      navigator.pop(); // Close BottomSheet
+                      navigator.pop(agent); // Pop SelectionScreen returning selected agent
                     },
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),

@@ -1111,7 +1111,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
           currentIndex: _selectedIndex,
           onTap: _onItemTapped,
           selectedItemColor: isDark ? Colors.white : AppColors.primary,
-          unselectedItemColor: isDark ? Colors.white : Colors.grey.shade600,
+          unselectedItemColor: isDark ? Colors.white70 : Colors.grey.shade600,
           showUnselectedLabels: true,
           type: BottomNavigationBarType.fixed,
           backgroundColor: theme.cardColor,

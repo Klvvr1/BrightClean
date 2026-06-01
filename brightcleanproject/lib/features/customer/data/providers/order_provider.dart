@@ -313,7 +313,7 @@ class OrderProvider extends ChangeNotifier {
     }
   }
 
-  Future<double> submitOrder(int bookingId, {Order? localOrder}) async {
+  Future<double?> submitOrder(int bookingId, {Order? localOrder}) async {
     _isCheckoutLoading = true;
     _errorMessage = null;
     notifyListeners();
@@ -324,7 +324,7 @@ class OrderProvider extends ChangeNotifier {
         _orders.insert(0, localOrder);
         await _saveOrderToDb(localOrder);
       }
-      
+
       // On success, clear local cart DB table
       final db = await DatabaseHelper.instance.database;
       await db.delete('cart_items');

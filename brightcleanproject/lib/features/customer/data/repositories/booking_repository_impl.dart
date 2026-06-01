@@ -43,7 +43,7 @@ class BookingRepositoryImpl implements BookingRepository {
   }
 
   @override
-  Future<double> submitBooking(int bookingId) async {
+  Future<double?> submitBooking(int bookingId) async {
     try {
       final response = await apiClient.post(
         '/api/bookings/submit',
@@ -56,8 +56,8 @@ class BookingRepositoryImpl implements BookingRepository {
           return (rawTotal as num).toDouble();
         }
       }
-      // Fallback: return 0 and let payment amount come from the local snapshot
-      return 0.0;
+      // Return null to indicate server omitted total (distinguishable from genuine zero)
+      return null;
     } catch (e) {
       rethrow;
     }

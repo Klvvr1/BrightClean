@@ -50,7 +50,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
   Future<int?> _ensureAddressRegistered() async {
     if (_selectedAddress == null || _selectedAddress!.isEmpty) return null;
-    
+
     final prefs = await SharedPreferences.getInstance();
     final userId = prefs.get('user_id')?.toString() ?? 'default_user';
     final lastRegStr = prefs.getString('last_registered_address_string_$userId');
@@ -65,23 +65,20 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         street = commaSplit.sublist(1).join(',').trim();
       }
 
-      try {
-        final response = await _apiClient.post('/api/addresses', body: {
-          'area': area,
-          'street': street,
-          'latitude': 0.0,
-          'longitude': 0.0,
-        });
+      // Propagate errors to caller - do not swallow
+      final response = await _apiClient.post('/api/addresses', body: {
+        'area': area,
+        'street': street,
+        'latitude': 0.0,
+        'longitude': 0.0,
+      });
 
-        if (response != null && response is Map<String, dynamic>) {
-          addressId = response['addressID'] as int?;
-          if (addressId != null) {
-            await prefs.setInt('last_registered_address_id_$userId', addressId);
-            await prefs.setString('last_registered_address_string_$userId', _selectedAddress!);
-          }
+      if (response != null && response is Map<String, dynamic>) {
+        addressId = response['addressID'] as int?;
+        if (addressId != null) {
+          await prefs.setInt('last_registered_address_id_$userId', addressId);
+          await prefs.setString('last_registered_address_string_$userId', _selectedAddress!);
         }
-      } catch (e) {
-        debugPrint('Error registering address on checkout: $e');
       }
     }
     return addressId;
@@ -317,11 +314,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
   Future<void> _loadLocationData() async {
     final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+
     final userId = prefs.get('user_id')?.toString() ?? 'default_user';
     String? savedAddress = prefs.getString('current_cart_address_$userId');
     if (savedAddress == null || savedAddress.isEmpty) {
       savedAddress = prefs.getString('user_registration_address_$userId');
     }
+    if (!mounted) return;
+
     if (savedAddress != null && savedAddress.isNotEmpty) {
       setState(() {
         _selectedAddress = savedAddress;
@@ -941,11 +942,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                              }
 
                              // 1. Submit the booking (changes status from Draft → Pending)
-                             // The returned value is the server's authoritative FinalTotal
+                             // The returned value is the server's authoritative FinalTotal (or null if omitted)
                              final serverFinalTotal = await orderProvider.submitOrder(bookingId, localOrder: newOrder);
 
-                             // Use server's FinalTotal for payment; fall back to local snapshot if server returned 0
-                             final paymentAmount = (serverFinalTotal > 0) ? serverFinalTotal : capturedFinalPrice;
+                             // Use server's FinalTotal for payment; only fallback if null (not if zero)
+                             final paymentAmount = serverFinalTotal ?? capturedFinalPrice;
 
                              // POST /api/payments - use server-authoritative amount
                              final methodMap = {

@@ -543,12 +543,61 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
     );
   }
 
-  // Resolved catalog lookup from backend API with local mapping fallback
+  // Resolved catalog lookup from backend API - derive IDs from catalog data instead of hardcoded numbers
   int _resolveServiceId(String itemName) {
+    // Map Arabic clothing labels to ServiceName values in catalog
+    final Map<String, String> arabicToServiceName = {
+      'ثوب أبيض': 'Wash & Iron',
+      'ثوب ملون': 'Wash & Iron',
+      'ثوب صوف': 'Wash & Iron',
+      'غترة': 'Wash & Iron',
+      'شماغ': 'Wash & Iron',
+      'فليئة داخلية': 'Wash & Iron',
+      'سروال قصير': 'Wash & Iron',
+      'سروال طويل': 'Wash & Iron',
+      'طاقية': 'Wash & Iron',
+      'قميص نوم': 'Wash & Iron',
+      'جوارب': 'Wash & Iron',
+      'منشفة صغيرة': 'Wash & Iron',
+      'منشفة كبيرة': 'Wash & Iron',
+      'بدلة عسكرية': 'Wash & Iron',
+      'بدلة رياضية': 'Wash & Iron',
+      'بدلة باكستاني': 'Wash & Iron',
+      'بدلة صوف': 'Wash & Iron',
+      'بالطو': 'Wash & Iron',
+      'بنطلون': 'Wash & Iron',
+      'قميص': 'Wash & Iron',
+      'ربطة عنق': 'Wash & Iron',
+      'فستان': 'Wash & Iron',
+      'بلوزة': 'Wash & Iron',
+      'تنورة': 'Wash & Iron',
+      'قميص حرير': 'Wash & Iron',
+      'عباية': 'Wash & Iron',
+      'طرحة': 'Wash & Iron',
+      'شرشف مزدوج': 'Wash & Iron',
+      'شرشف مفرد': 'Wash & Iron',
+      'كيس مخدة': 'Wash & Iron',
+      'مخدة': 'Wash & Iron',
+      'روب حمام': 'Wash & Iron',
+      'بجامة': 'Wash & Iron',
+      'جاكيت': 'Wash & Iron',
+      'جاكيت سبور': 'Wash & Iron',
+      'بطانية': 'Wash & Iron',
+      'مفرش': 'Wash & Iron',
+      'ستائر': 'Wash & Iron',
+      'سجاد': 'Carpet Cleaning',
+      'فروة': 'Wash & Iron',
+      'بشت': 'Wash & Iron',
+      'المعوز': 'Al-Maouz',
+      'العمامة': 'Turban',
+    };
+
     if (_catalogServices.isNotEmpty) {
+      // Lookup by mapped ServiceName
+      final catalogName = arabicToServiceName[itemName] ?? 'Wash & Iron';
       try {
         final matchingItem = _catalogServices.firstWhere(
-          (s) => s.serviceName == itemName,
+          (s) => s.serviceName == catalogName,
         );
         return matchingItem.serviceID;
       } catch (_) {
@@ -560,20 +609,16 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
           return defaultItem.serviceID;
         } catch (_) {
           // Absolute fallback: first available catalog service ID
-          return _catalogServices.first.serviceID;
+          if (_catalogServices.isNotEmpty) {
+            return _catalogServices.first.serviceID;
+          }
         }
       }
     }
 
-    // Resilient fallback to hardcoded IDs based on DbInitializer seed data
-    switch (itemName) {
-      case 'المعوز':
-        return 2;
-      case 'العمامة':
-        return 3;
-      default:
-        return 1;
-    }
+    // Last resort: return 1 if catalog is completely unavailable
+    debugPrint('Warning: No catalog services loaded, using fallback ID 1 for item: $itemName');
+    return 1;
   }
 
   @override
