@@ -60,10 +60,14 @@ class _CartScreenState extends State<CartScreen> {
     if (cartAddr == null || cartAddr.isEmpty || cartAddr == regAddr) {
       _selectedLocationAddress = regAddr;
       _isUsingRegistrationLocation = true;
+      _selectedLatitude = null;
+      _selectedLongitude = null;
       await prefs.setString('current_cart_address_$userId', regAddr);
     } else {
       _selectedLocationAddress = cartAddr;
       _isUsingRegistrationLocation = false;
+      _selectedLatitude = prefs.getDouble('current_cart_lat_$userId');
+      _selectedLongitude = prefs.getDouble('current_cart_lng_$userId');
     }
     
     if (mounted) {
@@ -130,10 +134,14 @@ class _CartScreenState extends State<CartScreen> {
     
     if (_registrationAddress != null) {
       await prefs.setString('current_cart_address_$userId', _registrationAddress!);
+      await prefs.remove('current_cart_lat_$userId');
+      await prefs.remove('current_cart_lng_$userId');
       if (mounted) {
         setState(() {
           _selectedLocationAddress = _registrationAddress;
           _isUsingRegistrationLocation = true;
+          _selectedLatitude = null;
+          _selectedLongitude = null;
         });
       }
     }
@@ -453,8 +461,8 @@ class _CartScreenState extends State<CartScreen> {
                                 final response = await apiClient.post('/api/addresses', body: {
                                   'area': area,
                                   'street': street,
-                                  'latitude': 0.0,
-                                  'longitude': 0.0,
+                                  'latitude': _selectedLatitude ?? 0.0,
+                                  'longitude': _selectedLongitude ?? 0.0,
                                 });
 
                                 if (response != null && response is Map<String, dynamic>) {
