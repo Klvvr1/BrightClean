@@ -1,10 +1,10 @@
-<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36" version="29.4.0">
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36">
   <diagram name="Use Case Diagram" id="0">
-    <mxGraphModel dx="1097" dy="646" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+    <mxGraphModel dx="1012" dy="561" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="btXEW6qT5I07JKc76msk-20" parent="1" style="whiteSpace=wrap;html=1;aspect=fixed;fillColor=none;fontFamily=monospace;align=center;" value="&lt;p style=&quot;margin-bottom: 500px; margin-top: 0px; padding-bottom: 0px;&quot;&gt;&lt;font style=&quot;font-size: 14px;&quot;&gt;Laundry Management System&lt;/font&gt;&lt;/p&gt;" vertex="1">
+        <mxCell id="btXEW6qT5I07JKc76msk-20" parent="1" style="whiteSpace=wrap;html=1;aspect=fixed;fillColor=none;fontFamily=monospace;align=center;verticalAlign=top;" value="&lt;p style=&quot;margin-bottom: 500px; margin-top: 0px; padding-bottom: 0px;&quot;&gt;&lt;font style=&quot;font-size: 14px;&quot;&gt;Laundry Management System&lt;/font&gt;&lt;/p&gt;" vertex="1">
           <mxGeometry height="537" width="558.81" x="380" y="30" as="geometry" />
         </mxCell>
         <mxCell id="2" parent="1" style="shape=umlActor;verticalAlign=bottom;align=center;fontFamily=monospace;" value="" vertex="1">
@@ -58,7 +58,7 @@
           <mxGeometry height="50" width="110" x="600" y="110" as="geometry" />
         </mxCell>
         <mxCell id="1YpzDaXkW-gDMkT-FS0d-27" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontFamily=monospace;" value="Show Error Message" vertex="1">
-          <mxGeometry height="50" width="110" x="570" y="170" as="geometry" />
+          <mxGeometry height="50" width="110" x="580" y="190" as="geometry" />
         </mxCell>
         <mxCell id="1YpzDaXkW-gDMkT-FS0d-28" edge="1" parent="1" source="1YpzDaXkW-gDMkT-FS0d-23" style="dashed=1;endArrow=open;html=1;fontFamily=monospace;" target="1YpzDaXkW-gDMkT-FS0d-25" value="«include»">
           <mxGeometry relative="1" x="-0.2348" y="-32" as="geometry">
@@ -82,10 +82,7 @@
           </mxGeometry>
         </mxCell>
         <mxCell id="1YpzDaXkW-gDMkT-FS0d-31" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontFamily=monospace;" value="Verify Account" vertex="1">
-          <mxGeometry height="50" width="110" x="570" y="230" as="geometry" />
-        </mxCell>
-        <mxCell id="1YpzDaXkW-gDMkT-FS0d-32" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontFamily=monospace;" value="Show Error Message" vertex="1">
-          <mxGeometry height="50" width="110" x="570" y="290" as="geometry" />
+          <mxGeometry height="50" width="110" x="585" y="273.5" as="geometry" />
         </mxCell>
         <mxCell id="1YpzDaXkW-gDMkT-FS0d-33" edge="1" parent="1" source="3" style="dashed=1;endArrow=open;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontFamily=monospace;" target="1YpzDaXkW-gDMkT-FS0d-31" value="«include»">
           <mxGeometry relative="1" x="-0.1855" y="-12" as="geometry">
@@ -94,10 +91,10 @@
             <mxPoint x="400" y="270" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="1YpzDaXkW-gDMkT-FS0d-34" edge="1" parent="1" source="1YpzDaXkW-gDMkT-FS0d-32" style="dashed=1;endArrow=open;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=1;entryDx=0;entryDy=0;fontFamily=monospace;" target="3" value="«Extend»">
+        <mxCell id="1YpzDaXkW-gDMkT-FS0d-34" edge="1" parent="1" source="1YpzDaXkW-gDMkT-FS0d-27" style="dashed=1;endArrow=open;html=1;exitX=1;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0;entryDx=0;entryDy=0;fontFamily=monospace;" target="3" value="«Extend»">
           <mxGeometry relative="1" x="-0.1144" y="16" as="geometry">
             <mxPoint as="offset" />
-            <mxPoint x="461" y="234" as="sourcePoint" />
+            <mxPoint x="680" y="315" as="sourcePoint" />
             <mxPoint x="340" y="200" as="targetPoint" />
           </mxGeometry>
         </mxCell>
