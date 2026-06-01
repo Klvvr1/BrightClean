@@ -16,6 +16,7 @@ import 'package:brightcleanproject/features/customer/domain/models/order.dart';
 import 'package:brightcleanproject/features/customer/data/providers/order_provider.dart';
 import '../data/providers/cart_provider.dart';
 import '../../../../core/widgets/map_picker_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class CheckoutScreen extends StatefulWidget {
   final List<CartItem>? directItems;
@@ -31,6 +32,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   String _selectedPaymentMethod = 'cash';
   bool _isLocationVerified = false;
   String? _selectedAddress;
+  bool _isProcessingPayment = false;
 
   Future<void> _selectLocation() async {
     final result = await Navigator.push(
@@ -44,6 +46,45 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         _isLocationVerified = true;
       });
     }
+  }
+
+  Future<int?> _ensureAddressRegistered() async {
+    if (_selectedAddress == null || _selectedAddress!.isEmpty) return null;
+    
+    final prefs = await SharedPreferences.getInstance();
+    final userId = prefs.get('user_id')?.toString() ?? 'default_user';
+    final lastRegStr = prefs.getString('last_registered_address_string_$userId');
+    int? addressId = prefs.getInt('last_registered_address_id_$userId');
+
+    if (lastRegStr != _selectedAddress || addressId == null) {
+      String area = _selectedAddress!;
+      String street = _selectedAddress!;
+      final commaSplit = area.split(',');
+      if (commaSplit.length >= 2) {
+        area = commaSplit[0].trim();
+        street = commaSplit.sublist(1).join(',').trim();
+      }
+
+      try {
+        final response = await _apiClient.post('/api/addresses', body: {
+          'area': area,
+          'street': street,
+          'latitude': 0.0,
+          'longitude': 0.0,
+        });
+
+        if (response != null && response is Map<String, dynamic>) {
+          addressId = response['addressID'] as int?;
+          if (addressId != null) {
+            await prefs.setInt('last_registered_address_id_$userId', addressId);
+            await prefs.setString('last_registered_address_string_$userId', _selectedAddress!);
+          }
+        }
+      } catch (e) {
+        debugPrint('Error registering address on checkout: $e');
+      }
+    }
+    return addressId;
   }
 
   final TextEditingController _locationDescriptionController =
@@ -140,7 +181,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             };
           }).toList();
 
-          bookingId = await orderProvider.createBooking(_selectedAgentId!, itemsDto);
+          final addressId = await _ensureAddressRegistered();
+          bookingId = await orderProvider.createBooking(_selectedAgentId!, itemsDto, addressID: addressId);
           if (mounted) {
             Navigator.of(context).pop(); // pop progress dialog
           }
@@ -267,8 +309,24 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   void initState() {
     super.initState();
     _initializeDateFormatting();
+    _loadLocationData();
     if (widget.directItems != null) {
       _loadAgents();
+    }
+  }
+
+  Future<void> _loadLocationData() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userId = prefs.get('user_id')?.toString() ?? 'default_user';
+    String? savedAddress = prefs.getString('current_cart_address_$userId');
+    if (savedAddress == null || savedAddress.isEmpty) {
+      savedAddress = prefs.getString('user_registration_address_$userId');
+    }
+    if (savedAddress != null && savedAddress.isNotEmpty) {
+      setState(() {
+        _selectedAddress = savedAddress;
+        _isLocationVerified = true;
+      });
     }
   }
 
@@ -827,13 +885,18 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton(
-                  onPressed: (canCompleteOrder && !orderProvider.isCheckoutLoading)
+                  onPressed: (canCompleteOrder && !orderProvider.isCheckoutLoading && !_isProcessingPayment)
                       ? () async {
                           final navigator = Navigator.of(context);
                           final scaffoldMessenger = ScaffoldMessenger.of(context);
                           final orderDetails = itemsToCheckout
                               .map((i) => '${i.serviceName} (${i.selectedType})')
                               .join(', ');
+
+                          // ✅ Capture finalPrice BEFORE any async ops to prevent
+                          // race condition: submitOrder clears cart → rebuild → finalPrice=0
+                          final capturedFinalPrice = finalPrice;
+                          final capturedPaymentMethod = _selectedPaymentMethod;
 
                           final newOrder = Order(
                             orderId: const Uuid().v4(),
@@ -844,12 +907,16 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                             activeStepIndex: 0,
                             locationDescription:
                                 _locationDescriptionController.text,
-                            paymentMethod: _selectedPaymentMethod,
+                            paymentMethod: capturedPaymentMethod,
                             pickupDate: _selectedDate,
                             pickupTimeSlot: _selectedTimeSlot,
                           );
 
-                           try {
+                          setState(() {
+                            _isProcessingPayment = true;
+                          });
+
+                          try {
                              // Use the actual booking ID from the order provider's current booking
                              var bookingId = orderProvider.currentBookingId;
                              if (bookingId == null) {
@@ -866,47 +933,62 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                    };
                                  }).toList();
 
-                                 bookingId = await orderProvider.createBooking(_selectedAgentId!, itemsDto);
+                                 final addressId = await _ensureAddressRegistered();
+                                 bookingId = await orderProvider.createBooking(_selectedAgentId!, itemsDto, addressID: addressId);
                                } else {
-                                 throw Exception('No active booking found');
+                                 throw Exception('لا يوجد حجز نشط. يرجى إعادة المحاولة.');
                                }
                              }
-                             await orderProvider.submitOrder(bookingId, localOrder: newOrder);
 
-                             // POST /api/payments after booking submission - MUST succeed before clearing cart
-                             // Map local payment method string to API enum string
+                             // 1. Submit the booking (changes status from Draft → Pending)
+                             // The returned value is the server's authoritative FinalTotal
+                             final serverFinalTotal = await orderProvider.submitOrder(bookingId, localOrder: newOrder);
+
+                             // Use server's FinalTotal for payment; fall back to local snapshot if server returned 0
+                             final paymentAmount = (serverFinalTotal > 0) ? serverFinalTotal : capturedFinalPrice;
+
+                             // POST /api/payments - use server-authoritative amount
                              final methodMap = {
                                'cash': 'Cash',
                                'bank_transfer': 'BankTransfer',
                                'wallet': 'Wallet',
                              };
-                             final apiMethod = methodMap[_selectedPaymentMethod] ?? 'Cash';
+                             final apiMethod = methodMap[capturedPaymentMethod] ?? 'Cash';
 
                              await _apiClient.post('/api/payments', body: {
                                'bookingID': bookingId,
-                               'amount': finalPrice,
+                               'amount': paymentAmount,
                                'method': apiMethod,
                                'transactionRef': null,
                              });
 
-                             // Only clear cart and navigate after successful payment
-                             if (widget.directItems == null) {
-                               await cart.clearCart();
-                             }
-
+                             // ✅ Cart DB already cleared inside submitOrder — no need to call cart.clearCart() again
+                             // Just navigate to success screen
                              navigator.pushReplacement(
                                MaterialPageRoute(
                                  builder: (context) => const OrderSuccessScreen(),
                                ),
                              );
                           } catch (e) {
+                            // Show the actual error from the server (e.g. amount mismatch)
+                            final errorText = e.toString()
+                                .replaceAll('Exception: ', '')
+                                .replaceAll('ServerException: ', '');
                             scaffoldMessenger.clearSnackBars();
                             scaffoldMessenger.showSnackBar(
                               SnackBar(
-                                content: Text('فشل تأكيد الطلب: $e'),
+                                content: Text('فشل تأكيد الطلب: $errorText'),
                                 backgroundColor: theme.colorScheme.error,
+                                duration: const Duration(seconds: 6),
+                                showCloseIcon: true,
                               ),
                             );
+                          } finally {
+                            if (mounted) {
+                              setState(() {
+                                _isProcessingPayment = false;
+                              });
+                            }
                           }
                         }
                       : (orderProvider.isCheckoutLoading
@@ -927,10 +1009,34 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         canCompleteOrder ? theme.colorScheme.primary : theme.colorScheme.surfaceContainerHighest,
                     foregroundColor: canCompleteOrder ? theme.colorScheme.onPrimary : theme.colorScheme.onSurfaceVariant,
                   ),
-                  child: orderProvider.isCheckoutLoading
-                      ? const CircularProgressIndicator(color: Colors.white)
+                  child: (orderProvider.isCheckoutLoading || _isProcessingPayment)
+                      ? const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            ),
+                            SizedBox(width: 12),
+                            Text(
+                              'جاري معالجة الطلب...',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        )
                       : Text(
                           'إتمام الطلب (${finalPrice.toStringAsFixed(0)} ر.ي)',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                 ),
               ),

@@ -43,25 +43,35 @@ class BookingRepositoryImpl implements BookingRepository {
   }
 
   @override
-  Future<void> submitBooking(int bookingId) async {
+  Future<double> submitBooking(int bookingId) async {
     try {
-      await apiClient.post(
+      final response = await apiClient.post(
         '/api/bookings/submit',
         body: {'bookingID': bookingId},
       );
+      // The backend returns the updated booking with FinalTotal
+      if (response != null && response is Map<String, dynamic>) {
+        final rawTotal = response['finalTotal'] ?? response['FinalTotal'];
+        if (rawTotal != null) {
+          return (rawTotal as num).toDouble();
+        }
+      }
+      // Fallback: return 0 and let payment amount come from the local snapshot
+      return 0.0;
     } catch (e) {
       rethrow;
     }
   }
 
   @override
-  Future<int> createBooking(int laundryAgentID, List<Map<String, int>> items) async {
+  Future<int> createBooking(int laundryAgentID, List<Map<String, int>> items, {int? addressID}) async {
     try {
       final response = await apiClient.post(
         '/api/bookings',
         body: {
           'laundryAgentID': laundryAgentID,
           'items': items,
+          if (addressID != null) 'addressID': addressID,
         },
       );
       if (response != null && response is Map<String, dynamic>) {

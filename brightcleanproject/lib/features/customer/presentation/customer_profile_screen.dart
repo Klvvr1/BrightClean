@@ -250,13 +250,14 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
   }
 
   Widget _buildSettingsHeader(String title) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Text(
         title,
         style: TextStyle(
           fontSize: 14,
-          color: Colors.grey.shade600,
+          color: isDark ? Colors.white.withValues(alpha: 0.7) : Colors.grey.shade600,
           fontWeight: FontWeight.bold,
         ),
       ),
@@ -264,29 +265,33 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
   }
 
   Widget _buildSettingsTile(IconData icon, String title, {String? subtitle, Color? color, VoidCallback? onTap}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return ListTile(
-      leading: Icon(icon, color: color ?? AppColors.primary),
+      leading: Icon(icon, color: color ?? (isDark ? Colors.white : AppColors.primary)),
       title: Text(
         title,
-        style: TextStyle(fontWeight: FontWeight.bold, color: color),
+        style: TextStyle(fontWeight: FontWeight.bold, color: color ?? (isDark ? Colors.white : null)),
       ),
-      subtitle: subtitle != null ? Text(subtitle, style: const TextStyle(fontSize: 12)) : null,
-      trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+      subtitle: subtitle != null ? Text(subtitle, style: TextStyle(fontSize: 12, color: isDark ? Colors.white70 : null)) : null,
+      trailing: Icon(Icons.arrow_forward_ios, size: 14, color: isDark ? Colors.white70 : null),
       onTap: onTap,
     );
   }
 
   Widget _buildSwitchTile(String title, bool value, Function(bool) onChanged) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return SwitchListTile(
       secondary: Icon(
         value ? Icons.dark_mode : Icons.light_mode,
-        color: value ? AppColors.primary : Colors.grey,
+        color: value 
+            ? (isDark ? Colors.white : AppColors.primary) 
+            : (isDark ? Colors.white38 : Colors.grey),
       ),
-      title: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+      title: Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: isDark ? Colors.white : null)),
       value: value,
       onChanged: onChanged,
-      activeTrackColor: AppColors.primary.withValues(alpha: 0.5),
-      activeThumbColor: AppColors.primary,
+      activeTrackColor: isDark ? Colors.white30 : AppColors.primary.withValues(alpha: 0.5),
+      activeThumbColor: isDark ? Colors.white : AppColors.primary,
     );
   }
 }

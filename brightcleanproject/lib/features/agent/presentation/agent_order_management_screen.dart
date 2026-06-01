@@ -346,7 +346,7 @@ class _AgentOrderManagementScreenState extends State<AgentOrderManagementScreen>
                                             crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
                                               Text(widget.order.customerName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                                              Text(isArabic ? 'الطلب #${widget.orderId}' : 'Order #${widget.orderId}', style: TextStyle(fontSize: 12, color: isDark ? Colors.white54 : Colors.grey.shade600, letterSpacing: 0.5)),
+                                              Text(isArabic ? 'الطلب #${widget.orderId}' : 'Order #${widget.orderId}', style: TextStyle(fontSize: 12, color: isDark ? Colors.white.withValues(alpha: 0.8) : Colors.grey.shade600, letterSpacing: 0.5)),
                                             ],
                                           ),
                                         ),
@@ -492,9 +492,10 @@ class _AgentOrderManagementScreenState extends State<AgentOrderManagementScreen>
   }
 
   Widget _buildSectionHeader(String title, ThemeData theme) {
+    final isDark = theme.brightness == Brightness.dark;
     return Row(
       children: [
-        Container(width: 4, height: 18, decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(2))),
+        Container(width: 4, height: 18, decoration: BoxDecoration(color: isDark ? Colors.white : AppColors.primary, borderRadius: BorderRadius.circular(2))),
         const SizedBox(width: 10),
         Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, letterSpacing: 0.5)),
       ],
@@ -537,7 +538,7 @@ class _AgentOrderManagementScreenState extends State<AgentOrderManagementScreen>
               children: [
                 Text(isArabic ? item.itemName : _translateItem(item.itemName), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
                 const SizedBox(height: 2),
-                Text(isArabic ? item.serviceType : _translateService(item.serviceType), style: TextStyle(fontSize: 12, color: isDark ? Colors.white54 : Colors.grey.shade600)),
+                Text(isArabic ? item.serviceType : _translateService(item.serviceType), style: TextStyle(fontSize: 12, color: isDark ? Colors.white.withValues(alpha: 0.8) : Colors.grey.shade600)),
               ],
             ),
           ),

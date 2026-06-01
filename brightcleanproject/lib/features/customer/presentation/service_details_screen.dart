@@ -976,7 +976,7 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
                     SnackBar(
                       content: const Text('تم إضافة الخدمات إلى السلة بنجاح'),
                       backgroundColor: AppColors.success,
-                      duration: const Duration(milliseconds: 1500),
+                      duration: const Duration(seconds: 4),
                       behavior: SnackBarBehavior.floating,
                       showCloseIcon: true,
                       closeIconColor: Colors.white,
@@ -1038,7 +1038,7 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
                     SnackBar(
                       content: const Text('تم إضافة الخدمات إلى السلة بنجاح'),
                       backgroundColor: AppColors.success,
-                      duration: const Duration(milliseconds: 1500),
+                      duration: const Duration(seconds: 4),
                       behavior: SnackBarBehavior.floating,
                       showCloseIcon: true,
                       closeIconColor: Colors.white,

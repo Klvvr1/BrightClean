@@ -293,7 +293,7 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(isArabic ? 'الخدمات المطلوبة' : 'Requested Services', style: TextStyle(color: isDark ? Colors.white54 : Colors.grey.shade600, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                Text(isArabic ? 'الخدمات المطلوبة' : 'Requested Services', style: TextStyle(color: isDark ? Colors.white.withValues(alpha: 0.8) : Colors.grey.shade600, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
                 const SizedBox(height: AppSpacing.sm),
                 Wrap(
                   spacing: 10, runSpacing: 10,
@@ -345,7 +345,7 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
                         const SizedBox(width: AppSpacing.xs),
                         Text(
                           isArabic ? order.customerLocation : _translateLocation(order.customerLocation), 
-                          style: TextStyle(color: isDark ? Colors.white70 : Colors.grey.shade700, fontSize: 13, fontWeight: FontWeight.w500)
+                          style: TextStyle(color: isDark ? Colors.white.withValues(alpha: 0.9) : Colors.grey.shade700, fontSize: 13, fontWeight: FontWeight.w500)
                         ),
                       ],
                     ),
@@ -397,13 +397,14 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
 
   Widget _buildHomeSection(List<AgentOrderModel> orders) {
     final isArabic = LanguageController().isArabic;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(isArabic ? 'مرحباً بك مجدداً!' : 'Welcome Back!', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, letterSpacing: -0.5)),
-          Text(isArabic ? 'إليك ملخص نشاطك اليوم' : 'Here is your activity summary', style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
+          Text(isArabic ? 'مرحباً بك مجدداً!' : 'Welcome Back!', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, letterSpacing: -0.5, color: isDark ? Colors.white : null)),
+          Text(isArabic ? 'إليك ملخص نشاطك اليوم' : 'Here is your activity summary', style: TextStyle(fontSize: 14, color: isDark ? Colors.white.withValues(alpha: 0.7) : Colors.grey.shade600)),
           const SizedBox(height: AppSpacing.xl),
           Row(
             children: [
@@ -434,14 +435,15 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
 
   Widget _buildOrdersSection() {
     final isArabic = LanguageController().isArabic;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final orders = _previousOrders;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(isArabic ? 'سجل الطلبات' : 'Order History', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
-          Text(isArabic ? 'مراجعة كافة الطلبات السابقة' : 'Review all previous orders', style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
+          Text(isArabic ? 'سجل الطلبات' : 'Order History', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: isDark ? Colors.white : null)),
+          Text(isArabic ? 'مراجعة كافة الطلبات السابقة' : 'Review all previous orders', style: TextStyle(fontSize: 14, color: isDark ? Colors.white.withValues(alpha: 0.7) : Colors.grey.shade600)),
           const SizedBox(height: AppSpacing.xl),
           if (orders.isEmpty) _buildEmptyState(isArabic ? 'سجل الطلبات فارغ' : 'Order history is empty')
           else ...orders.map((order) => _buildOrderRequestCard(context, order, isArabic, isReadOnly: true)),
@@ -486,7 +488,7 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
         _buildSettingsHeader(isArabic ? 'التفضيلات' : 'Preferences'),
         ListTile(
           leading: Icon(Icons.language, color: isDark ? Colors.white : AppColors.primary),
-          title: Text(isArabic ? 'لغة التطبيق' : 'App Language', style: const TextStyle(fontWeight: FontWeight.bold)),
+          title: Text(isArabic ? 'لغة التطبيق' : 'App Language', style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.white : null)),
           trailing: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             decoration: BoxDecoration(
@@ -568,23 +570,27 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
   }
 
   Widget _buildSettingsHeader(String title) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Text(title, style: TextStyle(fontSize: 14, color: Colors.grey.shade600, fontWeight: FontWeight.bold)),
+      child: Text(title, style: TextStyle(fontSize: 14, color: isDark ? Colors.white.withValues(alpha: 0.7) : Colors.grey.shade600, fontWeight: FontWeight.bold)),
     );
   }
 
   Widget _buildSwitchTile(String title, bool value, Function(bool) onChanged, {IconData? icon}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return SwitchListTile(
       secondary: Icon(
         icon ?? (value ? Icons.notifications_active : Icons.notifications_off), 
-        color: value ? AppColors.primary : Colors.grey
+        color: value 
+            ? (isDark ? Colors.white : AppColors.primary) 
+            : (isDark ? Colors.white38 : Colors.grey)
       ),
-      title: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+      title: Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: isDark ? Colors.white : null)),
       value: value,
       onChanged: onChanged,
-      activeTrackColor: AppColors.primary.withValues(alpha: 0.5),
-      activeThumbColor: AppColors.primary,
+      activeTrackColor: isDark ? Colors.white30 : AppColors.primary.withValues(alpha: 0.5),
+      activeThumbColor: isDark ? Colors.white : AppColors.primary,
     );
   }
 
@@ -609,11 +615,12 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
   }
 
   Widget _buildSettingsTile(IconData icon, String title, String subtitle, {Color? color, VoidCallback? onTap}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return ListTile(
-      leading: Icon(icon, color: color ?? AppColors.primary),
-      title: Text(title, style: TextStyle(fontWeight: FontWeight.bold, color: color)),
-      subtitle: Text(subtitle, style: const TextStyle(fontSize: 12)),
-      trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+      leading: Icon(icon, color: color ?? (isDark ? Colors.white : AppColors.primary)),
+      title: Text(title, style: TextStyle(fontWeight: FontWeight.bold, color: color ?? (isDark ? Colors.white : null))),
+      subtitle: Text(subtitle, style: TextStyle(fontSize: 12, color: isDark ? Colors.white70 : null)),
+      trailing: Icon(Icons.arrow_forward_ios, size: 14, color: isDark ? Colors.white70 : null),
       onTap: onTap,
     );
   }
