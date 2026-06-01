@@ -382,6 +382,67 @@ namespace BrightClean.API.Controllers
 
             return Ok(new { isStoreClosed = agent.IsStoreClosed });
         }
+
+        // POST: /api/bookings/{id}/rate
+        [HttpPost("{id}/rate")]
+        [Authorize(Roles = "Client")]
+        public async Task<IActionResult> RateBooking(int id, [FromBody] RateBookingDto dto)
+        {
+            // Extract ClientID securely from JWT claims
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out var clientId))
+            {
+                return Unauthorized();
+            }
+
+            // Load booking with existing rating
+            var booking = await _context.Bookings
+                .Include(b => b.Rating)
+                .FirstOrDefaultAsync(b => b.BookingID == id);
+
+            if (booking == null)
+            {
+                return NotFound(new { message = $"الحجز ذو المعرّف {id} غير موجود." });
+            }
+
+            // Validate ownership
+            if (booking.ClientID != clientId)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new { message = "غير مسموح: هذا الحجز لا ينتمي لحسابك." });
+            }
+
+            // Validate booking is Completed
+            if (booking.Status != BookingStatus.Completed)
+            {
+                return BadRequest(new { message = "لا يمكن تقييم حجز إلا بعد اكتمال تنفيذه (الحالة: Completed)." });
+            }
+
+            // Prevent duplicate ratings
+            if (booking.Rating != null)
+            {
+                return Conflict(new { message = "تم تقييم هذا الحجز مسبقاً." });
+            }
+
+            var rating = new BookingRating
+            {
+                BookingID = id,
+                AgentRating = dto.AgentRating,
+                AgentComment = dto.AgentComment,
+                DeliveryRating = dto.DeliveryRating,
+                DeliveryComment = dto.DeliveryComment,
+                RatedAt = DateTime.UtcNow
+            };
+
+            _context.BookingRatings.Add(rating);
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                ratingID = rating.RatingID,
+                bookingID = rating.BookingID,
+                message = "شكراً! تم إرسال تقييمك بنجاح."
+            });
+        }
     }
 
     public class SubmitBookingDto
@@ -401,4 +462,13 @@ namespace BrightClean.API.Controllers
         public int ServiceID { get; set; }
         public int Quantity { get; set; }
     }
+
+    public class RateBookingDto
+    {
+        public int? AgentRating { get; set; }
+        public string? AgentComment { get; set; }
+        public int? DeliveryRating { get; set; }
+        public string? DeliveryComment { get; set; }
+    }
 }
+

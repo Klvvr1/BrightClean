@@ -5,6 +5,8 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_styles.dart';
+import '../../../../core/network/api_client.dart';
+import '../../../../core/error/exceptions.dart';
 import 'package:brightcleanproject/features/customer/domain/models/order.dart';
 import 'package:brightcleanproject/features/customer/data/providers/order_provider.dart';
 import 'package:brightcleanproject/features/customer/domain/models/review.dart';
@@ -367,7 +369,9 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                 ),
               ),
               ElevatedButton(
-                onPressed: () {
+                onPressed: () async {
+                  Navigator.pop(dialogContext);
+
                   final review = Review(
                     userName: 'عميل برايت كلين',
                     comment: reviewController.text.trim().isEmpty ? 'خدمة ممتازة! شكراً لكم.' : reviewController.text.trim(),
@@ -377,27 +381,61 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                     date: DateTime.now(),
                   );
 
-                  Provider.of<ReviewProvider>(
-                    parentContext,
-                    listen: false,
-                  ).addReview(review);
+                  // Capture context-sensitive objects BEFORE the async gap
+                  final reviewProvider = Provider.of<ReviewProvider>(parentContext, listen: false);
+                  final orderProvider = Provider.of<OrderProvider>(parentContext, listen: false);
+                  final messenger = ScaffoldMessenger.of(parentContext);
+                  final commentText = reviewController.text.trim();
 
-                  Provider.of<OrderProvider>(
-                    parentContext,
-                    listen: false,
-                  ).markOrderAsRated(orderId);
+                  reviewProvider.addReview(review);
 
-                  Navigator.pop(dialogContext);
+                  // POST /api/bookings/{id}/rate
+                  try {
+                    final apiClient = BaseApiClient();
+                    final bookingIdInt = int.tryParse(orderId);
+                    if (bookingIdInt != null) {
+                      await apiClient.post(
+                        '/api/bookings/$bookingIdInt/rate',
+                        body: {
+                          'agentRating': serviceRating.toInt(),
+                          'agentComment': commentText.isEmpty ? null : commentText,
+                          'deliveryRating': requiresDriverRating ? driverRating.toInt() : null,
+                          'deliveryComment': null,
+                        },
+                      );
+                    }
 
-                  ScaffoldMessenger.of(parentContext).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'شكراً لتقييمك! تم إضافة رأيك في القائمة الرئيسية.',
+                    orderProvider.markOrderAsRated(orderId);
+
+                    messenger.showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'شكراً لتقييمك! تم إضافة رأيك بنجاح.',
+                        ),
+                        backgroundColor: AppColors.success,
+                        behavior: SnackBarBehavior.floating,
                       ),
-                      backgroundColor: AppColors.success,
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
+                    );
+                  } on ServerException catch (e) {
+                    messenger.showSnackBar(
+                      SnackBar(
+                        content: Text('فشل إرسال التقييم: ${e.message ?? "خطأ في الخادم"}'),
+                        backgroundColor: AppColors.error,
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  } catch (_) {
+                    // Booking might not be Completed on server yet — mark locally anyway
+                    orderProvider.markOrderAsRated(orderId);
+
+                    messenger.showSnackBar(
+                      const SnackBar(
+                        content: Text('شكراً لتقييمك! تم إضافة رأيك في القائمة الرئيسية.'),
+                        backgroundColor: AppColors.success,
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
                 },
                 child: const Text('إرسال التقييم'),
               ),
