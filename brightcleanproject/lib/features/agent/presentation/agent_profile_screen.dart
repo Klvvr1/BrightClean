@@ -162,7 +162,6 @@ class _AgentProfileScreenState extends State<AgentProfileScreen> {
 
                         // Capture context-sensitive objects BEFORE the async gap
                         final nav = Navigator.of(ctx);
-                        final messenger = ScaffoldMessenger.of(context);
 
                         setDialogState(() => isSubmitting = true);
                         try {

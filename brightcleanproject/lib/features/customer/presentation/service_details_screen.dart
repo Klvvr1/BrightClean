@@ -5,6 +5,8 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_styles.dart';
+import '../../../../core/network/api_client.dart';
+import '../data/models/booking_model.dart';
 import '../data/providers/cart_provider.dart';
 import 'package:brightcleanproject/features/customer/domain/models/service_option.dart';
 import 'package:brightcleanproject/features/customer/domain/models/cart_item.dart';
@@ -79,6 +81,8 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
     'خزان علوي': [],
     'خزان سفلي': [],
   };
+
+  List<ServiceCatalogItemModel> _catalogServices = [];
 
   int maidHours = 1;
   int maidPersons = 1;
@@ -200,6 +204,26 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
     selectedSolarPanelSize = _solarPanelSizes.keys.first;
     _lengthController.addListener(() => setState(() {}));
     _widthController.addListener(() => setState(() {}));
+    _loadCatalogServices();
+  }
+
+  Future<void> _loadCatalogServices() async {
+    try {
+      final apiClient = BaseApiClient();
+      final response = await apiClient.get('/api/services');
+      if (response is List) {
+        final items = response.map((json) => ServiceCatalogItemModel.fromJson(json as Map<String, dynamic>)).toList();
+        if (mounted) {
+          setState(() {
+            _catalogServices = items;
+          });
+        }
+      } else {
+        debugPrint('Services catalog response was not a list: $response');
+      }
+    } catch (e) {
+      debugPrint('Error loading catalog services silently: $e');
+    }
   }
 
   int get totalClothingPieces {
@@ -519,21 +543,35 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
     );
   }
 
-  // TODO: Replace with proper catalog lookup from backend API
-  // Currently using hardcoded mapping based on DbInitializer seed data:
-  // ServiceID 1: Wash & Iron (default)
-  // ServiceID 2: المعوز
-  // ServiceID 3: العمامة
+  // Resolved catalog lookup from backend API with local mapping fallback
   int _resolveServiceId(String itemName) {
-    // Map specific Arabic clothing items to their ServiceIDs
+    if (_catalogServices.isNotEmpty) {
+      try {
+        final matchingItem = _catalogServices.firstWhere(
+          (s) => s.serviceName == itemName,
+        );
+        return matchingItem.serviceID;
+      } catch (_) {
+        // Fallback to standard "Wash & Iron" service ID dynamically
+        try {
+          final defaultItem = _catalogServices.firstWhere(
+            (s) => s.serviceName == 'Wash & Iron',
+          );
+          return defaultItem.serviceID;
+        } catch (_) {
+          // Absolute fallback: first available catalog service ID
+          return _catalogServices.first.serviceID;
+        }
+      }
+    }
+
+    // Resilient fallback to hardcoded IDs based on DbInitializer seed data
     switch (itemName) {
       case 'المعوز':
         return 2;
       case 'العمامة':
         return 3;
       default:
-        // Default to ServiceID 1 (Wash & Iron) for all other items
-        // This is a temporary solution until a proper catalog API is implemented
         return 1;
     }
   }

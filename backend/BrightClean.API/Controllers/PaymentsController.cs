@@ -62,7 +62,7 @@ namespace BrightClean.API.Controllers
             }
 
             // Validate payment amount against server-side booking total
-            decimal bookingTotal = booking.FinalTotal;
+            decimal bookingTotal = booking.FinalTotal ?? 0m;
             if (Math.Abs(dto.Amount - bookingTotal) > 0.01m) // Allow for minor rounding differences
             {
                 return BadRequest(new { message = $"المبلغ المدفوع ({dto.Amount}) لا يطابق المبلغ المستحق ({bookingTotal})." });
