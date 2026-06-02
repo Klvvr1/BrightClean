@@ -28,6 +28,10 @@
 > - Added admin payment review endpoints for pending payment listing, confirmation, and rejection
 > - Added audit details and IP address fields for sensitive admin actions
 >
+> **Changelog v6.7 (Development Transport Stability):**
+> - HTTPS redirection is disabled by default in Development to prevent Flutter `POST` requests to `http://localhost:5135` / `10.0.2.2:5135` from receiving `307 Temporary Redirect`
+> - Flutter API client now reports HTTP 307/308 redirects with an explicit API URL/protocol configuration message
+>
 > **Changelog v6.2:**
 > - `SystemStatus.Reason` removed — `Message` is the sole public-facing explanation shown on the login screen
 > - `BookingRating` confirmed: `AgentComment` and `DeliveryComment` are the free-text note fields the client writes alongside their star ratings — no structural change required
@@ -1168,7 +1172,7 @@ State providers manage application state and coordinate data flow between the us
 | | | `registerAgent(RegisterAgentModel, commercialRegisterImagePath, nationalIdImagePath)` | Sends agent registration data and required document images through multipart form data. |
 | | | `forgotPassword(String email)` | Triggers the forgot password flow, generating an OTP sent to the user's email. |
 | | | `resetPassword(String email, String token, String newPassword)` | Validates the OTP token and updates the user's password on the backend. |
-| `BaseApiClient` | Centralizes HTTP communication and authentication headers | `defaultBaseUrl` | Resolves the API host from `BRIGHTCLEAN_API_BASE_URL`, then platform defaults: Android emulator uses `10.0.2.2`, desktop/web defaults to `localhost`. |
+| `BaseApiClient` | Centralizes HTTP communication and authentication headers | `defaultBaseUrl` | Resolves the API host from `BRIGHTCLEAN_API_BASE_URL`, then platform defaults: Android emulator uses `10.0.2.2`, desktop/web defaults to `localhost`. Development backend accepts HTTP to avoid 307 redirects during mobile/debug checkout. |
 
 ### 18.2 Repositories
 

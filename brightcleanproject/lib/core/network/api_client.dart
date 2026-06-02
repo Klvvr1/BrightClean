@@ -106,6 +106,17 @@ class BaseApiClient {
       }
       return null;
     } else {
+      if (response.statusCode == 307 || response.statusCode == 308) {
+        final redirectTarget =
+            response.headers['location'] ?? response.headers['Location'];
+        throw ServerException(
+          message: redirectTarget == null
+              ? 'الخادم حوّل الطلب إلى رابط آخر. تأكد من إعداد رابط الـ API وبروتوكول http/https.'
+              : 'الخادم حوّل الطلب إلى $redirectTarget. تأكد من أن رابط الـ API يستخدم البروتوكول الصحيح.',
+          statusCode: response.statusCode,
+        );
+      }
+
       if (response.statusCode == 401) {
         unawaited(_secureStorage.delete(key: 'auth_token'));
         final authHeader = response.headers['www-authenticate'];
