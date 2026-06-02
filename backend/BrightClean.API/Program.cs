@@ -117,7 +117,11 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+if (!app.Environment.IsDevelopment() ||
+    app.Configuration.GetValue<bool>("Security:UseHttpsRedirectionInDevelopment", false))
+{
+    app.UseHttpsRedirection();
+}
 
 // SECURITY NOTE: Static file serving exposes KYC uploads in wwwroot/uploads
 // TODO: Move uploads to a protected directory (outside wwwroot) and implement

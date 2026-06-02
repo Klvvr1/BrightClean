@@ -27,6 +27,20 @@ namespace BrightClean.Domain.Entities
 
         public string? TransactionRef { get; set; }
 
+        public string? PaymentProofURL { get; set; }
+
+        public string? StatusReason { get; set; }
+
+        [Required]
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
         public DateTime? PaidAt { get; set; }
+
+        public DateTime? ReviewedAt { get; set; }
+
+        public int? ReviewedByAdminID { get; set; }
+
+        [ForeignKey(nameof(ReviewedByAdminID))]
+        public virtual Admin? ReviewedByAdmin { get; set; }
     }
 }

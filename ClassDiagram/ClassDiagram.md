@@ -1,6 +1,6 @@
 # Laundry Platform — Class Diagram Documentation
 
-> **Version:** 6.5 — Checkout Integrity & Registration Workflow Updated
+> **Version:** 6.6 — Durable Payment, Document & Audit Workflow Updated
 > **Last Updated:** June 2026
 > **Diagram Type:** UML Class Diagram
 > **Architecture Pattern:** Table Per Type (TPT) Inheritance + Rich Junction Entities
@@ -19,6 +19,18 @@
 > - Driver and agent registration submit required document images through multipart form data
 > - Checkout frontend clears the cart and records the local order only after the payment API confirms success
 > - API base URL is now environment/platform configurable instead of always using hardcoded `localhost`
+>
+> **Changelog v6.6 (Phase 4 Durable Workflow Updates):**
+> - Added `DocumentReviewStatus` for durable document review state
+> - Added document metadata fields: original file name, content type, file size, review status, reviewer, review timestamp, and notes
+> - Added payment lifecycle fields: created timestamp, proof URL, status reason, reviewer, and review timestamp
+> - Added `PendingReview` and `Collected` payment statuses without changing existing enum numeric values
+> - Added admin payment review endpoints for pending payment listing, confirmation, and rejection
+> - Added audit details and IP address fields for sensitive admin actions
+>
+> **Changelog v6.7 (Development Transport Stability):**
+> - HTTPS redirection is disabled by default in Development to prevent Flutter `POST` requests to `http://localhost:5135` / `10.0.2.2:5135` from receiving `307 Temporary Redirect`
+> - Flutter API client now reports HTTP 307/308 redirects with an explicit API URL/protocol configuration message
 >
 > **Changelog v6.2:**
 > - `SystemStatus.Reason` removed — `Message` is the sole public-facing explanation shown on the login screen
@@ -85,11 +97,11 @@ This platform is a **multi-service on-demand marketplace** that connects clients
 | Metric | Count |
 |---|---|
 | Total Classes | 18 |
-| Total Enumerations | 16 |
-| Total Relationships | 27 |
+| Total Enumerations | 17 |
+| Total Relationships | 26 |
 | Inheritance Relationships | 4 |
-| One-to-One Relationships | 1 |
-| One-to-Many Relationships | 20 |
+| One-to-One Relationships | 2 |
+| One-to-Many Relationships | 22 |
 | Composition Relationships | 1 |
 | Many-to-Many (via Junction) | 1 |
 
@@ -232,7 +244,21 @@ Classifies uploaded verification documents per user role.
 
 ---
 
-### 4.6 `ServiceCategory`
+### 4.6 `DocumentReviewStatus`
+
+Durable review status for each uploaded verification document. Account approval is still holistic, but each document now records its own review metadata for auditability.
+
+| Value | Description |
+|---|---|
+| `Pending` | Uploaded and awaiting admin review |
+| `Approved` | Accepted by an admin during account approval |
+| `Rejected` | Rejected by an admin with optional review notes |
+
+**Used in:** `UserDocument.ReviewStatus`
+
+---
+
+### 4.7 `ServiceCategory`
 
 High-level grouping of all platform services. Used for UI filtering and agent profile classification.
 
@@ -247,7 +273,7 @@ High-level grouping of all platform services. Used for UI filtering and agent pr
 
 ---
 
-### 4.7 `ServiceType`
+### 4.8 `ServiceType`
 
 Specific service type within its category. Every catalog item maps to exactly one type.
 
@@ -271,7 +297,7 @@ Specific service type within its category. Every catalog item maps to exactly on
 
 ---
 
-### 4.8 `PricingModel`
+### 4.9 `PricingModel`
 
 Determines how `BookingItem.subTotal()` is computed.
 
@@ -284,7 +310,7 @@ Determines how `BookingItem.subTotal()` is computed.
 
 ---
 
-### 4.9 `DeliveryModel`
+### 4.10 `DeliveryModel`
 
 The most operationally significant enum. Determines logistics behavior for each service type and drives whether `DeliveryTask` records are created.
 
@@ -297,7 +323,7 @@ The most operationally significant enum. Determines logistics behavior for each 
 
 ---
 
-### 4.10 `BookingStatus`
+### 4.11 `BookingStatus`
 
 State machine governing the full lifecycle of every booking. Transitions are strictly sequential.
 
@@ -325,7 +351,7 @@ State machine governing the full lifecycle of every booking. Transitions are str
 
 ---
 
-### 4.11 `TaskType`
+### 4.12 `TaskType`
 
 Identifies which stage of the two-stage delivery a task represents.
 
@@ -338,7 +364,7 @@ Identifies which stage of the two-stage delivery a task represents.
 
 ---
 
-### 4.12 `DeliveryTaskStatus`
+### 4.13 `DeliveryTaskStatus`
 
 Tracks the independent lifecycle of each delivery leg.
 
@@ -354,7 +380,7 @@ Tracks the independent lifecycle of each delivery leg.
 
 ---
 
-### 4.13 `PaymentMethod`
+### 4.14 `PaymentMethod`
 
 Payment channel used by the client.
 
@@ -369,7 +395,7 @@ Payment channel used by the client.
 
 ---
 
-### 4.14 `PaymentStatus`
+### 4.15 `PaymentStatus`
 
 Outcome states of the single payment per booking.
 
@@ -379,12 +405,14 @@ Outcome states of the single payment per booking.
 | `Success` | Yes | Payment confirmed and processed |
 | `Failed` | Yes | Payment attempt rejected |
 | `Refunded` | Yes | Successful payment reversed on cancellation |
+| `PendingReview` | No | Bank transfer or proof-based payment awaiting admin review |
+| `Collected` | Yes | Cash payment collected and confirmed by admin |
 
 **Used in:** `Payment.Status`
 
 ---
 
-### 4.15 `OfferType`
+### 4.16 `OfferType`
 
 Discount calculation method.
 
@@ -397,7 +425,7 @@ Discount calculation method.
 
 ---
 
-### 4.16 `OfferScope`
+### 4.17 `OfferScope`
 
 Controls which bookings an offer can be applied to.
 
@@ -577,7 +605,14 @@ Stores uploaded verification document references for `DeliveryStaff` and `Laundr
 | `UserID_FK` | int | FK → User, NOT NULL | Foreign key referencing the parent `User` who uploaded the document |
 | `Type` | DocumentType | NOT NULL | NationalID, DriverLicense, VehicleImage, CommercialRegistration |
 | `FileURL` | string | NOT NULL | Relative URL/path of the uploaded file on the server's local file storage (`wwwroot/uploads`) |
+| `OriginalFileName` | string? | NULLABLE, max 260 | Original client-side filename for admin review and audit context |
+| `ContentType` | string? | NULLABLE, max 120 | Uploaded file MIME type reported by the request |
+| `FileSizeBytes` | long? | NULLABLE | Uploaded file size in bytes |
 | `UploadedAt` | datetime | NOT NULL, DEFAULT NOW() | Document upload timestamp |
+| `ReviewStatus` | DocumentReviewStatus | NOT NULL, DEFAULT Pending | Durable per-document review status |
+| `ReviewedAt` | datetime? | NULLABLE | Timestamp when admin reviewed the document |
+| `ReviewedByAdminID` | int? | NULLABLE, FK → Admin | Admin who reviewed the document |
+| `ReviewNotes` | string? | NULLABLE | Optional admin note, usually used for rejection or clarification |
 
 **Verification Document Types & Images:**
 
@@ -789,7 +824,12 @@ Records the single full payment for a booking. The `UNIQUE` constraint on `Booki
 | `Method` | PaymentMethod | NOT NULL | CreditCard, Cash, Wallet, or BankTransfer |
 | `Status` | PaymentStatus | NOT NULL, DEFAULT Pending | Payment outcome state |
 | `TransactionRef` | string | NULLABLE | Gateway reference — mandatory for CreditCard |
-| `PaidAt` | datetime | NULLABLE | Stamped on Status = Success |
+| `PaymentProofURL` | string? | NULLABLE | Optional bank transfer proof or external payment document URL |
+| `StatusReason` | string? | NULLABLE | Human-readable explanation for current payment status |
+| `CreatedAt` | datetime | NOT NULL, DEFAULT GETUTCDATE() | Payment record creation timestamp |
+| `PaidAt` | datetime | NULLABLE | Stamped when payment reaches `Success` or `Collected` |
+| `ReviewedAt` | datetime? | NULLABLE | Timestamp when admin reviewed pending payment |
+| `ReviewedByAdminID` | int? | NULLABLE, FK → Admin | Admin who confirmed or rejected pending payment |
 
 **Business Rules:**
 - Full payment only — no installments or partial payments
@@ -797,7 +837,9 @@ Records the single full payment for a booking. The `UNIQUE` constraint on `Booki
 - Payment is accepted only when `Booking.Status = Pending` and `Booking.FinalTotal` is not null
 - `Amount` is validated against the server-authoritative `Booking.FinalTotal` before record creation
 - `Wallet` payment requires `Client.WalletBalance >= Amount` and debits the wallet inside the same database transaction as the payment insert
-- `Cash` and `BankTransfer` start as `Pending`; `Wallet` and `CreditCard` start as `Success`
+- `Cash` starts as `Pending`, `BankTransfer` starts as `PendingReview`, and `Wallet` / `CreditCard` start as `Success`
+- Admin confirmation moves cash payments to `Collected` and bank transfer payments to `Success`
+- Admin rejection moves pending payments to `Failed` and records `StatusReason`, `ReviewedAt`, and `ReviewedByAdminID`
 - `Refunded` is a terminal state — no further transitions permitted
 - Duplicate payment creation is rejected by both controller validation and the unique `BookingID` constraint
 
@@ -866,6 +908,8 @@ Immutable record of every privileged admin action. Append-only — no UPDATE or 
 | `Action` | string | NOT NULL | Action key (e.g. `ACTIVATE_AGENT`, `CREATE_OFFER`) |
 | `TargetEntity` | string | NOT NULL | Affected table (e.g. `User`, `Offer`) |
 | `TargetID` | int | NOT NULL | PK of the affected record |
+| `Details` | string? | NULLABLE | Optional structured/plain text context for sensitive state transitions |
+| `IpAddress` | string? | NULLABLE, max 64 | Remote IP address captured for admin action traceability |
 | `PerformedAt` | datetime | NOT NULL, DEFAULT NOW() | Server-side timestamp — not application clock |
 
 **Constraints:**
@@ -939,6 +983,8 @@ LIMIT 1
 | 22 | `DeliveryStaff` | 1 ──► 0..* | `DeliveryTask` | assigned to | One-to-Many |
 | 23 | `DeliveryTask` | 0..* ──► 1 | `Address` | pickup from | One-to-Many |
 | 24 | `DeliveryTask` | 0..* ──► 1 | `Address` | dropoff to | One-to-Many |
+| 25 | `Admin` | 1 ──► 0..* | `Payment` | reviews | One-to-Many |
+| 26 | `Admin` | 1 ──► 0..* | `UserDocument` | reviews | One-to-Many |
 
 ---
 
@@ -959,7 +1005,9 @@ LIMIT 1
 - `Booking.FinalTotal` must be locked before payment record creation
 - `Amount` must equal the server-side `Booking.FinalTotal` before payment record is created
 - Wallet payment requires sufficient `Client.WalletBalance` and debits the wallet atomically with payment creation
-- Cash and bank transfer payments remain `Pending` until the business workflow confirms collection/review
+- Cash payments remain `Pending` until collection is confirmed
+- Bank transfer payments use `PendingReview` and require admin confirmation or rejection through the payment review API
+- Cash payment confirmation moves the payment to `Collected`
 - Local frontend order persistence and cart clearing occur only after the payment API confirms the payment workflow response
 
 ### Delivery Rules
@@ -987,6 +1035,8 @@ LIMIT 1
 - `TermsAccepted` must be `true` before registration can be submitted
 - Laundry agent registration is multipart and must include `commercialRegisterImage` and `nationalIdImage`
 - Driver registration is multipart and must include `nationalIdImage`, `driverLicenseImage`, and `vehicleImage`
+- Each uploaded document stores metadata and starts with `ReviewStatus = Pending`
+- Account approval marks attached documents as `Approved` and records the reviewing admin and timestamp
 
 ### Agent Service Rules
 - Only admin can activate or deactivate `AgentService` records
@@ -1122,7 +1172,7 @@ State providers manage application state and coordinate data flow between the us
 | | | `registerAgent(RegisterAgentModel, commercialRegisterImagePath, nationalIdImagePath)` | Sends agent registration data and required document images through multipart form data. |
 | | | `forgotPassword(String email)` | Triggers the forgot password flow, generating an OTP sent to the user's email. |
 | | | `resetPassword(String email, String token, String newPassword)` | Validates the OTP token and updates the user's password on the backend. |
-| `BaseApiClient` | Centralizes HTTP communication and authentication headers | `defaultBaseUrl` | Resolves the API host from `BRIGHTCLEAN_API_BASE_URL`, then platform defaults: Android emulator uses `10.0.2.2`, desktop/web defaults to `localhost`. |
+| `BaseApiClient` | Centralizes HTTP communication and authentication headers | `defaultBaseUrl` | Resolves the API host from `BRIGHTCLEAN_API_BASE_URL`, then platform defaults: Android emulator uses `10.0.2.2`, desktop/web defaults to `localhost`. Development backend accepts HTTP to avoid 307 redirects during mobile/debug checkout. |
 
 ### 18.2 Repositories
 

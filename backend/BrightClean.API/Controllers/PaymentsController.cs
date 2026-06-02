@@ -82,9 +82,19 @@ namespace BrightClean.API.Controllers
                 return BadRequest(new { message = $"Paid amount ({dto.Amount}) does not match booking total ({bookingTotal})." });
             }
 
-            var paymentStatus = paymentMethod == PaymentMethod.Cash || paymentMethod == PaymentMethod.BankTransfer
-                ? PaymentStatus.Pending
-                : PaymentStatus.Success;
+            var paymentStatus = paymentMethod switch
+            {
+                PaymentMethod.Cash => PaymentStatus.Pending,
+                PaymentMethod.BankTransfer => PaymentStatus.PendingReview,
+                _ => PaymentStatus.Success
+            };
+
+            var statusReason = paymentMethod switch
+            {
+                PaymentMethod.Cash => "Awaiting cash collection confirmation.",
+                PaymentMethod.BankTransfer => "Awaiting bank transfer review.",
+                _ => "Payment confirmed automatically."
+            };
 
             if (paymentMethod == PaymentMethod.Wallet)
             {
@@ -103,6 +113,9 @@ namespace BrightClean.API.Controllers
                 Method = paymentMethod,
                 Status = paymentStatus,
                 TransactionRef = dto.TransactionRef,
+                PaymentProofURL = dto.PaymentProofURL,
+                StatusReason = statusReason,
+                CreatedAt = DateTime.UtcNow,
                 PaidAt = paymentStatus == PaymentStatus.Success ? DateTime.UtcNow : null
             };
 
@@ -117,6 +130,7 @@ namespace BrightClean.API.Controllers
                 amount = payment.Amount,
                 method = payment.Method.ToString(),
                 status = payment.Status.ToString(),
+                statusReason = payment.StatusReason,
                 paidAt = payment.PaidAt,
                 walletBalance = paymentMethod == PaymentMethod.Wallet ? booking.Client.WalletBalance : (decimal?)null,
                 message = payment.Status == PaymentStatus.Success
@@ -132,5 +146,6 @@ namespace BrightClean.API.Controllers
         public decimal Amount { get; set; }
         public string Method { get; set; } = "Cash";
         public string? TransactionRef { get; set; }
+        public string? PaymentProofURL { get; set; }
     }
 }

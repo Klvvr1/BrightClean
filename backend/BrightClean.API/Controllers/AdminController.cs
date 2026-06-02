@@ -37,7 +37,18 @@ namespace BrightClean.API.Controllers
                     u.Email,
                     u.PhoneNo,
                     u.Role,
-                    u.CreatedAt
+                    u.CreatedAt,
+                    Documents = u.Documents.Select(d => new
+                    {
+                        d.DocumentID,
+                        d.Type,
+                        d.FileURL,
+                        d.OriginalFileName,
+                        d.ContentType,
+                        d.FileSizeBytes,
+                        d.UploadedAt,
+                        d.ReviewStatus
+                    })
                 })
                 .ToListAsync();
 
@@ -54,7 +65,9 @@ namespace BrightClean.API.Controllers
                 return Unauthorized(new { message = "فشلت عملية التحقق من هوية المسؤول." });
             }
 
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.UserID == userId);
+            var user = await _context.Users
+                .Include(u => u.Documents)
+                .FirstOrDefaultAsync(u => u.UserID == userId);
 
             if (user == null)
             {
@@ -74,6 +87,15 @@ namespace BrightClean.API.Controllers
 
             user.IsApproved = true;
             user.AccountStatus = AccountStatus.Active;
+            user.VerifiedAt = DateTime.UtcNow;
+
+            foreach (var document in user.Documents)
+            {
+                document.ReviewStatus = DocumentReviewStatus.Approved;
+                document.ReviewedAt = DateTime.UtcNow;
+                document.ReviewedByAdminID = adminId;
+                document.ReviewNotes = "Approved as part of account approval.";
+            }
 
             // Generate AuditLog entry
             string action = user.Role == UserRole.LaundryAgent ? "ACTIVATE_AGENT" : "ACTIVATE_DRIVER";
@@ -83,6 +105,8 @@ namespace BrightClean.API.Controllers
                 Action = action,
                 TargetEntity = "User",
                 TargetID = user.UserID,
+                Details = $"Approved {user.Role} account and {user.Documents.Count} attached document(s).",
+                IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
                 PerformedAt = DateTime.UtcNow
             };
             _context.AuditLogs.Add(auditLog);
@@ -90,6 +114,184 @@ namespace BrightClean.API.Controllers
             await _context.SaveChangesAsync();
 
             return Ok(new { message = "تم تفعيل الحساب بنجاح.", userId = user.UserID, isApproved = user.IsApproved });
+        }
+
+        // GET: /api/admin/payments/pending-review
+        [HttpGet("payments/pending-review")]
+        public async Task<IActionResult> GetPaymentsPendingReview()
+        {
+            var payments = await _context.Payments
+                .Include(p => p.Booking)
+                    .ThenInclude(b => b.Client)
+                .Where(p => p.Status == PaymentStatus.Pending || p.Status == PaymentStatus.PendingReview)
+                .OrderBy(p => p.CreatedAt)
+                .Select(p => new
+                {
+                    p.PaymentID,
+                    p.BookingID,
+                    p.Amount,
+                    p.Method,
+                    p.Status,
+                    p.TransactionRef,
+                    p.PaymentProofURL,
+                    p.StatusReason,
+                    p.CreatedAt,
+                    Client = new
+                    {
+                        p.Booking.Client.UserID,
+                        p.Booking.Client.FirstName,
+                        p.Booking.Client.LastName,
+                        p.Booking.Client.PhoneNo
+                    }
+                })
+                .ToListAsync();
+
+            return Ok(payments);
+        }
+
+        // POST: /api/admin/payments/{paymentId}/confirm
+        [HttpPost("payments/{paymentId}/confirm")]
+        public async Task<IActionResult> ConfirmPayment(int paymentId, [FromBody] PaymentReviewDto dto)
+        {
+            var adminId = GetAdminId();
+            if (adminId == null)
+            {
+                return Unauthorized(new { message = "فشلت عملية التحقق من هوية المسؤول." });
+            }
+
+            var now = DateTime.UtcNow;
+            var newStatus = PaymentStatus.Success;
+            var statusReason = string.IsNullOrWhiteSpace(dto.Reason)
+                ? "Payment confirmed by admin."
+                : dto.Reason.Trim();
+
+            // Use ExecuteUpdateAsync to atomically update only payments in Pending or PendingReview status
+            var affectedRows = await _context.Payments
+                .Where(p => p.PaymentID == paymentId &&
+                           (p.Status == PaymentStatus.Pending || p.Status == PaymentStatus.PendingReview))
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(p => p.Status, p => p.Method == PaymentMethod.Cash ? PaymentStatus.Collected : newStatus)
+                    .SetProperty(p => p.PaidAt, now)
+                    .SetProperty(p => p.ReviewedAt, now)
+                    .SetProperty(p => p.ReviewedByAdminID, adminId.Value)
+                    .SetProperty(p => p.StatusReason, statusReason)
+                );
+
+            if (affectedRows == 0)
+            {
+                // Either payment doesn't exist or it's not in a reviewable state
+                var existingPayment = await _context.Payments.FirstOrDefaultAsync(p => p.PaymentID == paymentId);
+                if (existingPayment == null)
+                {
+                    return NotFound(new { message = $"Payment {paymentId} was not found." });
+                }
+                return Conflict(new { message = "Payment status has changed. Only pending payments can be confirmed." });
+            }
+
+            // Apply optional fields if provided (requires separate update since ExecuteUpdateAsync doesn't support conditional SetProperty)
+            if (!string.IsNullOrWhiteSpace(dto.TransactionRef) || !string.IsNullOrWhiteSpace(dto.PaymentProofURL))
+            {
+                var payment = await _context.Payments.FirstOrDefaultAsync(p => p.PaymentID == paymentId);
+                if (payment != null)
+                {
+                    if (!string.IsNullOrWhiteSpace(dto.TransactionRef))
+                    {
+                        payment.TransactionRef = dto.TransactionRef.Trim();
+                    }
+                    if (!string.IsNullOrWhiteSpace(dto.PaymentProofURL))
+                    {
+                        payment.PaymentProofURL = dto.PaymentProofURL.Trim();
+                    }
+                    await _context.SaveChangesAsync();
+                }
+            }
+
+            // Fetch the updated payment for the response
+            var updatedPayment = await _context.Payments.FirstOrDefaultAsync(p => p.PaymentID == paymentId);
+            if (updatedPayment == null)
+            {
+                return NotFound(new { message = $"Payment {paymentId} was not found after update." });
+            }
+
+            _context.AuditLogs.Add(new AuditLog
+            {
+                AdminID = adminId.Value,
+                Action = "CONFIRM_PAYMENT",
+                TargetEntity = "Payment",
+                TargetID = updatedPayment.PaymentID,
+                Details = $"Confirmed {updatedPayment.Method} payment for booking {updatedPayment.BookingID} with status {updatedPayment.Status}.",
+                IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                PerformedAt = now
+            });
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                updatedPayment.PaymentID,
+                updatedPayment.BookingID,
+                updatedPayment.Amount,
+                method = updatedPayment.Method.ToString(),
+                status = updatedPayment.Status.ToString(),
+                updatedPayment.PaidAt,
+                updatedPayment.ReviewedAt,
+                updatedPayment.StatusReason
+            });
+        }
+
+        // POST: /api/admin/payments/{paymentId}/fail
+        [HttpPost("payments/{paymentId}/fail")]
+        public async Task<IActionResult> FailPayment(int paymentId, [FromBody] PaymentReviewDto dto)
+        {
+            var adminId = GetAdminId();
+            if (adminId == null)
+            {
+                return Unauthorized(new { message = "فشلت عملية التحقق من هوية المسؤول." });
+            }
+
+            var payment = await _context.Payments.FirstOrDefaultAsync(p => p.PaymentID == paymentId);
+            if (payment == null)
+            {
+                return NotFound(new { message = $"Payment {paymentId} was not found." });
+            }
+
+            if (payment.Status != PaymentStatus.Pending && payment.Status != PaymentStatus.PendingReview)
+            {
+                return BadRequest(new { message = "Only pending payments can be rejected." });
+            }
+
+            var now = DateTime.UtcNow;
+            payment.Status = PaymentStatus.Failed;
+            payment.PaidAt = null;
+            payment.ReviewedAt = now;
+            payment.ReviewedByAdminID = adminId.Value;
+            payment.StatusReason = string.IsNullOrWhiteSpace(dto.Reason)
+                ? "Payment rejected by admin."
+                : dto.Reason.Trim();
+
+            _context.AuditLogs.Add(new AuditLog
+            {
+                AdminID = adminId.Value,
+                Action = "REJECT_PAYMENT",
+                TargetEntity = "Payment",
+                TargetID = payment.PaymentID,
+                Details = $"Rejected {payment.Method} payment for booking {payment.BookingID}. Reason: {payment.StatusReason}",
+                IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                PerformedAt = now
+            });
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                payment.PaymentID,
+                payment.BookingID,
+                payment.Amount,
+                method = payment.Method.ToString(),
+                status = payment.Status.ToString(),
+                payment.ReviewedAt,
+                payment.StatusReason
+            });
         }
 
         // GET: /api/admin/staff
@@ -137,6 +339,8 @@ namespace BrightClean.API.Controllers
                     al.Action,
                     al.TargetEntity,
                     al.TargetID,
+                    al.Details,
+                    al.IpAddress,
                     al.PerformedAt
                 })
                 .ToListAsync();
@@ -149,5 +353,20 @@ namespace BrightClean.API.Controllers
                 totalCount = totalCount
             });
         }
+
+        private int? GetAdminId()
+        {
+            var adminIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+            return adminIdClaim != null && int.TryParse(adminIdClaim.Value, out var adminId)
+                ? adminId
+                : null;
+        }
+    }
+
+    public class PaymentReviewDto
+    {
+        public string? Reason { get; set; }
+        public string? TransactionRef { get; set; }
+        public string? PaymentProofURL { get; set; }
     }
 }

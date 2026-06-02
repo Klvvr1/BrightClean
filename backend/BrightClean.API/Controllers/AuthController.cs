@@ -142,18 +142,49 @@ namespace BrightClean.API.Controllers
                     IsApproved = false // Requires Admin approval
                 };
 
+                // Validate document metadata lengths before creating records
+                var crOriginalFileName = System.IO.Path.GetFileName(commercialRegisterImage.FileName);
+                var crContentType = commercialRegisterImage.ContentType;
+                if (crOriginalFileName.Length > 260)
+                {
+                    return BadRequest(new { message = "اسم ملف السجل التجاري طويل جداً (الحد الأقصى 260 حرف)." });
+                }
+                if (crContentType.Length > 120)
+                {
+                    return BadRequest(new { message = "نوع ملف السجل التجاري غير صالح." });
+                }
+
+                var idOriginalFileName = System.IO.Path.GetFileName(nationalIdImage.FileName);
+                var idContentType = nationalIdImage.ContentType;
+                if (idOriginalFileName.Length > 260)
+                {
+                    return BadRequest(new { message = "اسم ملف الهوية الوطنية طويل جداً (الحد الأقصى 260 حرف)." });
+                }
+                if (idContentType.Length > 120)
+                {
+                    return BadRequest(new { message = "نوع ملف الهوية الوطنية غير صالح." });
+                }
+
                 agent.Documents.Add(new UserDocument
                 {
                     Type = DocumentType.CommercialRegistration,
                     FileURL = crRelativeUrl,
-                    UploadedAt = DateTime.UtcNow
+                    UploadedAt = DateTime.UtcNow,
+                    OriginalFileName = crOriginalFileName,
+                    ContentType = crContentType,
+                    FileSizeBytes = commercialRegisterImage.Length,
+                    ReviewStatus = DocumentReviewStatus.Pending
                 });
 
                 agent.Documents.Add(new UserDocument
                 {
                     Type = DocumentType.NationalID,
                     FileURL = idRelativeUrl,
-                    UploadedAt = DateTime.UtcNow
+                    UploadedAt = DateTime.UtcNow,
+                    OriginalFileName = idOriginalFileName,
+                    ContentType = idContentType,
+                    FileSizeBytes = nationalIdImage.Length,
+                    ReviewStatus = DocumentReviewStatus.Pending
                 });
 
                 _context.LaundryAgents.Add(agent);
@@ -247,25 +278,71 @@ namespace BrightClean.API.Controllers
                 IsApproved = false // Requires Admin approval
             };
 
+            // Validate document metadata lengths before creating records
+            var nationalIdOriginalFileName = System.IO.Path.GetFileName(nationalIdImage.FileName);
+            var nationalIdContentType = nationalIdImage.ContentType;
+            if (nationalIdOriginalFileName.Length > 260)
+            {
+                return BadRequest(new { message = "اسم ملف الهوية الوطنية طويل جداً (الحد الأقصى 260 حرف)." });
+            }
+            if (nationalIdContentType.Length > 120)
+            {
+                return BadRequest(new { message = "نوع ملف الهوية الوطنية غير صالح." });
+            }
+
+            var licenseOriginalFileName = System.IO.Path.GetFileName(driverLicenseImage.FileName);
+            var licenseContentType = driverLicenseImage.ContentType;
+            if (licenseOriginalFileName.Length > 260)
+            {
+                return BadRequest(new { message = "اسم ملف رخصة القيادة طويل جداً (الحد الأقصى 260 حرف)." });
+            }
+            if (licenseContentType.Length > 120)
+            {
+                return BadRequest(new { message = "نوع ملف رخصة القيادة غير صالح." });
+            }
+
+            var vehicleOriginalFileName = System.IO.Path.GetFileName(vehicleImage.FileName);
+            var vehicleContentType = vehicleImage.ContentType;
+            if (vehicleOriginalFileName.Length > 260)
+            {
+                return BadRequest(new { message = "اسم ملف صورة المركبة طويل جداً (الحد الأقصى 260 حرف)." });
+            }
+            if (vehicleContentType.Length > 120)
+            {
+                return BadRequest(new { message = "نوع ملف صورة المركبة غير صالح." });
+            }
+
             driver.Documents.Add(new UserDocument
             {
                 Type = DocumentType.NationalID,
                 FileURL = nationalIdUrl,
-                UploadedAt = DateTime.UtcNow
+                UploadedAt = DateTime.UtcNow,
+                OriginalFileName = nationalIdOriginalFileName,
+                ContentType = nationalIdContentType,
+                FileSizeBytes = nationalIdImage.Length,
+                ReviewStatus = DocumentReviewStatus.Pending
             });
 
             driver.Documents.Add(new UserDocument
             {
                 Type = DocumentType.DriverLicense,
                 FileURL = licenseUrl,
-                UploadedAt = DateTime.UtcNow
+                UploadedAt = DateTime.UtcNow,
+                OriginalFileName = licenseOriginalFileName,
+                ContentType = licenseContentType,
+                FileSizeBytes = driverLicenseImage.Length,
+                ReviewStatus = DocumentReviewStatus.Pending
             });
 
             driver.Documents.Add(new UserDocument
             {
                 Type = DocumentType.VehicleImage,
                 FileURL = vehicleUrl,
-                UploadedAt = DateTime.UtcNow
+                UploadedAt = DateTime.UtcNow,
+                OriginalFileName = vehicleOriginalFileName,
+                ContentType = vehicleContentType,
+                FileSizeBytes = vehicleImage.Length,
+                ReviewStatus = DocumentReviewStatus.Pending
             });
 
             _context.DeliveryStaffs.Add(driver);
