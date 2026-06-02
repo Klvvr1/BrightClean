@@ -98,9 +98,9 @@ This platform is a **multi-service on-demand marketplace** that connects clients
 |---|---|
 | Total Classes | 18 |
 | Total Enumerations | 17 |
-| Total Relationships | 29 |
+| Total Relationships | 26 |
 | Inheritance Relationships | 4 |
-| One-to-One Relationships | 1 |
+| One-to-One Relationships | 2 |
 | One-to-Many Relationships | 22 |
 | Composition Relationships | 1 |
 | Many-to-Many (via Junction) | 1 |

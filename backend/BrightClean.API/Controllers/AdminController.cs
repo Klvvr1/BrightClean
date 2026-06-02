@@ -159,36 +159,58 @@ namespace BrightClean.API.Controllers
                 return Unauthorized(new { message = "فشلت عملية التحقق من هوية المسؤول." });
             }
 
-            var payment = await _context.Payments.FirstOrDefaultAsync(p => p.PaymentID == paymentId);
-            if (payment == null)
-            {
-                return NotFound(new { message = $"Payment {paymentId} was not found." });
-            }
-
-            if (payment.Status != PaymentStatus.Pending && payment.Status != PaymentStatus.PendingReview)
-            {
-                return BadRequest(new { message = "Only pending payments can be confirmed." });
-            }
-
             var now = DateTime.UtcNow;
-            payment.Status = payment.Method == PaymentMethod.Cash
-                ? PaymentStatus.Collected
-                : PaymentStatus.Success;
-            payment.PaidAt = now;
-            payment.ReviewedAt = now;
-            payment.ReviewedByAdminID = adminId.Value;
-            payment.StatusReason = string.IsNullOrWhiteSpace(dto.Reason)
+            var newStatus = PaymentStatus.Success;
+            var statusReason = string.IsNullOrWhiteSpace(dto.Reason)
                 ? "Payment confirmed by admin."
                 : dto.Reason.Trim();
 
-            if (!string.IsNullOrWhiteSpace(dto.TransactionRef))
+            // Use ExecuteUpdateAsync to atomically update only payments in Pending or PendingReview status
+            var affectedRows = await _context.Payments
+                .Where(p => p.PaymentID == paymentId &&
+                           (p.Status == PaymentStatus.Pending || p.Status == PaymentStatus.PendingReview))
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(p => p.Status, p => p.Method == PaymentMethod.Cash ? PaymentStatus.Collected : newStatus)
+                    .SetProperty(p => p.PaidAt, now)
+                    .SetProperty(p => p.ReviewedAt, now)
+                    .SetProperty(p => p.ReviewedByAdminID, adminId.Value)
+                    .SetProperty(p => p.StatusReason, statusReason)
+                );
+
+            if (affectedRows == 0)
             {
-                payment.TransactionRef = dto.TransactionRef.Trim();
+                // Either payment doesn't exist or it's not in a reviewable state
+                var existingPayment = await _context.Payments.FirstOrDefaultAsync(p => p.PaymentID == paymentId);
+                if (existingPayment == null)
+                {
+                    return NotFound(new { message = $"Payment {paymentId} was not found." });
+                }
+                return Conflict(new { message = "Payment status has changed. Only pending payments can be confirmed." });
             }
 
-            if (!string.IsNullOrWhiteSpace(dto.PaymentProofURL))
+            // Apply optional fields if provided (requires separate update since ExecuteUpdateAsync doesn't support conditional SetProperty)
+            if (!string.IsNullOrWhiteSpace(dto.TransactionRef) || !string.IsNullOrWhiteSpace(dto.PaymentProofURL))
             {
-                payment.PaymentProofURL = dto.PaymentProofURL.Trim();
+                var payment = await _context.Payments.FirstOrDefaultAsync(p => p.PaymentID == paymentId);
+                if (payment != null)
+                {
+                    if (!string.IsNullOrWhiteSpace(dto.TransactionRef))
+                    {
+                        payment.TransactionRef = dto.TransactionRef.Trim();
+                    }
+                    if (!string.IsNullOrWhiteSpace(dto.PaymentProofURL))
+                    {
+                        payment.PaymentProofURL = dto.PaymentProofURL.Trim();
+                    }
+                    await _context.SaveChangesAsync();
+                }
+            }
+
+            // Fetch the updated payment for the response
+            var updatedPayment = await _context.Payments.FirstOrDefaultAsync(p => p.PaymentID == paymentId);
+            if (updatedPayment == null)
+            {
+                return NotFound(new { message = $"Payment {paymentId} was not found after update." });
             }
 
             _context.AuditLogs.Add(new AuditLog
@@ -196,8 +218,8 @@ namespace BrightClean.API.Controllers
                 AdminID = adminId.Value,
                 Action = "CONFIRM_PAYMENT",
                 TargetEntity = "Payment",
-                TargetID = payment.PaymentID,
-                Details = $"Confirmed {payment.Method} payment for booking {payment.BookingID} with status {payment.Status}.",
+                TargetID = updatedPayment.PaymentID,
+                Details = $"Confirmed {updatedPayment.Method} payment for booking {updatedPayment.BookingID} with status {updatedPayment.Status}.",
                 IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
                 PerformedAt = now
             });
@@ -206,14 +228,14 @@ namespace BrightClean.API.Controllers
 
             return Ok(new
             {
-                payment.PaymentID,
-                payment.BookingID,
-                payment.Amount,
-                method = payment.Method.ToString(),
-                status = payment.Status.ToString(),
-                payment.PaidAt,
-                payment.ReviewedAt,
-                payment.StatusReason
+                updatedPayment.PaymentID,
+                updatedPayment.BookingID,
+                updatedPayment.Amount,
+                method = updatedPayment.Method.ToString(),
+                status = updatedPayment.Status.ToString(),
+                updatedPayment.PaidAt,
+                updatedPayment.ReviewedAt,
+                updatedPayment.StatusReason
             });
         }
 

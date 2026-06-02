@@ -109,10 +109,14 @@ class BaseApiClient {
       if (response.statusCode == 307 || response.statusCode == 308) {
         final redirectTarget =
             response.headers['location'] ?? response.headers['Location'];
+
+        // Log redirect target for diagnostics in debug mode only
+        if (kDebugMode && redirectTarget != null) {
+          debugPrint('HTTP redirect detected: target=$redirectTarget');
+        }
+
         throw ServerException(
-          message: redirectTarget == null
-              ? 'الخادم حوّل الطلب إلى رابط آخر. تأكد من إعداد رابط الـ API وبروتوكول http/https.'
-              : 'الخادم حوّل الطلب إلى $redirectTarget. تأكد من أن رابط الـ API يستخدم البروتوكول الصحيح.',
+          message: 'الخادم حوّل الطلب إلى موقع آخر؛ تأكد من إعداد رابط الـ API وبروتوكول http/https.',
           statusCode: response.statusCode,
         );
       }

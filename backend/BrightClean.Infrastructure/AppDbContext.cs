@@ -126,7 +126,8 @@ namespace BrightClean.Infrastructure
                 .IsUnique();
 
             modelBuilder.Entity<UserDocument>()
-                .HasIndex(ud => new { ud.UserID, ud.Type });
+                .HasIndex(ud => new { ud.UserID, ud.Type })
+                .IsUnique();
 
             modelBuilder.Entity<UserDocument>()
                 .HasIndex(ud => ud.ReviewStatus);

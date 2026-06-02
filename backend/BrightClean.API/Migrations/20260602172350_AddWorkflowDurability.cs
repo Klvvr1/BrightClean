@@ -60,6 +60,19 @@ namespace BrightClean.API.Migrations
                 type: "int",
                 nullable: true);
 
+            // Backfill review state from existing approved users
+            // For LaundryAgents and DeliveryStaff who are already approved, mark their documents as Approved
+            migrationBuilder.Sql(@"
+                UPDATE ud
+                SET ud.ReviewStatus = 1,  -- DocumentReviewStatus.Approved
+                    ud.ReviewedAt = u.VerifiedAt
+                FROM UserDocuments ud
+                INNER JOIN Users u ON ud.UserID = u.UserID
+                WHERE u.IsApproved = 1
+                  AND u.VerifiedAt IS NOT NULL
+                  AND (u.Role = 2 OR u.Role = 3);  -- LaundryAgent = 2, DeliveryStaff = 3
+            ");
+
             migrationBuilder.AddColumn<DateTime>(
                 name: "CreatedAt",
                 table: "Payments",
