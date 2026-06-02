@@ -23,6 +23,29 @@ namespace BrightClean.API.Controllers
             _context = context;
         }
 
+        private IActionResult ValidateScheduledAt(DateTime? scheduledAt)
+        {
+            if (!scheduledAt.HasValue)
+            {
+                return null; // No validation needed if not provided
+            }
+
+            // Check if scheduled date is in the past
+            if (scheduledAt.Value < DateTime.UtcNow.Date)
+            {
+                return BadRequest(new { message = "تاريخ الموعد لا يمكن أن يكون في الماضي." });
+            }
+
+            // Check if scheduled date is beyond 30 days (maximum future window enforced by UI)
+            var maxFutureDate = DateTime.UtcNow.AddDays(30);
+            if (scheduledAt.Value > maxFutureDate)
+            {
+                return BadRequest(new { message = "تاريخ الموعد لا يمكن أن يكون بعد 30 يوماً من الآن." });
+            }
+
+            return null;
+        }
+
         // GET: /api/bookings
         [HttpGet]
         public async Task<IActionResult> GetBookings()
@@ -114,6 +137,13 @@ namespace BrightClean.API.Controllers
                 }
             }
 
+            // Validate ScheduledAt before creating booking
+            var scheduledAtValidation = ValidateScheduledAt(dto.ScheduledAt);
+            if (scheduledAtValidation != null)
+            {
+                return scheduledAtValidation;
+            }
+
             var booking = new Booking
             {
                 ClientID = clientId,
@@ -178,8 +208,28 @@ namespace BrightClean.API.Controllers
                 return Forbid();
             }
 
+            // If already pending with FinalTotal, allow updates to ScheduledAt and SpecialInstructions
             if (booking.Status == BookingStatus.Pending && booking.FinalTotal.HasValue)
             {
+                // Validate ScheduledAt before updating
+                var scheduledAtValidation = ValidateScheduledAt(dto.ScheduledAt);
+                if (scheduledAtValidation != null)
+                {
+                    return scheduledAtValidation;
+                }
+
+                // Apply schedule and instruction updates even for pending bookings (deferred payment retry flow)
+                if (dto.ScheduledAt.HasValue)
+                {
+                    booking.ScheduledAt = dto.ScheduledAt;
+                }
+
+                if (!string.IsNullOrWhiteSpace(dto.SpecialInstructions))
+                {
+                    booking.SpecialInstructions = dto.SpecialInstructions;
+                }
+
+                await _context.SaveChangesAsync();
                 return Ok(booking);
             }
 
@@ -191,6 +241,13 @@ namespace BrightClean.API.Controllers
             if (booking.ExpiresAt.HasValue && booking.ExpiresAt.Value < DateTime.UtcNow)
             {
                 return BadRequest("This draft booking has expired. Please create a new booking.");
+            }
+
+            // Validate ScheduledAt before updating booking
+            var scheduledAtValidation2 = ValidateScheduledAt(dto.ScheduledAt);
+            if (scheduledAtValidation2 != null)
+            {
+                return scheduledAtValidation2;
             }
 
             if (dto.ScheduledAt.HasValue)

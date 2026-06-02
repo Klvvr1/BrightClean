@@ -37,6 +37,12 @@ namespace BrightClean.API.Controllers
                 return BadRequest(new { message = $"Payment method '{dto.Method}' is not supported." });
             }
 
+            // Validate that the parsed enum value is defined (reject numeric strings for undefined members)
+            if (!Enum.IsDefined(typeof(PaymentMethod), paymentMethod))
+            {
+                return BadRequest(new { message = $"Payment method '{dto.Method}' is not a valid payment method." });
+            }
+
             using var transaction = await _context.Database.BeginTransactionAsync();
 
             var booking = await _context.Bookings

@@ -8,11 +8,16 @@ import '../error/exceptions.dart';
 class BaseApiClient {
   static String get defaultBaseUrl {
     const configuredUrl = String.fromEnvironment('BRIGHTCLEAN_API_BASE_URL');
-    if (configuredUrl.isNotEmpty) return configuredUrl;
-    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-      return 'http://10.0.2.2:5135';
+    String baseUrl;
+    if (configuredUrl.isNotEmpty) {
+      baseUrl = configuredUrl;
+    } else if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      baseUrl = 'http://10.0.2.2:5135';
+    } else {
+      baseUrl = 'http://localhost:5135';
     }
-    return 'http://localhost:5135';
+    // Normalize by removing trailing slash and whitespace
+    return baseUrl.trim().replaceAll(RegExp(r'/+$'), '');
   }
 
   final http.Client _client;
@@ -85,8 +90,10 @@ class BaseApiClient {
   }
 
   Uri _buildUrl(String endpoint) {
+    // Ensure endpoint starts with '/' for proper concatenation
     final normalizedEndpoint =
         endpoint.startsWith('/') ? endpoint : '/$endpoint';
+    // baseUrl is already normalized (no trailing slash) in constructor
     return Uri.parse('$baseUrl$normalizedEndpoint');
   }
 

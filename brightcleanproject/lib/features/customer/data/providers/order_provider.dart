@@ -441,9 +441,18 @@ class OrderProvider extends ChangeNotifier {
     Order localOrder, {
     bool notifyOnStateChange = true,
   }) async {
+    // Perform fragile cleanup first, before mutating state
+    try {
+      await cartProvider.clearCartSilently();
+    } catch (e) {
+      // Cleanup failed - do not proceed with state mutation
+      debugPrint('Error clearing cart: $e');
+      rethrow;
+    }
+
+    // Only after cleanup succeeds, update state
     _orders.insert(0, localOrder);
     await _saveOrderToDb(localOrder);
-    await cartProvider.clearCartSilently();
     _currentBookingId = null;
     _isCheckoutLoading = false;
     if (notifyOnStateChange) {

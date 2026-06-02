@@ -1009,7 +1009,8 @@ class _CheckoutBottomBarState extends State<_CheckoutBottomBar> {
             itemsDto,
             addressID: addressId,
             scheduledAt: widget.selectedDate,
-            specialInstructions: widget.selectedTimeSlot,
+            // TODO: Add dedicated pickupSlot field to backend API instead of using specialInstructions
+            specialInstructions: widget.locationDescription,
             notifyOnStateChange: false,
           );
         } else {
@@ -1020,7 +1021,8 @@ class _CheckoutBottomBarState extends State<_CheckoutBottomBar> {
       final serverFinalTotal = await orderProvider.submitOrder(
         bookingId,
         scheduledAt: widget.selectedDate,
-        specialInstructions: widget.selectedTimeSlot,
+        // TODO: Add dedicated pickupSlot field to backend API instead of using specialInstructions
+        specialInstructions: widget.locationDescription,
         notifyOnStateChange: false,
       );
       final paymentAmount = serverFinalTotal ?? capturedFinalPrice;
