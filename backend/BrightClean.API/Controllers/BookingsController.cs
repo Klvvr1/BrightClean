@@ -45,6 +45,7 @@ namespace BrightClean.API.Controllers
 
         // POST: /api/bookings
         [HttpPost]
+        [Authorize(Roles = "Client")]
         public async Task<IActionResult> CreateBooking([FromBody] CreateBookingDto dto)
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
@@ -62,6 +63,34 @@ namespace BrightClean.API.Controllers
             if (agent == null)
             {
                 return BadRequest(new { message = "وكيل الغسيل غير موجود." });
+            }
+
+            if (!agent.IsApproved || agent.AccountStatus != AccountStatus.Active || agent.IsStoreClosed)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new { message = "The selected laundry agent is not currently available." });
+            }
+
+            var requestedServiceIds = dto.Items
+                .Select(i => i.ServiceID)
+                .Distinct()
+                .ToList();
+
+            var activeAgentServiceIds = await _context.AgentServices
+                .Where(s => s.LaundryAgentID == agent.UserID && s.IsActive)
+                .Select(s => s.ServiceID)
+                .ToListAsync();
+
+            var unsupportedServiceIds = requestedServiceIds
+                .Where(id => !activeAgentServiceIds.Contains(id))
+                .ToList();
+
+            if (unsupportedServiceIds.Any())
+            {
+                return BadRequest(new
+                {
+                    message = "The selected laundry agent does not provide one or more requested services.",
+                    unsupportedServiceIds
+                });
             }
 
             int addressId = dto.AddressID ?? 0;
@@ -92,7 +121,9 @@ namespace BrightClean.API.Controllers
                 AddressID = addressId,
                 Status = BookingStatus.Draft,
                 CreatedAt = DateTime.UtcNow,
-                ExpiresAt = DateTime.UtcNow.AddDays(1)
+                ExpiresAt = DateTime.UtcNow.AddDays(1),
+                ScheduledAt = dto.ScheduledAt,
+                SpecialInstructions = dto.SpecialInstructions
             };
 
             foreach (var itemDto in dto.Items)
@@ -126,6 +157,7 @@ namespace BrightClean.API.Controllers
 
         // POST: /api/bookings/submit
         [HttpPost("submit")]
+        [Authorize(Roles = "Client")]
         public async Task<IActionResult> SubmitBooking([FromBody] SubmitBookingDto dto)
         {
             var booking = await _context.Bookings
@@ -146,9 +178,29 @@ namespace BrightClean.API.Controllers
                 return Forbid();
             }
 
+            if (booking.Status == BookingStatus.Pending && booking.FinalTotal.HasValue)
+            {
+                return Ok(booking);
+            }
+
             if (booking.Status != BookingStatus.Draft)
             {
                 return BadRequest("Only draft bookings can be submitted.");
+            }
+
+            if (booking.ExpiresAt.HasValue && booking.ExpiresAt.Value < DateTime.UtcNow)
+            {
+                return BadRequest("This draft booking has expired. Please create a new booking.");
+            }
+
+            if (dto.ScheduledAt.HasValue)
+            {
+                booking.ScheduledAt = dto.ScheduledAt;
+            }
+
+            if (!string.IsNullOrWhiteSpace(dto.SpecialInstructions))
+            {
+                booking.SpecialInstructions = dto.SpecialInstructions;
             }
 
             // Calculate subtotal
@@ -460,6 +512,8 @@ namespace BrightClean.API.Controllers
     public class SubmitBookingDto
     {
         public int BookingID { get; set; }
+        public DateTime? ScheduledAt { get; set; }
+        public string? SpecialInstructions { get; set; }
     }
 
     public class CreateBookingDto
@@ -467,6 +521,8 @@ namespace BrightClean.API.Controllers
         public int LaundryAgentID { get; set; }
         public System.Collections.Generic.List<CreateBookingItemDto> Items { get; set; } = new();
         public int? AddressID { get; set; }
+        public DateTime? ScheduledAt { get; set; }
+        public string? SpecialInstructions { get; set; }
     }
 
     public class CreateBookingItemDto

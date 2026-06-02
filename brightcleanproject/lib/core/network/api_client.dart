@@ -6,17 +6,25 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../error/exceptions.dart';
 
 class BaseApiClient {
-  static const String defaultBaseUrl = 'http://localhost:5135';
+  static String get defaultBaseUrl {
+    const configuredUrl = String.fromEnvironment('BRIGHTCLEAN_API_BASE_URL');
+    if (configuredUrl.isNotEmpty) return configuredUrl;
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      return 'http://10.0.2.2:5135';
+    }
+    return 'http://localhost:5135';
+  }
 
   final http.Client _client;
   final String baseUrl;
   final FlutterSecureStorage _secureStorage;
 
   BaseApiClient({
-    this.baseUrl = defaultBaseUrl,
+    String? baseUrl,
     http.Client? client,
     FlutterSecureStorage? secureStorage,
-  })  : _client = client ?? http.Client(),
+  })  : baseUrl = baseUrl ?? defaultBaseUrl,
+        _client = client ?? http.Client(),
         _secureStorage = secureStorage ?? const FlutterSecureStorage();
 
   Future<Map<String, String>> _getHeaders() async {

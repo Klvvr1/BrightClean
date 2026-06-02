@@ -345,6 +345,8 @@ class OrderProvider extends ChangeNotifier {
   Future<double?> submitOrder(
     int bookingId, {
     Order? localOrder,
+    DateTime? scheduledAt,
+    String? specialInstructions,
     bool notifyOnStateChange = true,
   }) async {
     // أعلم المستمعين ببدء العملية فقط
@@ -355,23 +357,21 @@ class OrderProvider extends ChangeNotifier {
     }
 
     try {
-      final serverFinalTotal = await bookingRepository.submitBooking(bookingId);
-
-      if (localOrder != null) {
-        _orders.insert(0, localOrder);
-        await _saveOrderToDb(localOrder);
-      }
+      final serverFinalTotal = await bookingRepository.submitBooking(
+        bookingId,
+        scheduledAt: scheduledAt,
+        specialInstructions: specialInstructions,
+      );
 
       // ✅ امسح الكارت عبر CartProvider بدون notifyListeners()
       //    لمنع إعادة بناء CheckoutScreen أثناء الـ navigation
-      await cartProvider.clearCartSilently();
+      // Cart is cleared only after payment is recorded successfully.
 
       // ✅ الإصلاح: عند النجاح نُغيّر الحالة بدون notifyListeners()
       // لأن CheckoutScreen ستغادر فوراً — أي rebuild هنا يسبب الـ crash.
       // المستمعون الآخرون (شاشة الطلبات مثلاً) سيحصلون على البيانات
       // عندما يُعاد تحميلهم بشكل طبيعي.
       _isCheckoutLoading = false;
-      _currentBookingId = null;
 
       return serverFinalTotal;
     } on ServerException catch (e) {
@@ -392,8 +392,14 @@ class OrderProvider extends ChangeNotifier {
     }
   }
 
-  Future<int> createBooking(int laundryAgentID, List<Map<String, int>> items,
-      {int? addressID, bool notifyOnStateChange = true}) async {
+  Future<int> createBooking(
+    int laundryAgentID,
+    List<Map<String, int>> items, {
+    int? addressID,
+    DateTime? scheduledAt,
+    String? specialInstructions,
+    bool notifyOnStateChange = true,
+  }) async {
     _isCheckoutLoading = true;
     _errorMessage = null;
     if (notifyOnStateChange) {
@@ -401,8 +407,13 @@ class OrderProvider extends ChangeNotifier {
     }
 
     try {
-      final bookingId = await bookingRepository
-          .createBooking(laundryAgentID, items, addressID: addressID);
+      final bookingId = await bookingRepository.createBooking(
+        laundryAgentID,
+        items,
+        addressID: addressID,
+        scheduledAt: scheduledAt,
+        specialInstructions: specialInstructions,
+      );
       _currentBookingId = bookingId;
       _isCheckoutLoading = false;
       if (notifyOnStateChange) {
@@ -423,6 +434,20 @@ class OrderProvider extends ChangeNotifier {
         notifyListeners();
       }
       rethrow;
+    }
+  }
+
+  Future<void> completeCheckoutAfterPayment(
+    Order localOrder, {
+    bool notifyOnStateChange = true,
+  }) async {
+    _orders.insert(0, localOrder);
+    await _saveOrderToDb(localOrder);
+    await cartProvider.clearCartSilently();
+    _currentBookingId = null;
+    _isCheckoutLoading = false;
+    if (notifyOnStateChange) {
+      notifyListeners();
     }
   }
 }

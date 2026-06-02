@@ -183,7 +183,7 @@ namespace BrightClean.API.Controllers
 
         // POST: /api/auth/register/driver
         [HttpPost("register/driver")]
-        public async Task<IActionResult> RegisterDriver([FromBody] RegisterDriverDto dto)
+        public async Task<IActionResult> RegisterDriver([FromForm] RegisterDriverDto dto, IFormFile nationalIdImage, IFormFile driverLicenseImage, IFormFile vehicleImage)
         {
             if (await _context.Users.AnyAsync(u => u.Email == dto.Email))
                 return BadRequest(new { message = "البريد الإلكتروني مسجل بالفعل." });
@@ -196,6 +196,36 @@ namespace BrightClean.API.Controllers
 
             if (await _context.DeliveryStaffs.AnyAsync(ds => ds.PlateNumber == dto.PlateNumber))
                 return BadRequest(new { message = "رقم لوحة المركبة مسجل بالفعل." });
+
+            if (nationalIdImage == null || nationalIdImage.Length == 0)
+                return BadRequest(new { message = "National ID image is required." });
+
+            if (driverLicenseImage == null || driverLicenseImage.Length == 0)
+                return BadRequest(new { message = "Driver license image is required." });
+
+            if (vehicleImage == null || vehicleImage.Length == 0)
+                return BadRequest(new { message = "Vehicle image is required." });
+
+            var uploadDir = System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+            if (!System.IO.Directory.Exists(uploadDir))
+            {
+                System.IO.Directory.CreateDirectory(uploadDir);
+            }
+
+            async Task<string> SaveUploadAsync(IFormFile file)
+            {
+                var fileName = $"{Guid.NewGuid()}_{System.IO.Path.GetFileName(file.FileName)}";
+                var filePath = System.IO.Path.Combine(uploadDir, fileName);
+                using (var stream = new System.IO.FileStream(filePath, System.IO.FileMode.Create))
+                {
+                    await file.CopyToAsync(stream);
+                }
+                return $"/uploads/{fileName}";
+            }
+
+            var nationalIdUrl = await SaveUploadAsync(nationalIdImage);
+            var licenseUrl = await SaveUploadAsync(driverLicenseImage);
+            var vehicleUrl = await SaveUploadAsync(vehicleImage);
 
             var driver = new DeliveryStaff
             {
@@ -216,6 +246,27 @@ namespace BrightClean.API.Controllers
                 AccountStatus = AccountStatus.PendingVerification,
                 IsApproved = false // Requires Admin approval
             };
+
+            driver.Documents.Add(new UserDocument
+            {
+                Type = DocumentType.NationalID,
+                FileURL = nationalIdUrl,
+                UploadedAt = DateTime.UtcNow
+            });
+
+            driver.Documents.Add(new UserDocument
+            {
+                Type = DocumentType.DriverLicense,
+                FileURL = licenseUrl,
+                UploadedAt = DateTime.UtcNow
+            });
+
+            driver.Documents.Add(new UserDocument
+            {
+                Type = DocumentType.VehicleImage,
+                FileURL = vehicleUrl,
+                UploadedAt = DateTime.UtcNow
+            });
 
             _context.DeliveryStaffs.Add(driver);
             await _context.SaveChangesAsync();

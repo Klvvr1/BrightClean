@@ -103,13 +103,21 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  Future<void> registerAgent(RegisterAgentModel model) async {
+  Future<void> registerAgent(
+    RegisterAgentModel model, {
+    required String commercialRegisterImagePath,
+    required String nationalIdImagePath,
+  }) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      await _authRepository.registerAgent(model);
+      await _authRepository.registerAgent(
+        model,
+        commercialRegisterImagePath: commercialRegisterImagePath,
+        nationalIdImagePath: nationalIdImagePath,
+      );
       _isLoading = false;
       notifyListeners();
     } on ServerException catch (e) {

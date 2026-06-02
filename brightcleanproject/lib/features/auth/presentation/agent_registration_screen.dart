@@ -402,7 +402,11 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
       );
 
       final cartProvider = Provider.of<CartProvider>(context, listen: false);
-      await authProvider.registerAgent(agentModel);
+      await authProvider.registerAgent(
+        agentModel,
+        commercialRegisterImagePath: _commercialRegImage!.path,
+        nationalIdImagePath: _idImage!.path,
+      );
 
       // Crucially logout after registration succeeds so the pending applicant doesn't remain authenticated
       await authProvider.logout(cartProvider);
