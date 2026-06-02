@@ -7,9 +7,11 @@ import '../../domain/repositories/booking_repository.dart';
 import '../repositories/booking_repository_impl.dart';
 import '../../domain/models/order.dart';
 import '../models/booking_model.dart';
+import '../providers/cart_provider.dart';
 
 class OrderProvider extends ChangeNotifier {
   final BookingRepository bookingRepository;
+  final CartProvider cartProvider;
   List<Order> _orders = [];
   bool _isLoading = false;
   bool _isActionLoading = false;
@@ -39,15 +41,19 @@ class OrderProvider extends ChangeNotifier {
   bool get isActionLoading => _isActionLoading;
   bool get isCheckoutLoading => _isCheckoutLoading;
 
-  OrderProvider({BookingRepository? bookingRepository})
-      : bookingRepository = bookingRepository ??
+  OrderProvider({
+    BookingRepository? bookingRepository,
+    required this.cartProvider,
+    bool initialize = true,
+  }) : bookingRepository = bookingRepository ??
             BookingRepositoryImpl(apiClient: BaseApiClient()) {
-    _initialize();
+    if (initialize) {
+      _initialize();
+    }
   }
 
   Future<void> _initialize() async {
     await _loadOrders();
-    // Seed demo orders only in debug mode if DB is empty
     if (kDebugMode && _orders.isEmpty) {
       seedDemoOrders();
     }
@@ -55,26 +61,29 @@ class OrderProvider extends ChangeNotifier {
 
   Future<void> loadLocalOrders() => _loadOrders();
 
-
   Future<void> _loadOrders() async {
     try {
       final db = await DatabaseHelper.instance.database;
       final maps = await db.query('orders', orderBy: 'date DESC');
 
       if (maps.isNotEmpty) {
-        _orders = maps.map((map) => Order(
-          orderId: map['orderId'] as String,
-          date: map['date'] as String,
-          details: map['details'] as String,
-          status: map['status'] as String,
-          activeStepIndex: map['activeStepIndex'] as int,
-          locationDescription: map['locationDescription'] as String?,
-          paymentMethod: map['paymentMethod'] as String?,
-          isRated: (map['isRated'] as int) == 1,
-          pickupDate: map['pickupDate'] != null ? DateTime.parse(map['pickupDate'] as String) : null,
-          pickupTimeSlot: map['pickupTimeSlot'] as String?,
-          category: map['category'] as String?,
-        )).toList();
+        _orders = maps
+            .map((map) => Order(
+                  orderId: map['orderId'] as String,
+                  date: map['date'] as String,
+                  details: map['details'] as String,
+                  status: map['status'] as String,
+                  activeStepIndex: map['activeStepIndex'] as int,
+                  locationDescription: map['locationDescription'] as String?,
+                  paymentMethod: map['paymentMethod'] as String?,
+                  isRated: (map['isRated'] as int) == 1,
+                  pickupDate: map['pickupDate'] != null
+                      ? DateTime.parse(map['pickupDate'] as String)
+                      : null,
+                  pickupTimeSlot: map['pickupTimeSlot'] as String?,
+                  category: map['category'] as String?,
+                ))
+            .toList();
       } else {
         _orders = [];
       }
@@ -84,8 +93,6 @@ class OrderProvider extends ChangeNotifier {
     }
   }
 
-  /// Seeds demo orders for testing/debug purposes.
-  /// Should only be called explicitly in debug mode or test scenarios.
   void seedDemoOrders() {
     _orders = [
       Order(
@@ -121,19 +128,22 @@ class OrderProvider extends ChangeNotifier {
   Future<void> _saveOrderToDb(Order order) async {
     try {
       final db = await DatabaseHelper.instance.database;
-      await db.insert('orders', {
-        'orderId': order.orderId,
-        'date': order.date,
-        'details': order.details,
-        'status': order.status,
-        'activeStepIndex': order.activeStepIndex,
-        'locationDescription': order.locationDescription,
-        'paymentMethod': order.paymentMethod,
-        'isRated': order.isRated ? 1 : 0,
-        'pickupDate': order.pickupDate?.toIso8601String(),
-        'pickupTimeSlot': order.pickupTimeSlot,
-        'category': order.category,
-      }, conflictAlgorithm: ConflictAlgorithm.replace);
+      await db.insert(
+          'orders',
+          {
+            'orderId': order.orderId,
+            'date': order.date,
+            'details': order.details,
+            'status': order.status,
+            'activeStepIndex': order.activeStepIndex,
+            'locationDescription': order.locationDescription,
+            'paymentMethod': order.paymentMethod,
+            'isRated': order.isRated ? 1 : 0,
+            'pickupDate': order.pickupDate?.toIso8601String(),
+            'pickupTimeSlot': order.pickupTimeSlot,
+            'category': order.category,
+          },
+          conflictAlgorithm: ConflictAlgorithm.replace);
     } catch (e) {
       debugPrint('Error saving order: $e');
     }
@@ -178,11 +188,11 @@ class OrderProvider extends ChangeNotifier {
 
     try {
       final bookingModels = await bookingRepository.getPendingBookings(agentId);
-      
       _orders = bookingModels.map((booking) {
         return Order(
           orderId: booking.bookingID.toString(),
-          date: '${booking.createdAt.day} ${_getMonthName(booking.createdAt.month)} ${booking.createdAt.year}',
+          date:
+              '${booking.createdAt.day} ${_getMonthName(booking.createdAt.month)} ${booking.createdAt.year}',
           details: _mapBookingItemsToDetails(booking),
           status: _mapStatusToString(booking.status),
           activeStepIndex: _mapStatusToStepIndex(booking.status),
@@ -190,7 +200,6 @@ class OrderProvider extends ChangeNotifier {
           pickupDate: booking.scheduledAt,
         );
       }).toList();
-      
       _isLoading = false;
     } on ServerException catch (e) {
       _errorMessage = e.message ?? 'حدث خطأ في الخادم';
@@ -205,12 +214,20 @@ class OrderProvider extends ChangeNotifier {
 
   String _getMonthName(int month) {
     const months = [
-      'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
-      'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+      'يناير',
+      'فبراير',
+      'مارس',
+      'أبريل',
+      'مايو',
+      'يونيو',
+      'يوليو',
+      'أغسطس',
+      'سبتمبر',
+      'أكتوبر',
+      'نوفمبر',
+      'ديسمبر'
     ];
-    if (month >= 1 && month <= 12) {
-      return months[month - 1];
-    }
+    if (month >= 1 && month <= 12) return months[month - 1];
     return '';
   }
 
@@ -281,7 +298,6 @@ class OrderProvider extends ChangeNotifier {
     _isActionLoading = true;
     _errorMessage = null;
     notifyListeners();
-
     try {
       await bookingRepository.acceptBooking(bookingId);
       await fetchPendingBookings(agentId);
@@ -299,7 +315,6 @@ class OrderProvider extends ChangeNotifier {
     _isActionLoading = true;
     _errorMessage = null;
     notifyListeners();
-
     try {
       await bookingRepository.markBookingReady(bookingId);
       await fetchPendingBookings(agentId);
@@ -313,55 +328,100 @@ class OrderProvider extends ChangeNotifier {
     }
   }
 
-  Future<double?> submitOrder(int bookingId, {Order? localOrder}) async {
+  // ─────────────────────────────────────────────────────────────────────────
+  // submitOrder: FIXED
+  //
+  // المشكلة الأصلية:
+  //   finally { _isCheckoutLoading = false; notifyListeners(); }
+  //   هذا يُطلق rebuild لكل widget مرتبط بـ OrderProvider بما فيها
+  //   CheckoutScreen التي تكون في طور الانتقال لـ /order_success,
+  //   فيحاول Flutter رسمها وهي غير مهيأة → RenderBox crash.
+  //
+  // الحل:
+  //   - عند النجاح: نُعيد القيمة مباشرة بدون notifyListeners()
+  //     لأن CheckoutScreen ستنتقل فوراً ولا داعي لـ rebuild.
+  //   - عند الفشل: notifyListeners() مقبول لأن الصفحة ستبقى وتعرض الخطأ.
+  // ─────────────────────────────────────────────────────────────────────────
+  Future<double?> submitOrder(
+    int bookingId, {
+    Order? localOrder,
+    bool notifyOnStateChange = true,
+  }) async {
+    // أعلم المستمعين ببدء العملية فقط
     _isCheckoutLoading = true;
     _errorMessage = null;
-    notifyListeners();
+    if (notifyOnStateChange) {
+      notifyListeners();
+    }
 
     try {
       final serverFinalTotal = await bookingRepository.submitBooking(bookingId);
+
       if (localOrder != null) {
         _orders.insert(0, localOrder);
         await _saveOrderToDb(localOrder);
       }
 
-      // On success, clear local cart DB table
-      final db = await DatabaseHelper.instance.database;
-      await db.delete('cart_items');
+      // ✅ امسح الكارت عبر CartProvider بدون notifyListeners()
+      //    لمنع إعادة بناء CheckoutScreen أثناء الـ navigation
+      await cartProvider.clearCartSilently();
+
+      // ✅ الإصلاح: عند النجاح نُغيّر الحالة بدون notifyListeners()
+      // لأن CheckoutScreen ستغادر فوراً — أي rebuild هنا يسبب الـ crash.
+      // المستمعون الآخرون (شاشة الطلبات مثلاً) سيحصلون على البيانات
+      // عندما يُعاد تحميلهم بشكل طبيعي.
+      _isCheckoutLoading = false;
+      _currentBookingId = null;
 
       return serverFinalTotal;
     } on ServerException catch (e) {
       _errorMessage = e.message ?? 'حدث خطأ في الخادم';
+      // ✅ عند الفشل: notify مقبول، الصفحة ستبقى وتعرض الخطأ
+      _isCheckoutLoading = false;
+      if (notifyOnStateChange) {
+        notifyListeners();
+      }
       rethrow;
     } catch (e) {
       _errorMessage = e.toString();
-      rethrow;
-    } finally {
       _isCheckoutLoading = false;
-      notifyListeners();
+      if (notifyOnStateChange) {
+        notifyListeners();
+      }
+      rethrow;
     }
   }
 
-  Future<int> createBooking(int laundryAgentID, List<Map<String, int>> items, {int? addressID}) async {
+  Future<int> createBooking(int laundryAgentID, List<Map<String, int>> items,
+      {int? addressID, bool notifyOnStateChange = true}) async {
     _isCheckoutLoading = true;
     _errorMessage = null;
-    notifyListeners();
+    if (notifyOnStateChange) {
+      notifyListeners();
+    }
 
     try {
-      final bookingId = await bookingRepository.createBooking(laundryAgentID, items, addressID: addressID);
+      final bookingId = await bookingRepository
+          .createBooking(laundryAgentID, items, addressID: addressID);
       _currentBookingId = bookingId;
       _isCheckoutLoading = false;
-      notifyListeners();
+      if (notifyOnStateChange) {
+        notifyListeners();
+      }
       return bookingId;
     } on ServerException catch (e) {
       _errorMessage = e.message ?? 'حدث خطأ أثناء إنشاء الحجز';
       _isCheckoutLoading = false;
-      notifyListeners();
+      if (notifyOnStateChange) {
+        notifyListeners();
+      }
       rethrow;
     } catch (e) {
       _errorMessage = e.toString();
       _isCheckoutLoading = false;
-      notifyListeners();
+      if (notifyOnStateChange) {
+        notifyListeners();
+      }
       rethrow;
     }
   }
