@@ -6,17 +6,30 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../error/exceptions.dart';
 
 class BaseApiClient {
-  static const String defaultBaseUrl = 'http://localhost:5135';
+  static String get defaultBaseUrl {
+    const configuredUrl = String.fromEnvironment('BRIGHTCLEAN_API_BASE_URL');
+    String baseUrl;
+    if (configuredUrl.isNotEmpty) {
+      baseUrl = configuredUrl;
+    } else if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      baseUrl = 'http://10.0.2.2:5135';
+    } else {
+      baseUrl = 'http://localhost:5135';
+    }
+    // Normalize by removing trailing slash and whitespace
+    return baseUrl.trim().replaceAll(RegExp(r'/+$'), '');
+  }
 
   final http.Client _client;
   final String baseUrl;
   final FlutterSecureStorage _secureStorage;
 
   BaseApiClient({
-    this.baseUrl = defaultBaseUrl,
+    String? baseUrl,
     http.Client? client,
     FlutterSecureStorage? secureStorage,
-  })  : _client = client ?? http.Client(),
+  })  : baseUrl = baseUrl ?? defaultBaseUrl,
+        _client = client ?? http.Client(),
         _secureStorage = secureStorage ?? const FlutterSecureStorage();
 
   Future<Map<String, String>> _getHeaders() async {
@@ -77,8 +90,10 @@ class BaseApiClient {
   }
 
   Uri _buildUrl(String endpoint) {
+    // Ensure endpoint starts with '/' for proper concatenation
     final normalizedEndpoint =
         endpoint.startsWith('/') ? endpoint : '/$endpoint';
+    // baseUrl is already normalized (no trailing slash) in constructor
     return Uri.parse('$baseUrl$normalizedEndpoint');
   }
 

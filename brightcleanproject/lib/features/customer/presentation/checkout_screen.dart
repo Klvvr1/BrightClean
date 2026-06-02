@@ -1008,6 +1008,9 @@ class _CheckoutBottomBarState extends State<_CheckoutBottomBar> {
             widget.selectedAgentId!,
             itemsDto,
             addressID: addressId,
+            scheduledAt: widget.selectedDate,
+            // TODO: Add dedicated pickupSlot field to backend API instead of using specialInstructions
+            specialInstructions: widget.locationDescription,
             notifyOnStateChange: false,
           );
         } else {
@@ -1017,7 +1020,9 @@ class _CheckoutBottomBarState extends State<_CheckoutBottomBar> {
 
       final serverFinalTotal = await orderProvider.submitOrder(
         bookingId,
-        localOrder: newOrder,
+        scheduledAt: widget.selectedDate,
+        // TODO: Add dedicated pickupSlot field to backend API instead of using specialInstructions
+        specialInstructions: widget.locationDescription,
         notifyOnStateChange: false,
       );
       final paymentAmount = serverFinalTotal ?? capturedFinalPrice;
@@ -1033,6 +1038,11 @@ class _CheckoutBottomBarState extends State<_CheckoutBottomBar> {
         'method': methodMap[capturedPaymentMethod] ?? 'Cash',
         'transactionRef': null,
       });
+
+      await orderProvider.completeCheckoutAfterPayment(
+        newOrder,
+        notifyOnStateChange: false,
+      );
 
       // Navigate AFTER all async work is done — this widget is still alive
       completedSuccessfully = true;

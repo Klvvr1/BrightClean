@@ -119,6 +119,12 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+// SECURITY NOTE: Static file serving exposes KYC uploads in wwwroot/uploads
+// TODO: Move uploads to a protected directory (outside wwwroot) and implement
+// an authenticated download endpoint to serve files with proper access control.
+// See Issue #4 for full implementation requirements.
+app.UseStaticFiles();
+
 app.UseAuthentication();
 app.UseAuthorization();
 

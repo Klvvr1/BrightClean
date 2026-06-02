@@ -3,6 +3,7 @@ import '../../domain/repositories/auth_repository.dart';
 import '../models/login_response_model.dart';
 import '../models/register_agent_model.dart';
 import '../models/register_client_model.dart';
+import 'package:http/http.dart' as http;
 
 class AuthRepositoryImpl implements AuthRepository {
   final BaseApiClient _apiClient;
@@ -23,10 +24,28 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<void> registerAgent(RegisterAgentModel agentModel) async {
-    await _apiClient.post(
+  Future<void> registerAgent(
+    RegisterAgentModel agentModel, {
+    required String commercialRegisterImagePath,
+    required String nationalIdImagePath,
+  }) async {
+    final fields = agentModel.toJson().map(
+          (key, value) => MapEntry(key, value?.toString() ?? ''),
+        );
+
+    await _apiClient.postMultipart(
       '/api/auth/register/agent',
-      body: agentModel.toJson(),
+      fields: fields,
+      files: [
+        await http.MultipartFile.fromPath(
+          'commercialRegisterImage',
+          commercialRegisterImagePath,
+        ),
+        await http.MultipartFile.fromPath(
+          'nationalIdImage',
+          nationalIdImagePath,
+        ),
+      ],
     );
   }
 

@@ -1,7 +1,7 @@
 # Laundry Platform — Class Diagram Documentation
 
-> **Version:** 6.4 — Phase 2 Updated
-> **Last Updated:** May 2026
+> **Version:** 6.5 — Checkout Integrity & Registration Workflow Updated
+> **Last Updated:** June 2026
 > **Diagram Type:** UML Class Diagram
 > **Architecture Pattern:** Table Per Type (TPT) Inheritance + Rich Junction Entities
 >
@@ -10,6 +10,15 @@
 > - Password reset uses transient in-memory OTP storage (not persisted to User model) via thread-safe dictionary for temporary token/expiry pairs
 > - Detailed `UserDocument` with specific image uploads for `CommercialRegistration` and `NationalID`, documenting `UserID_FK` relationship
 > - Documented Frontend Architecture Providers (`OrderProvider`, `AdminProvider`, `AuthProvider`) and Repositories in a new dedicated section
+>
+> **Changelog v6.5 (Remediation Implementation Updates):**
+> - Payment creation is now restricted to authenticated client-owned `Pending` bookings with a locked `FinalTotal`
+> - Wallet payments debit `Client.WalletBalance` atomically inside the payment transaction
+> - Cash and bank transfer payments are recorded as `Pending`; wallet and credit card payments are recorded as `Success`
+> - Booking creation validates that the selected agent is approved, active, open, and subscribed to every requested service
+> - Driver and agent registration submit required document images through multipart form data
+> - Checkout frontend clears the cart and records the local order only after the payment API confirms success
+> - API base URL is now environment/platform configurable instead of always using hardcoded `localhost`
 >
 > **Changelog v6.2:**
 > - `SystemStatus.Reason` removed — `Message` is the sole public-facing explanation shown on the login screen
@@ -354,6 +363,7 @@ Payment channel used by the client.
 | `CreditCard` | `TransactionRef` must be populated | Processed via payment gateway |
 | `Cash` | None | Physical cash to agent or driver |
 | `Wallet` | `Client.WalletBalance >= Amount` | Deducted from platform wallet |
+| `BankTransfer` | Transfer reference/proof expected by business workflow | Recorded for later confirmation/review |
 
 **Used in:** `Payment.Method`
 
@@ -573,6 +583,8 @@ Stores uploaded verification document references for `DeliveryStaff` and `Laundr
 
 * **Commercial Register Image**: Represented by a `UserDocument` record where the `Type` field equals `DocumentType.CommercialRegistration` and the `FileURL` field holds the file path. Sent from frontend via `commercialRegisterImage` multipart form data.
 * **National ID Image**: Represented by a `UserDocument` record where the `Type` field equals `DocumentType.NationalID` and the `FileURL` field holds the file path. Sent from frontend via `nationalIdImage` multipart form data.
+* **Driver License Image**: Represented by a `UserDocument` record where the `Type` field equals `DocumentType.DriverLicense` and the `FileURL` field holds the file path. Sent from frontend via `driverLicenseImage` multipart form data.
+* **Vehicle Image**: Represented by a `UserDocument` record where the `Type` field equals `DocumentType.VehicleImage` and the `FileURL` field holds the file path. Sent from frontend via `vehicleImage` multipart form data.
 
 **Key Relationship:**
 - **Foreign Key constraint**: The `UserID_FK` database column establishes a **Many-to-One** relationship linking each document back to a unique record in the `User` table, representing the document's owner.
@@ -585,6 +597,8 @@ Stores uploaded verification document references for `DeliveryStaff` and `Laundr
 | `LaundryAgent` | NationalID, CommercialRegistration |
 
 **Note:** Document approval is determined by the overall `User.AccountStatus` transition — the admin reviews all documents together and approves or rejects the entire registration.
+
+**Serving Rule:** Uploaded files under `wwwroot/uploads` are exposed by the backend static file middleware. Any future move to protected document downloads must preserve the same `UserDocument.FileURL` relationship or introduce a deliberate document access endpoint.
 
 ---
 
@@ -696,6 +710,9 @@ The aggregate root of the platform. Every service request — regardless of cate
 - `FinalTotal` is NULL during `Draft` — computed and locked when client submits (transition to `Pending`)
 - `FinalTotal` is immune to future price changes once locked
 - `ExpiresAt` is set at Draft creation — a background job deletes expired Draft bookings automatically
+- Booking creation is restricted to authenticated clients
+- The selected `LaundryAgent` must be approved, active, and not store-closed at booking creation time
+- Every requested `BookingItem.ServiceID` must exist in the selected agent's active `AgentService` subscriptions
 - `ScheduledAt` is mandatory for all `TechnicianDispatch` service bookings
 - Status transitions are strictly sequential — no skipping or reversal except to `Cancelled`
 - Cancellation must reverse `Offer.UsageCount` if an offer was applied
@@ -753,6 +770,7 @@ Represents one leg of the two-stage physical logistics chain. Only created for b
 **Constraints:**
 - Stage 2 `Status` cannot leave `Unassigned` until Stage 1 `Status = Completed`
 - `DeliveryStaffID` is null at creation — set atomically when driver claims from pool
+- Driver task pool queries expose unassigned eligible tasks plus tasks already assigned to the authenticated driver only
 - One driver can only have one `InProgress` task at a time (application-layer enforcement)
 
 ---
@@ -768,17 +786,20 @@ Records the single full payment for a booking. The `UNIQUE` constraint on `Booki
 | `PaymentID_PK` | int | PK, Auto-increment | Unique identifier |
 | `BookingID` (FK) | int | FK → Booking, NOT NULL, UNIQUE | Enforces one payment per booking |
 | `Amount` | decimal | NOT NULL, CHECK > 0 | Must equal `Booking.FinalTotal` |
-| `Method` | PaymentMethod | NOT NULL | CreditCard, Cash, or Wallet |
+| `Method` | PaymentMethod | NOT NULL | CreditCard, Cash, Wallet, or BankTransfer |
 | `Status` | PaymentStatus | NOT NULL, DEFAULT Pending | Payment outcome state |
 | `TransactionRef` | string | NULLABLE | Gateway reference — mandatory for CreditCard |
 | `PaidAt` | datetime | NULLABLE | Stamped on Status = Success |
 
 **Business Rules:**
 - Full payment only — no installments or partial payments
-- `Amount` validated against `Booking.FinalTotal` before record creation
-- `Wallet` payment requires `Client.WalletBalance >= Amount`
+- Payment can be created only by the authenticated client who owns the booking
+- Payment is accepted only when `Booking.Status = Pending` and `Booking.FinalTotal` is not null
+- `Amount` is validated against the server-authoritative `Booking.FinalTotal` before record creation
+- `Wallet` payment requires `Client.WalletBalance >= Amount` and debits the wallet inside the same database transaction as the payment insert
+- `Cash` and `BankTransfer` start as `Pending`; `Wallet` and `CreditCard` start as `Success`
 - `Refunded` is a terminal state — no further transitions permitted
-- A `Failed` payment allows retry — a new `Payment` record is created only if no `Success` record exists
+- Duplicate payment creation is rejected by both controller validation and the unique `BookingID` constraint
 
 ---
 
@@ -934,14 +955,19 @@ LIMIT 1
 ### Payment Rules
 - One payment per booking — enforced by `UNIQUE` constraint on `Payment.BookingID`
 - Full payment only — no installments or partial amounts
-- `Amount` must equal `Booking.FinalTotal` before payment record is created
-- Wallet payment requires sufficient `Client.WalletBalance`
+- Payment can be created only by the booking owner while the booking is `Pending`
+- `Booking.FinalTotal` must be locked before payment record creation
+- `Amount` must equal the server-side `Booking.FinalTotal` before payment record is created
+- Wallet payment requires sufficient `Client.WalletBalance` and debits the wallet atomically with payment creation
+- Cash and bank transfer payments remain `Pending` until the business workflow confirms collection/review
+- Local frontend order persistence and cart clearing occur only after the payment API confirms the payment workflow response
 
 ### Delivery Rules
 - `TwoStage` bookings generate exactly 2 `DeliveryTask` records at `Booking.Status = Accepted`
 - `TechnicianDispatch` bookings generate 0 `DeliveryTask` records
 - Stage 2 remains `Unassigned` until Stage 1 is `Completed`
 - Different drivers may handle Stage 1 and Stage 2 of the same booking
+- The driver pool returns unassigned tasks and the current driver's own assigned tasks; tasks assigned to other drivers are hidden
 
 ### Pricing Rules
 - All prices are set by the admin — agents have no pricing authority
@@ -959,11 +985,14 @@ LIMIT 1
 - Admin reviews all submitted documents holistically before approving
 - `AgentService.IsActive` is ignored while account is `PendingVerification`
 - `TermsAccepted` must be `true` before registration can be submitted
+- Laundry agent registration is multipart and must include `commercialRegisterImage` and `nationalIdImage`
+- Driver registration is multipart and must include `nationalIdImage`, `driverLicenseImage`, and `vehicleImage`
 
 ### Agent Service Rules
 - Only admin can activate or deactivate `AgentService` records
 - Clients only see services where both `AccountStatus = Active` and `AgentService.IsActive = true`
-- All `BookingItem` records must reference services in the agent's active subscriptions
+- Booking creation rejects agents that are unapproved, inactive, store-closed, or missing any requested active service subscription
+- All `BookingItem` records must reference services in the selected agent's active subscriptions
 
 ### Rating Rules
 - Rating only submittable when `Booking.Status = Completed`
@@ -1077,7 +1106,7 @@ LIMIT 1
 
 ## 18. Frontend Architecture (Providers & Repositories)
 
-This section documents the structure and key methods of the state providers and repositories in the Flutter frontend, capturing the changes made during Phase 1 and Phase 2.
+This section documents the structure and key methods of the state providers and repositories in the Flutter frontend, capturing the changes made during Phase 1, Phase 2, and the checkout integrity remediation.
 
 ### 18.1 State Providers & Repositories
 
@@ -1085,34 +1114,48 @@ State providers manage application state and coordinate data flow between the us
 
 | Provider | Purpose / Scope | Key Method | Description |
 |---|---|---|---|
-| `OrderProvider` | Manages cart state, active bookings, and checkout transactions | `createBooking(int laundryAgentID, List<Map<String, int>> items)` | Contacts the checkout API to create a booking draft and stores the resulting booking ID in local state. |
+| `OrderProvider` | Manages cart state, active bookings, and checkout transactions | `createBooking(int laundryAgentID, List<Map<String, int>> items, DateTime? scheduledAt, String? specialInstructions)` | Contacts the checkout API to create a booking draft, including optional scheduling metadata, and stores the resulting booking ID in local state. |
+| | | `submitOrder(..., DateTime? scheduledAt, String? specialInstructions)` | Submits the booking to lock the server-side total, but does not clear cart or save the local order before payment succeeds. |
+| | | `completeCheckoutAfterPayment(Order localOrder)` | Saves the local order and clears the cart only after the payment API returns a successful workflow response. |
 | `AdminProvider` | Handles administrative tasks such as pending users and active staff oversight | `fetchApprovedStaff()` | Retrieves the list of all approved laundry agents and drivers from the administrative staff API. |
 | `AuthProvider` | Coordinates login session persistence, user profiles, registration, and password recovery | `updateProfile(String name, String phone)` | Splits the full name into first/last components, updates user info via the profile API, and refreshes local SharedPreferences. |
+| | | `registerAgent(RegisterAgentModel, commercialRegisterImagePath, nationalIdImagePath)` | Sends agent registration data and required document images through multipart form data. |
 | | | `forgotPassword(String email)` | Triggers the forgot password flow, generating an OTP sent to the user's email. |
 | | | `resetPassword(String email, String token, String newPassword)` | Validates the OTP token and updates the user's password on the backend. |
+| `BaseApiClient` | Centralizes HTTP communication and authentication headers | `defaultBaseUrl` | Resolves the API host from `BRIGHTCLEAN_API_BASE_URL`, then platform defaults: Android emulator uses `10.0.2.2`, desktop/web defaults to `localhost`. |
 
 ### 18.2 Repositories
 
 Repositories serve as the data access layer, abstracting direct API communication with the backend.
 
 * **Order / Booking Repository**:
-  * `BookingRepository.createBooking(int laundryAgentID, List<Map<String, int>> items)`: Submits items to the booking creation API.
+  * `BookingRepository.createBooking(int laundryAgentID, List<Map<String, int>> items, DateTime? scheduledAt, String? specialInstructions)`: Submits items and optional scheduling fields to the booking creation API.
+  * `BookingRepository.submitBooking(int bookingId, DateTime? scheduledAt, String? specialInstructions)`: Locks the draft booking total and moves it to `Pending` without modifying frontend cart state.
+  * `BookingRepository.getPendingBookings()`: Parses both raw list responses and wrapped list responses defensively for backward compatibility.
 * **Admin Repository**:
   * `AdminRepository.getApprovedStaff()`: Fetches the list of approved drivers and agents from `/api/admin/staff`.
 * **Auth Repository**:
+  * `AuthRepository.registerAgent(...)`: Calls `POST /api/auth/register/agent` using multipart form data and the file keys `commercialRegisterImage` and `nationalIdImage`.
   * `AuthRepository.updateProfile(String firstName, String lastName, String phone)`: Calls `PUT /api/users/profile` to update user account info.
   * `AuthRepository.forgotPassword(String email)`: Calls `POST /api/auth/forgot-password` to initiate recovery.
   * `AuthRepository.resetPassword(String email, String token, String newPassword)`: Calls `POST /api/auth/reset-password` to update credentials.
+* **Driver Registration Screen**:
+  * Calls `POST /api/auth/register/driver` using multipart form data and the file keys `nationalIdImage`, `driverLicenseImage`, and `vehicleImage`.
+* **API Client**:
+  * `BaseApiClient.defaultBaseUrl`: Uses `BRIGHTCLEAN_API_BASE_URL` when supplied; otherwise resolves emulator/desktop defaults to avoid hardcoded production assumptions.
 
 ### 18.3 Core Methods List
 
 * **OrderProvider**:
   * `createBooking`: Sends a request to the backend with selected service items and laundry agent ID, creating a new `Draft` booking and saving the `BookingID` in local state.
+  * `submitOrder`: Submits the current draft booking and locks the server total; it intentionally preserves the cart until payment succeeds.
+  * `completeCheckoutAfterPayment`: Saves the local order, persists it locally, clears the cart, and resets the current booking ID after the payment response confirms success.
 
 * **AdminProvider**:
   * `fetchApprovedStaff`: Calls the admin repository to retrieve all approved laundry agents and delivery staff, caching the results in local state for dashboard views.
 
 * **AuthProvider**:
+  * `registerAgent`: Submits registration fields and required agent document images via multipart form data.
   * `updateProfile`: Updates the logged-in user's first name, last name, and phone number on the server, and updates the local storage cache (`user_name` and `user_phone`).
   * `forgotPassword`: Submits the user's email to request a temporary OTP code for password reset.
   * `resetPassword`: Submits the verified OTP code alongside the new password to complete the password reset flow.

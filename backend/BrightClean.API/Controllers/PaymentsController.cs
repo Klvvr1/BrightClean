@@ -26,70 +26,102 @@ namespace BrightClean.API.Controllers
         [HttpPost]
         public async Task<IActionResult> CreatePayment([FromBody] CreatePaymentDto dto)
         {
-            // Extract ClientID securely from JWT claims — never from the request body
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
             if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out var clientId))
             {
                 return Unauthorized();
             }
 
-            // Validate the Booking exists and belongs to the authenticated client
+            if (!Enum.TryParse<PaymentMethod>(dto.Method, ignoreCase: true, out var paymentMethod))
+            {
+                return BadRequest(new { message = $"Payment method '{dto.Method}' is not supported." });
+            }
+
+            // Validate that the parsed enum value is defined (reject numeric strings for undefined members)
+            if (!Enum.IsDefined(typeof(PaymentMethod), paymentMethod))
+            {
+                return BadRequest(new { message = $"Payment method '{dto.Method}' is not a valid payment method." });
+            }
+
+            using var transaction = await _context.Database.BeginTransactionAsync();
+
             var booking = await _context.Bookings
                 .Include(b => b.Payment)
+                .Include(b => b.Client)
                 .Include(b => b.BookingItems)
                 .FirstOrDefaultAsync(b => b.BookingID == dto.BookingID);
 
             if (booking == null)
             {
-                return NotFound(new { message = $"الحجز ذو المعرّف {dto.BookingID} غير موجود." });
+                return NotFound(new { message = $"Booking {dto.BookingID} was not found." });
             }
 
             if (booking.ClientID != clientId)
             {
-                return StatusCode(403, new { message = "غير مسموح: هذا الحجز لا ينتمي لحسابك." });
+                return StatusCode(403, new { message = "This booking does not belong to the authenticated client." });
             }
 
-            // Prevent duplicate payments for the same booking (one-to-one constraint)
             if (booking.Payment != null)
             {
-                return Conflict(new { message = "تم تسجيل دفعة لهذا الحجز مسبقاً." });
+                return Conflict(new { message = "A payment already exists for this booking." });
             }
 
-            // Parse payment method (map string to enum)
-            if (!Enum.TryParse<PaymentMethod>(dto.Method, ignoreCase: true, out var paymentMethod))
+            if (booking.Status != BookingStatus.Pending)
             {
-                return BadRequest(new { message = $"طريقة الدفع '{dto.Method}' غير مدعومة. الأساليب المتاحة: CreditCard, Cash, Wallet, BankTransfer." });
+                return BadRequest(new { message = "Only pending bookings can be paid." });
             }
 
-            // Validate payment amount against server-side booking total
-            decimal bookingTotal = booking.FinalTotal ?? 0m;
-            if (Math.Abs(dto.Amount - bookingTotal) > 0.01m) // Allow for minor rounding differences
+            if (!booking.FinalTotal.HasValue)
             {
-                return BadRequest(new { message = $"المبلغ المدفوع ({dto.Amount}) لا يطابق المبلغ المستحق ({bookingTotal})." });
+                return BadRequest(new { message = "Booking total has not been calculated. Submit the booking before payment." });
             }
 
-            // ARCHITECTURAL RULE: Insert Payment record with its own status.
-            // We do NOT update Booking.Status — it is strictly operational.
+            var bookingTotal = booking.FinalTotal.Value;
+            if (Math.Abs(dto.Amount - bookingTotal) > 0.01m)
+            {
+                return BadRequest(new { message = $"Paid amount ({dto.Amount}) does not match booking total ({bookingTotal})." });
+            }
+
+            var paymentStatus = paymentMethod == PaymentMethod.Cash || paymentMethod == PaymentMethod.BankTransfer
+                ? PaymentStatus.Pending
+                : PaymentStatus.Success;
+
+            if (paymentMethod == PaymentMethod.Wallet)
+            {
+                if (booking.Client.WalletBalance < bookingTotal)
+                {
+                    return BadRequest(new { message = "Insufficient wallet balance." });
+                }
+
+                booking.Client.WalletBalance -= bookingTotal;
+            }
+
             var payment = new Payment
             {
                 BookingID = dto.BookingID,
-                Amount = bookingTotal, // Use server-side amount
+                Amount = bookingTotal,
                 Method = paymentMethod,
-                Status = PaymentStatus.Success,
+                Status = paymentStatus,
                 TransactionRef = dto.TransactionRef,
-                PaidAt = DateTime.UtcNow
+                PaidAt = paymentStatus == PaymentStatus.Success ? DateTime.UtcNow : null
             };
 
             _context.Payments.Add(payment);
             await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
 
             return Ok(new
             {
                 paymentID = payment.PaymentID,
                 bookingID = payment.BookingID,
+                amount = payment.Amount,
+                method = payment.Method.ToString(),
                 status = payment.Status.ToString(),
                 paidAt = payment.PaidAt,
-                message = "تم تسجيل الدفعة بنجاح."
+                walletBalance = paymentMethod == PaymentMethod.Wallet ? booking.Client.WalletBalance : (decimal?)null,
+                message = payment.Status == PaymentStatus.Success
+                    ? "Payment recorded successfully."
+                    : "Payment was recorded and is pending confirmation."
             });
         }
     }
@@ -98,10 +130,6 @@ namespace BrightClean.API.Controllers
     {
         public int BookingID { get; set; }
         public decimal Amount { get; set; }
-
-        /// <summary>
-        /// Accepts: "CreditCard", "Cash", "Wallet", or "BankTransfer"
-        /// </summary>
         public string Method { get; set; } = "Cash";
         public string? TransactionRef { get; set; }
     }

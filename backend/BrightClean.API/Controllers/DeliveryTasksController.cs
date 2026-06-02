@@ -27,6 +27,12 @@ namespace BrightClean.API.Controllers
         [HttpGet("pool")]
         public async Task<IActionResult> GetTaskPool()
         {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out var driverId))
+            {
+                return Unauthorized();
+            }
+
             var pool = await _context.DeliveryTasks
                 .Include(t => t.Booking)
                 .Include(t => t.PickupAddress)
@@ -39,7 +45,7 @@ namespace BrightClean.API.Controllers
                         prev.StageNumber == 1 &&
                         prev.Status == DeliveryTaskStatus.Completed) &&
                      _context.Bookings.Any(b => b.BookingID == t.BookingID && b.Status == BookingStatus.Ready)))) ||
-                    t.Status == DeliveryTaskStatus.Assigned)
+                    (t.Status == DeliveryTaskStatus.Assigned && t.DeliveryStaffID == driverId))
                 .ToListAsync();
 
             return Ok(pool);

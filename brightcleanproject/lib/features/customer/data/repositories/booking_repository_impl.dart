@@ -13,6 +13,11 @@ class BookingRepositoryImpl implements BookingRepository {
     try {
       final response = await apiClient.get('/api/bookings/agent/$agentId/pending');
       
+      if (response is List) {
+        return response
+            .map((item) => BookingModel.fromJson(item as Map<String, dynamic>))
+            .toList();
+      }
       if (response != null && response is Map<String, dynamic> && response.containsKey('value')) {
         final list = response['value'] as List<dynamic>;
         return list
@@ -44,11 +49,20 @@ class BookingRepositoryImpl implements BookingRepository {
   }
 
   @override
-  Future<double?> submitBooking(int bookingId) async {
+  Future<double?> submitBooking(
+    int bookingId, {
+    DateTime? scheduledAt,
+    String? specialInstructions,
+  }) async {
     try {
       final response = await apiClient.post(
         '/api/bookings/submit',
-        body: {'bookingID': bookingId},
+        body: {
+          'bookingID': bookingId,
+          if (scheduledAt != null) 'scheduledAt': scheduledAt.toIso8601String(),
+          if (specialInstructions != null && specialInstructions.isNotEmpty)
+            'specialInstructions': specialInstructions,
+        },
       );
       debugPrint('📦 submitBooking response type: ${response.runtimeType}');
       debugPrint('📦 submitBooking response: $response');
@@ -69,7 +83,13 @@ class BookingRepositoryImpl implements BookingRepository {
   }
 
   @override
-  Future<int> createBooking(int laundryAgentID, List<Map<String, int>> items, {int? addressID}) async {
+  Future<int> createBooking(
+    int laundryAgentID,
+    List<Map<String, int>> items, {
+    int? addressID,
+    DateTime? scheduledAt,
+    String? specialInstructions,
+  }) async {
     try {
       final response = await apiClient.post(
         '/api/bookings',
@@ -77,6 +97,9 @@ class BookingRepositoryImpl implements BookingRepository {
           'laundryAgentID': laundryAgentID,
           'items': items,
           if (addressID != null) 'addressID': addressID,
+          if (scheduledAt != null) 'scheduledAt': scheduledAt.toIso8601String(),
+          if (specialInstructions != null && specialInstructions.isNotEmpty)
+            'specialInstructions': specialInstructions,
         },
       );
       if (response != null && response is Map<String, dynamic>) {

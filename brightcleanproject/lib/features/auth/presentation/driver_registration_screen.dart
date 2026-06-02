@@ -9,7 +9,6 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_radius.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/widgets/map_picker_screen.dart';
-import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../../../../core/network/api_client.dart';
 
@@ -34,6 +33,7 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController = TextEditingController();
   final TextEditingController _dobController = TextEditingController();
+  final TextEditingController _nationalIdController = TextEditingController();
   final TextEditingController _plateNumberController = TextEditingController();
 
   final TextEditingController _carCompanyController = TextEditingController();
@@ -64,6 +64,7 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     _dobController.dispose();
+    _nationalIdController.dispose();
     _plateNumberController.dispose();
     _carCompanyController.dispose();
     _carModelController.dispose();
@@ -138,6 +139,14 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
     }
     if (!RegExp(r'^[0-9]{9}$').hasMatch(value)) {
       return 'الرجاء إدخال رقم هاتف يمني صالح مكون من 9 أرقام';
+    }
+    return null;
+  }
+
+  String? _validateNationalId(String? value) {
+    if (value == null || value.trim().isEmpty) return 'رقم الهوية الوطنية مطلوب';
+    if (!RegExp(r'^[0-9]{10}$').hasMatch(value.trim())) {
+      return 'يجب أن يتكون رقم الهوية من 10 أرقام';
     }
     return null;
   }
@@ -228,65 +237,45 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
 
         final String phoneNo = _phoneController.text.trim();
 
-        // Construct exact payload for RegisterDriverDto
-        final Map<String, dynamic> payload = {
-          'FirstName': _firstNameController.text.trim(),
-          'LastName': _lastNameController.text.trim(),
-          'Email': _emailController.text.trim(),
-          'Password': _passwordController.text, // raw password
-          'PhoneNo': phoneNo,
-          'DateOfBirth': _dobController.text.trim(),
-          'FatherName': _fatherNameController.text.trim(),
-          'GrandfatherName': _grandfatherNameController.text.trim(),
-          'NationalIDNumber': phoneNo, // Unique and 10 digits
-          'VehicleType': vehicleTypeVal,
-          'VehicleMake': _selectedVehicleType == 'سيارة' ? _carCompanyController.text.trim() : (_selectedVehicleType ?? ''),
-          'VehicleModel': _selectedVehicleType == 'سيارة' ? _carModelController.text.trim() : (_selectedVehicleType ?? ''),
-          'PlateNumber': _plateNumberController.text.trim(),
-          'BankAcc': 'SA$phoneNo',
-        };
+        final vehicleModel = _selectedVehicleType == 'سيارة'
+            ? '${_carModelController.text.trim()} ${_carYearController.text.trim()}'.trim()
+            : (_selectedVehicleType ?? '');
 
-        final response = await http.post(
-          Uri.parse('${BaseApiClient.defaultBaseUrl}/api/auth/register/driver'),
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
+        await BaseApiClient().postMultipart(
+          '/api/auth/register/driver',
+          fields: {
+            'FirstName': _firstNameController.text.trim(),
+            'LastName': _lastNameController.text.trim(),
+            'Email': _emailController.text.trim(),
+            'Password': _passwordController.text,
+            'PhoneNo': phoneNo,
+            'DateOfBirth': _dobController.text.trim(),
+            'FatherName': _fatherNameController.text.trim(),
+            'GrandfatherName': _grandfatherNameController.text.trim(),
+            'NationalIDNumber': _nationalIdController.text.trim(),
+            'VehicleType': vehicleTypeVal.toString(),
+            'VehicleMake': _selectedVehicleType == 'سيارة'
+                ? _carCompanyController.text.trim()
+                : (_selectedVehicleType ?? ''),
+            'VehicleModel': vehicleModel,
+            'PlateNumber': _plateNumberController.text.trim(),
+            'BankAcc': 'SA$phoneNo',
           },
-          body: json.encode(payload),
-        ).timeout(const Duration(seconds: 30));
+          files: [
+            await http.MultipartFile.fromPath('nationalIdImage', _idImage!.path),
+            await http.MultipartFile.fromPath('driverLicenseImage', _licenseImage!.path),
+            await http.MultipartFile.fromPath('vehicleImage', _carImage!.path),
+          ],
+        );
 
-        // Log non-sensitive metadata only
-        debugPrint('Driver registration response: status ${response.statusCode}');
-
-        if (response.statusCode == 200 || response.statusCode == 201) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('تم التسجيل بنجاح!'),
-                backgroundColor: AppColors.success,
-              ),
-            );
-            context.go('/login');
-          }
-        } else {
-          String errorMsg = response.body;
-          try {
-            final Map<String, dynamic> decoded = json.decode(response.body);
-            if (decoded.containsKey('message')) {
-              errorMsg = decoded['message'].toString();
-            } else if (decoded.containsKey('error')) {
-              errorMsg = decoded['error'].toString();
-            }
-          } catch (_) {}
-
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('فشل التسجيل: $errorMsg'),
-                backgroundColor: Theme.of(context).colorScheme.error,
-              ),
-            );
-          }
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('تم التسجيل بنجاح!'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+          context.go('/login');
         }
       } catch (e) {
         if (mounted) {
@@ -467,6 +456,17 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
                       validator: (v) => v == null || v.isEmpty ? 'يرجى اختيار تاريخ الميلاد' : null,
                     ),
                   ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                CustomTextField(
+                  controller: _nationalIdController,
+                  hintText: 'رقم الهوية الوطنية',
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(10),
+                  ],
+                  validator: _validateNationalId,
                 ),
                 const SizedBox(height: AppSpacing.xl),
 
