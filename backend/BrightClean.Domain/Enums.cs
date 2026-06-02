@@ -37,6 +37,13 @@ namespace BrightClean.Domain.Enums
         CommercialRegistration
     }
 
+    public enum DocumentReviewStatus
+    {
+        Pending = 0,
+        Approved = 1,
+        Rejected = 2
+    }
+
     public enum ServiceCategory
     {
         Laundry,
@@ -109,10 +116,12 @@ namespace BrightClean.Domain.Enums
 
     public enum PaymentStatus
     {
-        Pending,
-        Success,
-        Failed,
-        Refunded
+        Pending = 0,
+        Success = 1,
+        Failed = 2,
+        Refunded = 3,
+        PendingReview = 4,
+        Collected = 5
     }
 
     public enum OfferType

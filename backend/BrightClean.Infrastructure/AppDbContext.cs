@@ -108,9 +108,28 @@ namespace BrightClean.Infrastructure
                 .HasIndex(p => p.BookingID)
                 .IsUnique();
 
+            modelBuilder.Entity<Payment>()
+                .HasIndex(p => p.Status);
+
+            modelBuilder.Entity<Payment>()
+                .HasIndex(p => p.Method);
+
+            modelBuilder.Entity<Payment>()
+                .HasIndex(p => p.CreatedAt);
+
+            modelBuilder.Entity<Payment>()
+                .Property(p => p.CreatedAt)
+                .HasDefaultValueSql("GETUTCDATE()");
+
             modelBuilder.Entity<BookingRating>()
                 .HasIndex(r => r.BookingID)
                 .IsUnique();
+
+            modelBuilder.Entity<UserDocument>()
+                .HasIndex(ud => new { ud.UserID, ud.Type });
+
+            modelBuilder.Entity<UserDocument>()
+                .HasIndex(ud => ud.ReviewStatus);
 
             // --- 3. Cascade Delete Protection (Restrict/NoAction) ---
 
@@ -182,6 +201,18 @@ namespace BrightClean.Infrastructure
                 .WithMany(u => u.Documents)
                 .HasForeignKey(ud => ud.UserID)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<UserDocument>()
+                .HasOne(ud => ud.ReviewedByAdmin)
+                .WithMany()
+                .HasForeignKey(ud => ud.ReviewedByAdminID)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Payment>()
+                .HasOne(p => p.ReviewedByAdmin)
+                .WithMany()
+                .HasForeignKey(p => p.ReviewedByAdminID)
+                .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<Notification>()
                 .HasOne(n => n.User)

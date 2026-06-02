@@ -24,6 +24,11 @@ namespace BrightClean.Domain.Entities
         [Required]
         public int TargetID { get; set; }
 
+        public string? Details { get; set; }
+
+        [MaxLength(64)]
+        public string? IpAddress { get; set; }
+
         [Required]
         public DateTime PerformedAt { get; set; } = DateTime.UtcNow;
     }

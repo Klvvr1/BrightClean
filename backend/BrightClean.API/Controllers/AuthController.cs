@@ -146,14 +146,22 @@ namespace BrightClean.API.Controllers
                 {
                     Type = DocumentType.CommercialRegistration,
                     FileURL = crRelativeUrl,
-                    UploadedAt = DateTime.UtcNow
+                    UploadedAt = DateTime.UtcNow,
+                    OriginalFileName = System.IO.Path.GetFileName(commercialRegisterImage.FileName),
+                    ContentType = commercialRegisterImage.ContentType,
+                    FileSizeBytes = commercialRegisterImage.Length,
+                    ReviewStatus = DocumentReviewStatus.Pending
                 });
 
                 agent.Documents.Add(new UserDocument
                 {
                     Type = DocumentType.NationalID,
                     FileURL = idRelativeUrl,
-                    UploadedAt = DateTime.UtcNow
+                    UploadedAt = DateTime.UtcNow,
+                    OriginalFileName = System.IO.Path.GetFileName(nationalIdImage.FileName),
+                    ContentType = nationalIdImage.ContentType,
+                    FileSizeBytes = nationalIdImage.Length,
+                    ReviewStatus = DocumentReviewStatus.Pending
                 });
 
                 _context.LaundryAgents.Add(agent);
@@ -251,21 +259,33 @@ namespace BrightClean.API.Controllers
             {
                 Type = DocumentType.NationalID,
                 FileURL = nationalIdUrl,
-                UploadedAt = DateTime.UtcNow
+                UploadedAt = DateTime.UtcNow,
+                OriginalFileName = System.IO.Path.GetFileName(nationalIdImage.FileName),
+                ContentType = nationalIdImage.ContentType,
+                FileSizeBytes = nationalIdImage.Length,
+                ReviewStatus = DocumentReviewStatus.Pending
             });
 
             driver.Documents.Add(new UserDocument
             {
                 Type = DocumentType.DriverLicense,
                 FileURL = licenseUrl,
-                UploadedAt = DateTime.UtcNow
+                UploadedAt = DateTime.UtcNow,
+                OriginalFileName = System.IO.Path.GetFileName(driverLicenseImage.FileName),
+                ContentType = driverLicenseImage.ContentType,
+                FileSizeBytes = driverLicenseImage.Length,
+                ReviewStatus = DocumentReviewStatus.Pending
             });
 
             driver.Documents.Add(new UserDocument
             {
                 Type = DocumentType.VehicleImage,
                 FileURL = vehicleUrl,
-                UploadedAt = DateTime.UtcNow
+                UploadedAt = DateTime.UtcNow,
+                OriginalFileName = System.IO.Path.GetFileName(vehicleImage.FileName),
+                ContentType = vehicleImage.ContentType,
+                FileSizeBytes = vehicleImage.Length,
+                ReviewStatus = DocumentReviewStatus.Pending
             });
 
             _context.DeliveryStaffs.Add(driver);
