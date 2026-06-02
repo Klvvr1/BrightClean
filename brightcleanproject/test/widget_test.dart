@@ -17,9 +17,15 @@ void main() {
       MultiProvider(
         providers: [
           ChangeNotifierProvider(create: (_) => AuthProvider()),
-          ChangeNotifierProvider(create: (_) => OrderProvider()),
-          ChangeNotifierProvider(create: (_) => ReviewProvider()),
           ChangeNotifierProvider(create: (_) => CartProvider()),
+          ChangeNotifierProxyProvider<CartProvider, OrderProvider>(
+            create: (ctx) => OrderProvider(
+              cartProvider: Provider.of<CartProvider>(ctx, listen: false),
+            ),
+            update: (ctx, cart, previous) =>
+                previous ?? OrderProvider(cartProvider: cart),
+          ),
+          ChangeNotifierProvider(create: (_) => ReviewProvider()),
           ChangeNotifierProvider(create: (_) => DriverProvider()),
           ChangeNotifierProvider(create: (_) => AdminProvider()),
           ChangeNotifierProvider(create: (_) => NotificationProvider()),

@@ -91,6 +91,16 @@ class BaseApiClient {
       }
       return null;
     } else {
+      if (response.statusCode == 401) {
+        unawaited(_secureStorage.delete(key: 'auth_token'));
+        final authHeader = response.headers['www-authenticate'];
+        debugPrint('Authentication failed: $authHeader');
+        throw ServerException(
+          message: 'انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى.',
+          statusCode: response.statusCode,
+        );
+      }
+
       String errorMessage =
           'Server responded with status code ${response.statusCode}';
       try {
@@ -168,7 +178,8 @@ class BaseApiClient {
   }) async {
     final url = _buildUrl(endpoint);
     final headers = await _getHeaders();
-    headers.remove('Content-Type'); // http.MultipartRequest handles this boundary automatically
+    headers.remove(
+        'Content-Type'); // http.MultipartRequest handles this boundary automatically
 
     final request = http.MultipartRequest('POST', url);
     request.headers.addAll(headers);
@@ -182,17 +193,18 @@ class BaseApiClient {
     final isSensitive = path.contains('/register') || path.contains('/login');
 
     if (isSensitive) {
-      debugPrint('Fields: [REDACTED - sensitive endpoint, keys: ${request.fields.keys.toList()}]');
+      debugPrint(
+          'Fields: [REDACTED - sensitive endpoint, keys: ${request.fields.keys.toList()}]');
     } else {
       debugPrint('Fields: ${request.fields}');
     }
 
-    debugPrint('Files: ${request.files.map((f) => "${f.field}: ${f.filename}").toList()}');
+    debugPrint(
+        'Files: ${request.files.map((f) => "${f.field}: ${f.filename}").toList()}');
 
     try {
-      final streamedResponse = await _client
-          .send(request)
-          .timeout(const Duration(seconds: 15));
+      final streamedResponse =
+          await _client.send(request).timeout(const Duration(seconds: 15));
       final response = await http.Response.fromStream(streamedResponse);
       return _processResponse(response);
     } catch (e) {

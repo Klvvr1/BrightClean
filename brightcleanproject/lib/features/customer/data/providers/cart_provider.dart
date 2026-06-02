@@ -5,23 +5,27 @@ import '../../domain/models/cart_item.dart';
 class CartProvider with ChangeNotifier {
   List<CartItem> _items = [];
 
-  CartProvider() {
-    _loadCartItems();
+  CartProvider({bool loadFromDb = true}) {
+    if (loadFromDb) {
+      _loadCartItems();
+    }
   }
 
   Future<void> _loadCartItems() async {
     try {
       final db = await DatabaseHelper.instance.database;
       final maps = await db.query('cart_items');
-      _items = maps.map((map) => CartItem(
-        id: map['id'] as String,
-        serviceName: map['serviceName'] as String,
-        selectedType: map['selectedType'] as String,
-        quantity: map['quantity'] as int,
-        pricePerUnit: map['pricePerUnit'] as double,
-        totalPrice: map['totalPrice'] as double,
-        serviceId: map['serviceId'] as int? ?? 1,
-      )).toList();
+      _items = maps
+          .map((map) => CartItem(
+                id: map['id'] as String,
+                serviceName: map['serviceName'] as String,
+                selectedType: map['selectedType'] as String,
+                quantity: map['quantity'] as int,
+                pricePerUnit: map['pricePerUnit'] as double,
+                totalPrice: map['totalPrice'] as double,
+                serviceId: map['serviceId'] as int? ?? 1,
+              ))
+          .toList();
       notifyListeners();
     } catch (e) {
       debugPrint('Error loading cart items: $e');
@@ -29,7 +33,6 @@ class CartProvider with ChangeNotifier {
   }
 
   List<CartItem> get items => [..._items];
-
   int get itemCount => _items.length;
 
   double get totalAmount {
@@ -48,52 +51,40 @@ class CartProvider with ChangeNotifier {
     required double totalPrice,
     required int serviceId,
   }) async {
-    // Validate inputs
-    if (quantity <= 0) {
-      throw ArgumentError('Quantity must be greater than 0');
-    }
+    if (quantity <= 0) throw ArgumentError('Quantity must be greater than 0');
     if (pricePerUnit < 0) {
       throw ArgumentError('Price per unit must be non-negative');
     }
 
-    // Compute expected total internally (do not trust caller-supplied totalPrice)
     final expectedTotal = quantity * pricePerUnit;
-
-    // Check if same service and type already in cart
     final existingIndex = _items.indexWhere(
-      (item) => item.serviceName == serviceName && item.selectedType == selectedType
+      (item) =>
+          item.serviceName == serviceName && item.selectedType == selectedType,
     );
 
     if (existingIndex >= 0) {
-      // Update existing item
       final oldItem = _items[existingIndex];
-      final newQuantity = oldItem.quantity + quantity;
-      final newTotal = oldItem.totalPrice + expectedTotal;
       _items[existingIndex] = CartItem(
         id: oldItem.id,
         serviceName: serviceName,
         selectedType: selectedType,
-        quantity: newQuantity,
+        quantity: oldItem.quantity + quantity,
         pricePerUnit: pricePerUnit,
-        totalPrice: newTotal,
+        totalPrice: oldItem.totalPrice + expectedTotal,
         serviceId: serviceId,
       );
     } else {
-      // Add new item
-      _items.add(
-        CartItem(
-          id: DateTime.now().toString(),
-          serviceName: serviceName,
-          selectedType: selectedType,
-          quantity: quantity,
-          pricePerUnit: pricePerUnit,
-          totalPrice: expectedTotal,
-          serviceId: serviceId,
-        ),
-      );
+      _items.add(CartItem(
+        id: DateTime.now().toString(),
+        serviceName: serviceName,
+        selectedType: selectedType,
+        quantity: quantity,
+        pricePerUnit: pricePerUnit,
+        totalPrice: expectedTotal,
+        serviceId: serviceId,
+      ));
     }
-    
-    // Persist to DB
+
     await _saveToDb();
     notifyListeners();
   }
@@ -126,9 +117,31 @@ class CartProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  /// المسح العادي — يُطلق notifyListeners() لتحديث الواجهة.
   Future<void> clearCart() async {
     _items.clear();
     await _saveToDb();
     notifyListeners();
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // clearCartSilently — الإصلاح الجذري لمشكلة RenderBox crash
+  //
+  // المشكلة:
+  //   submitOrder في OrderProvider يحذف cart_items من DB مباشرة
+  //   بـ db.delete('cart_items') متجاوزاً CartProvider كلياً.
+  //   لكن CartProvider._items لا تزال مليئة، فعند أي تفاعل لاحق
+  //   يستدعي notifyListeners() ويُعيد بناء CheckoutScreen
+  //   أثناء الـ navigation → RenderBox لم يُحدَّد حجمه → crash.
+  //
+  // الحل:
+  //   استخدم هذه الدالة من submitOrder بدلاً من db.delete مباشرة.
+  //   تمسح _items وتحفظ في DB لكن بدون notifyListeners() لأن
+  //   CheckoutScreen ستغادر فوراً ولا يجب إعادة بنائها.
+  // ─────────────────────────────────────────────────────────────────────────
+  Future<void> clearCartSilently() async {
+    _items.clear();
+    await _saveToDb();
+    // ❌ لا notifyListeners() هنا عن قصد
   }
 }
