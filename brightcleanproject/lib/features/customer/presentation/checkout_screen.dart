@@ -1029,9 +1029,10 @@ class _CheckoutBottomBarState extends State<_CheckoutBottomBar> {
             widget.selectedAgentId!,
             itemsDto,
             addressID: addressId,
-            scheduledAt: widget.selectedDate,
-            // TODO: Add dedicated pickupSlot field to backend API instead of using specialInstructions
-            specialInstructions: widget.locationDescription,
+            scheduledAt: widget.selectedDate?.toUtc(),
+            specialInstructions: widget.locationDescription.isNotEmpty
+                ? widget.locationDescription
+                : null,
             notifyOnStateChange: false,
           );
         } else {
@@ -1041,23 +1042,26 @@ class _CheckoutBottomBarState extends State<_CheckoutBottomBar> {
 
       final serverFinalTotal = await orderProvider.submitOrder(
         bookingId,
-        scheduledAt: widget.selectedDate,
-        // TODO: Add dedicated pickupSlot field to backend API instead of using specialInstructions
-        specialInstructions: widget.locationDescription,
+        // إرسال UTC صريح لتجنب خطأ 400 "تاريخ في الماضي" بسبب offset المنطقة الزمنية
+        scheduledAt: widget.selectedDate?.toUtc(),
+        specialInstructions: widget.locationDescription.isNotEmpty
+            ? widget.locationDescription
+            : null,
         notifyOnStateChange: false,
       );
+      // نستخدم القيمة التي أرجعها السيرفر من /submit مباشرةً لضمان مطابقة decimal
+      // إعادة حساب المبلغ بـ double تُسبب 400 بسبب floating-point vs decimal mismatch
       final paymentAmount = serverFinalTotal ?? capturedFinalPrice;
 
       final methodMap = {
         'cash': 'Cash',
         'bank_transfer': 'BankTransfer',
-        'wallet': 'Wallet'
+        'wallet': 'Wallet',
       };
       await widget.apiClient.post('/api/payments', body: {
         'bookingID': bookingId,
         'amount': paymentAmount,
         'method': methodMap[capturedPaymentMethod] ?? 'Cash',
-        'transactionRef': null,
       });
 
       await orderProvider.completeCheckoutAfterPayment(
