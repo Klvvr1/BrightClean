@@ -1,6 +1,6 @@
 # Laundry Platform — Class Diagram Documentation
 
-> **Version:** 6.6 — Durable Payment, Document & Audit Workflow Updated
+> **Version:** 6.8 — Server-Backed Frontend Data Flow Updated
 > **Last Updated:** June 2026
 > **Diagram Type:** UML Class Diagram
 > **Architecture Pattern:** Table Per Type (TPT) Inheritance + Rich Junction Entities
@@ -31,6 +31,20 @@
 > **Changelog v6.7 (Development Transport Stability):**
 > - HTTPS redirection is disabled by default in Development to prevent Flutter `POST` requests to `http://localhost:5135` / `10.0.2.2:5135` from receiving `307 Temporary Redirect`
 > - Flutter API client now reports HTTP 307/308 redirects with an explicit API URL/protocol configuration message
+>
+> **Changelog v6.8 (Phase 5 Server-Backed Data Updates):**
+> - Added DTO-safe `GET /api/bookings/my` for customer order history; `Draft` bookings are excluded from order history
+> - Added public agent details, ratings summary, recent review, and agent service ID data for frontend filtering
+> - Added `GET /api/services/agents/{agentId}` to expose only active services supported by the selected available agent
+> - Admin pending and approved staff APIs now include real document metadata/URLs and role-specific fields
+> - Flutter order history now loads from backend bookings instead of debug/demo local orders
+> - Flutter service selection no longer falls back to `serviceId = 1`; invalid catalog mappings are blocked before checkout
+> - Agent selection and checkout filter agents by required backend service IDs
+> - Added `GET /api/users/me` so role dashboards can load server-backed profile data instead of relying on `SharedPreferences`
+> - Added `GET /api/bookings/agent/my` for laundry-agent order lists and wired the agent dashboard to server-backed bookings
+> - Added agent order actions `POST /api/bookings/{bookingId}/reject` and `POST /api/bookings/{bookingId}/start`; existing accept/ready actions are now called from Flutter instead of simulated delays
+> - Customer ratings are only cached locally after the backend rating API succeeds; default seeded local reviews are no longer shown for empty review history
+> - Added authenticated `POST /api/auth/change-password`; the Flutter change-password screen no longer uses simulated success
 >
 > **Changelog v6.2:**
 > - `SystemStatus.Reason` removed — `Message` is the sole public-facing explanation shown on the login screen
@@ -998,6 +1012,11 @@ LIMIT 1
 - `ExpiresAt` is set at Draft creation — a background job hard-deletes expired Draft bookings and their items automatically
 - Transition from `Draft` → `Pending` locks `FinalTotal` and opens the order for agent acceptance
 
+### Agent Booking Operation Rules
+- Laundry agents can reject only their own `Pending` bookings; rejected bookings move to `Cancelled`
+- Laundry agents can move only their own `Accepted` bookings to `InProgress`
+- Flutter agent dashboards must load orders through `GET /api/bookings/agent/my`; local mock order state is not authoritative
+
 ### Payment Rules
 - One payment per booking — enforced by `UNIQUE` constraint on `Payment.BookingID`
 - Full payment only — no installments or partial amounts
@@ -1043,6 +1062,7 @@ LIMIT 1
 - Clients only see services where both `AccountStatus = Active` and `AgentService.IsActive = true`
 - Booking creation rejects agents that are unapproved, inactive, store-closed, or missing any requested active service subscription
 - All `BookingItem` records must reference services in the selected agent's active subscriptions
+- Frontend cart and direct checkout must use real backend `ServiceID` values from the catalog; placeholder/fallback IDs are rejected before checkout
 
 ### Rating Rules
 - Rating only submittable when `Booking.Status = Completed`
@@ -1165,6 +1185,7 @@ State providers manage application state and coordinate data flow between the us
 | Provider | Purpose / Scope | Key Method | Description |
 |---|---|---|---|
 | `OrderProvider` | Manages cart state, active bookings, and checkout transactions | `createBooking(int laundryAgentID, List<Map<String, int>> items, DateTime? scheduledAt, String? specialInstructions)` | Contacts the checkout API to create a booking draft, including optional scheduling metadata, and stores the resulting booking ID in local state. |
+| | | `fetchMyOrders()` | Loads customer order history from `GET /api/bookings/my`, maps server bookings into `Order`, and refreshes the local cache. |
 | | | `submitOrder(..., DateTime? scheduledAt, String? specialInstructions)` | Submits the booking to lock the server-side total, but does not clear cart or save the local order before payment succeeds. |
 | | | `completeCheckoutAfterPayment(Order localOrder)` | Saves the local order and clears the cart only after the payment API returns a successful workflow response. |
 | `AdminProvider` | Handles administrative tasks such as pending users and active staff oversight | `fetchApprovedStaff()` | Retrieves the list of all approved laundry agents and drivers from the administrative staff API. |
@@ -1179,14 +1200,31 @@ State providers manage application state and coordinate data flow between the us
 Repositories serve as the data access layer, abstracting direct API communication with the backend.
 
 * **Order / Booking Repository**:
+  * `BookingRepository.getMyBookings()`: Calls `GET /api/bookings/my` to load server-backed customer order history.
   * `BookingRepository.createBooking(int laundryAgentID, List<Map<String, int>> items, DateTime? scheduledAt, String? specialInstructions)`: Submits items and optional scheduling fields to the booking creation API.
   * `BookingRepository.submitBooking(int bookingId, DateTime? scheduledAt, String? specialInstructions)`: Locks the draft booking total and moves it to `Pending` without modifying frontend cart state.
   * `BookingRepository.getPendingBookings()`: Parses both raw list responses and wrapped list responses defensively for backward compatibility.
+* **Agent / Service Catalog APIs**:
+  * `GET /api/users/agents`: Returns approved, active, open agents with address, rating summary, recent reviews, and supported `serviceIds`.
+  * `GET /api/users/agents/{agentId}`: Returns public agent details, services, and recent reviews.
+  * `GET /api/users/agents/{agentId}/ratings-summary`: Returns rating distribution and average rating for the agent.
+  * `GET /api/services/agents/{agentId}`: Returns only active catalog services that the selected available agent provides.
+* **Agent Booking Repository**:
+  * `AgentBookingRepository.getMyBookings()`: Calls `GET /api/bookings/agent/my` to load the authenticated laundry agent's real bookings.
+  * `AgentBookingRepository.acceptBooking(int bookingId)`: Calls `POST /api/bookings/{bookingId}/accept` and relies on backend task creation rules.
+  * `AgentBookingRepository.rejectBooking(int bookingId, String reason)`: Calls `POST /api/bookings/{bookingId}/reject` to cancel a pending booking with a rejection reason.
+  * `AgentBookingRepository.startBooking(int bookingId)`: Calls `POST /api/bookings/{bookingId}/start` to move an accepted booking to `InProgress`.
+  * `AgentBookingRepository.markReady(int bookingId)`: Calls `POST /api/bookings/{bookingId}/ready` when processing is complete.
+  * `AgentBookingRepository.toggleStoreStatus()`: Calls `POST /api/bookings/toggle-store-status` and treats the returned server state as authoritative.
+* **Current User API**:
+  * `GET /api/users/me`: Returns authenticated profile data plus role-specific agent or driver details for dashboards and profile screens.
 * **Admin Repository**:
-  * `AdminRepository.getApprovedStaff()`: Fetches the list of approved drivers and agents from `/api/admin/staff`.
+  * `AdminRepository.getPendingApprovals()`: Fetches pending agent/driver approvals with real `UserDocument` metadata and file URLs.
+  * `AdminRepository.getApprovedStaff()`: Fetches approved drivers and agents with real role-specific fields, rating, and document data from `/api/admin/staff`.
 * **Auth Repository**:
   * `AuthRepository.registerAgent(...)`: Calls `POST /api/auth/register/agent` using multipart form data and the file keys `commercialRegisterImage` and `nationalIdImage`.
   * `AuthRepository.updateProfile(String firstName, String lastName, String phone)`: Calls `PUT /api/users/profile` to update user account info.
+  * `POST /api/auth/change-password`: Authenticated password change endpoint; verifies the current password before writing a new BCrypt hash.
   * `AuthRepository.forgotPassword(String email)`: Calls `POST /api/auth/forgot-password` to initiate recovery.
   * `AuthRepository.resetPassword(String email, String token, String newPassword)`: Calls `POST /api/auth/reset-password` to update credentials.
 * **Driver Registration Screen**:
@@ -1198,6 +1236,7 @@ Repositories serve as the data access layer, abstracting direct API communicatio
 
 * **OrderProvider**:
   * `createBooking`: Sends a request to the backend with selected service items and laundry agent ID, creating a new `Draft` booking and saving the `BookingID` in local state.
+  * `fetchMyOrders`: Refreshes order history from the backend and updates the local cache as a secondary store.
   * `submitOrder`: Submits the current draft booking and locks the server total; it intentionally preserves the cart until payment succeeds.
   * `completeCheckoutAfterPayment`: Saves the local order, persists it locally, clears the cart, and resets the current booking ID after the payment response confirms success.
 

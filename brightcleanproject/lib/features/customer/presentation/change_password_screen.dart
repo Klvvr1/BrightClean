@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_radius.dart';
+import '../../../../core/network/api_client.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
   const ChangePasswordScreen({super.key});
@@ -33,29 +34,22 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
 
   // 3. Change Password (Backend Validation)
   Future<bool> _verifyOldPassword(String oldPassword) async {
-    // Pending: Inject VerifyPasswordUseCase and call it here
-    // Example: final response = await authService.verifyPassword(oldPassword);
-    // return response.isValid;
-
-    // Simulate a network delay
-    await Future.delayed(const Duration(seconds: 1));
-
-    // Placeholder: In production, call your authentication backend
-    // to verify the old password
-    return true; // Temporarily accept any password until backend is implemented
+    return oldPassword.isNotEmpty;
   }
 
   Future<bool> _updatePassword(String newPassword) async {
-    // Pending: Inject UpdatePasswordUseCase and call it here
-    // Example: final response = await authService.updatePassword(newPassword);
-    // return response.success;
-
-    // Simulate a network delay
-    await Future.delayed(const Duration(seconds: 1));
-
-    // Placeholder: In production, call your authentication backend
-    // to persist the new password
-    return true; // Temporarily return success until backend is implemented
+    try {
+      await BaseApiClient().post(
+        '/api/auth/change-password',
+        body: {
+          'currentPassword': _oldPasswordController.text,
+          'newPassword': newPassword,
+        },
+      );
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   Future<void> _handleSave() async {

@@ -24,7 +24,7 @@ class ReviewProvider with ChangeNotifier {
           date: DateTime.parse(map['date'] as String),
         )).toList();
       } else {
-        _seedDefaultReviews();
+        _reviews = [];
       }
       notifyListeners();
     } catch (e) {
@@ -32,7 +32,7 @@ class ReviewProvider with ChangeNotifier {
     }
   }
 
-  void _seedDefaultReviews() {
+  void seedDefaultReviews() {
     _reviews = [
       Review(
         userName: 'أحمد محمد',

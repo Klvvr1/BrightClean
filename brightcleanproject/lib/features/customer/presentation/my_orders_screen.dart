@@ -41,7 +41,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
   void _tryLoadOrders() {
     final userId = Provider.of<AuthProvider>(context, listen: false).userId;
     if (userId != null && !_hasLoadedOrders) {
-      Provider.of<OrderProvider>(context, listen: false).loadLocalOrders();
+      Provider.of<OrderProvider>(context, listen: false).fetchMyOrders();
       _hasLoadedOrders = true;
     }
   }
@@ -387,8 +387,6 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                   final messenger = ScaffoldMessenger.of(parentContext);
                   final commentText = reviewController.text.trim();
 
-                  reviewProvider.addReview(review);
-
                   // POST /api/bookings/{id}/rate
                   try {
                     final apiClient = BaseApiClient();
@@ -414,6 +412,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                       },
                     );
 
+                    reviewProvider.addReview(review);
                     orderProvider.markOrderAsRated(orderId);
 
                     messenger.showSnackBar(
@@ -562,7 +561,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                             onPressed: () {
                               final userId = Provider.of<AuthProvider>(context, listen: false).userId;
                               if (userId != null) {
-                                orderProvider.loadLocalOrders();
+                                orderProvider.fetchMyOrders();
                               }
                             },
                             child: const Text('إعادة المحاولة'),

@@ -8,23 +8,34 @@ class BookingRepositoryImpl implements BookingRepository {
 
   BookingRepositoryImpl({required this.apiClient});
 
+  List<BookingModel> _parseBookingList(dynamic response) {
+    if (response is List) {
+      return response
+          .map((item) => BookingModel.fromJson(item as Map<String, dynamic>))
+          .toList();
+    }
+    if (response != null &&
+        response is Map<String, dynamic> &&
+        response.containsKey('value') &&
+        response['value'] is List) {
+      return (response['value'] as List<dynamic>)
+          .map((item) => BookingModel.fromJson(item as Map<String, dynamic>))
+          .toList();
+    }
+    return [];
+  }
+
+  @override
+  Future<List<BookingModel>> getMyBookings() async {
+    final response = await apiClient.get('/api/bookings/my');
+    return _parseBookingList(response);
+  }
+
   @override
   Future<List<BookingModel>> getPendingBookings(int agentId) async {
     try {
       final response = await apiClient.get('/api/bookings/agent/$agentId/pending');
-      
-      if (response is List) {
-        return response
-            .map((item) => BookingModel.fromJson(item as Map<String, dynamic>))
-            .toList();
-      }
-      if (response != null && response is Map<String, dynamic> && response.containsKey('value')) {
-        final list = response['value'] as List<dynamic>;
-        return list
-            .map((item) => BookingModel.fromJson(item as Map<String, dynamic>))
-            .toList();
-      }
-      return [];
+      return _parseBookingList(response);
     } catch (e) {
       rethrow;
     }

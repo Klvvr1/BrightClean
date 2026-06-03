@@ -11,6 +11,9 @@ class BookingModel {
   final DateTime? scheduledAt;
   final String? specialInstructions;
   final List<BookingItemModel> bookingItems;
+  final String? paymentMethod;
+  final String? paymentStatus;
+  final bool isRated;
 
   BookingModel({
     required this.bookingID,
@@ -25,6 +28,9 @@ class BookingModel {
     this.scheduledAt,
     this.specialInstructions,
     required this.bookingItems,
+    this.paymentMethod,
+    this.paymentStatus,
+    this.isRated = false,
   });
 
   factory BookingModel.fromJson(Map<String, dynamic> json) {
@@ -94,7 +100,17 @@ class BookingModel {
               : null,
       specialInstructions: json['specialInstructions'] as String? ?? json['SpecialInstructions'] as String?,
       bookingItems: itemsList,
+      paymentMethod: _nestedString(json['payment'] ?? json['Payment'], 'method', 'Method'),
+      paymentStatus: _nestedString(json['payment'] ?? json['Payment'], 'status', 'Status'),
+      isRated: json['rating'] != null || json['Rating'] != null,
     );
+  }
+
+  static String? _nestedString(Object? value, String camelKey, String pascalKey) {
+    if (value is Map<String, dynamic>) {
+      return value[camelKey]?.toString() ?? value[pascalKey]?.toString();
+    }
+    return null;
   }
 
   Map<String, dynamic> toJson() {
@@ -111,6 +127,9 @@ class BookingModel {
       'scheduledAt': scheduledAt?.toIso8601String(),
       'specialInstructions': specialInstructions,
       'bookingItems': bookingItems.map((item) => item.toJson()).toList(),
+      'paymentMethod': paymentMethod,
+      'paymentStatus': paymentStatus,
+      'isRated': isRated,
     };
   }
 }

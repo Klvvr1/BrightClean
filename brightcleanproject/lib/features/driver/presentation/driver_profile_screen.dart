@@ -6,6 +6,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_styles.dart';
 import '../../../../core/controllers/theme_controller.dart';
+import '../../../../core/network/api_client.dart';
 
 class DriverProfileScreen extends StatefulWidget {
   const DriverProfileScreen({super.key});
@@ -17,6 +18,9 @@ class DriverProfileScreen extends StatefulWidget {
 class _DriverProfileScreenState extends State<DriverProfileScreen> {
   String _userName = 'سائق برايت كلين';
   String _userPhone = '0533333333';
+  String _userEmail = '';
+  String _vehicle = '';
+  String _plateNumber = '';
   bool _isAvailable = false;
 
   @override
@@ -27,10 +31,40 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
 
   Future<void> _loadUserData() async {
     final prefs = await SharedPreferences.getInstance();
+    Map<String, dynamic>? profileResponse;
+    try {
+      final response = await BaseApiClient().get('/api/users/me');
+      if (response is Map<String, dynamic>) {
+        profileResponse = response;
+      }
+    } catch (_) {
+      profileResponse = null;
+    }
     if (mounted) {
       setState(() {
         _userName = prefs.getString('user_name') ?? 'سائق برايت كلين';
         _userPhone = prefs.getString('user_phone') ?? '0533333333';
+        final profile = profileResponse?['profile'];
+        final driver = profileResponse?['driver'];
+        if (profile is Map<String, dynamic>) {
+          final firstName = profile['firstName']?.toString() ?? '';
+          final lastName = profile['lastName']?.toString() ?? '';
+          final serverName = '$firstName $lastName'.trim();
+          if (serverName.isNotEmpty) {
+            _userName = serverName;
+          }
+          _userPhone = profile['phoneNo']?.toString() ?? _userPhone;
+          _userEmail = profile['email']?.toString() ?? '';
+        }
+        if (driver is Map<String, dynamic>) {
+          final make = driver['vehicleMake']?.toString() ?? '';
+          final model = driver['vehicleModel']?.toString() ?? '';
+          _vehicle = '$make $model'.trim();
+          if (_vehicle.isEmpty) {
+            _vehicle = driver['vehicleType']?.toString() ?? '';
+          }
+          _plateNumber = driver['plateNumber']?.toString() ?? '';
+        }
       });
     }
   }
@@ -162,19 +196,19 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
           AccountInfoCard(
             icon: Icons.email_outlined,
             label: 'البريد الإلكتروني',
-            value: 'driver@brightclean.com',
+            value: _userEmail.isEmpty ? '-' : _userEmail,
           ),
           const Divider(height: 1),
           AccountInfoCard(
             icon: Icons.drive_eta_outlined,
             label: 'نوع المركبة',
-            value: 'سيارة صالون',
+            value: _vehicle.isEmpty ? '-' : _vehicle,
           ),
           const Divider(height: 1),
           AccountInfoCard(
             icon: Icons.confirmation_number_outlined,
             label: 'رقم اللوحة',
-            value: 'A 12345',
+            value: _plateNumber.isEmpty ? '-' : _plateNumber,
           ),
         ],
       ),

@@ -82,8 +82,8 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
   }
 
   void _onSaveLocation() {
-    final mockAddress = 'موقع محدد (${_selectedLocation.latitude.toStringAsFixed(4)}, ${_selectedLocation.longitude.toStringAsFixed(4)})';
-    Navigator.of(context).pop(mockAddress);
+    final selectedAddress = 'موقع محدد (${_selectedLocation.latitude.toStringAsFixed(4)}, ${_selectedLocation.longitude.toStringAsFixed(4)})';
+    Navigator.of(context).pop(selectedAddress);
   }
 
   @override

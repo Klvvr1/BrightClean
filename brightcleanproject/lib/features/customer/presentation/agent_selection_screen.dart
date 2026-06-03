@@ -5,7 +5,7 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_styles.dart';
 import '../../../../core/network/api_client.dart';
-import '../data/providers/review_provider.dart';
+import '../data/providers/cart_provider.dart';
 import '../domain/models/review.dart';
 
 class AgentSelectionScreen extends StatefulWidget {
@@ -35,6 +35,12 @@ class _AgentSelectionScreenState extends State<AgentSelectionScreen> {
       final apiClient = BaseApiClient();
       final response = await apiClient.get('/api/users/agents');
       if (response is List) {
+        if (!mounted) return;
+        final requiredServiceIds = Provider.of<CartProvider>(context, listen: false)
+            .items
+            .map((item) => item.serviceId)
+            .where((id) => id > 0)
+            .toSet();
         setState(() {
           _agents = response.where((a) {
             // Validate required fields exist and are of correct type
@@ -44,6 +50,15 @@ class _AgentSelectionScreenState extends State<AgentSelectionScreen> {
             if (idValue == null || nameValue == null) return false;
             // Accept int or parseable String for id
             if (idValue is! int && (idValue is! String || int.tryParse(idValue) == null)) return false;
+            if (requiredServiceIds.isNotEmpty) {
+              final rawServiceIds = a['serviceIds'];
+              if (rawServiceIds is! List) return false;
+              final agentServiceIds = rawServiceIds
+                  .map((id) => id is int ? id : int.tryParse(id.toString()))
+                  .whereType<int>()
+                  .toSet();
+              if (!requiredServiceIds.every(agentServiceIds.contains)) return false;
+            }
             return true;
           }).map((a) {
             // Safe extraction with type coercion
@@ -51,7 +66,7 @@ class _AgentSelectionScreenState extends State<AgentSelectionScreen> {
             final id = idValue is int ? idValue : int.parse(idValue as String);
             final businessName = (a['businessName'] ?? '').toString();
             
-            // Map realistic mock info depending on the agent ID
+            // Initialize display fields before overriding them with server values.
             String address = 'شارع بيروت، حولي';
             String workingHours = '8:00 ص - 10:00 م';
             double rating = 4.8;
@@ -74,6 +89,44 @@ class _AgentSelectionScreenState extends State<AgentSelectionScreen> {
               reviewCount = 42;
             }
 
+            address = 'غير متوفر';
+            workingHours = 'غير متوفر';
+            rating = 0.0;
+            reviewCount = 0;
+
+            final addressJson = a['address'];
+            if (addressJson is Map) {
+              final area = addressJson['area'] ?? addressJson['Area'];
+              final street = addressJson['street'] ?? addressJson['Street'];
+              final serverAddress = [area, street]
+                  .where((value) => value != null && value.toString().trim().isNotEmpty)
+                  .join('، ');
+              if (serverAddress.isNotEmpty) {
+                address = serverAddress;
+              }
+            }
+
+            final ratingRaw = a['averageRating'] ?? a['rating'];
+            final reviewCountRaw = a['reviewCount'];
+            rating = ratingRaw is num ? ratingRaw.toDouble() : 0.0;
+            reviewCount = reviewCountRaw is int
+                ? reviewCountRaw
+                : int.tryParse(reviewCountRaw?.toString() ?? '') ?? 0;
+            workingHours = 'غير متوفر';
+
+            final rawReviews = a['recentReviews'];
+            final reviews = rawReviews is List
+                ? rawReviews
+                    .whereType<Map>()
+                    .map((review) => Review(
+                          userName: (review['userName'] ?? '').toString(),
+                          comment: (review['comment'] ?? '').toString(),
+                          rating: (review['rating'] as num?)?.toDouble() ?? 0.0,
+                          date: DateTime.tryParse((review['ratedAt'] ?? '').toString()) ?? DateTime.now(),
+                        ))
+                    .toList()
+                : <Review>[];
+
             return {
               'id': id,
               'businessName': businessName,
@@ -81,6 +134,7 @@ class _AgentSelectionScreenState extends State<AgentSelectionScreen> {
               'workingHours': workingHours,
               'rating': rating,
               'reviewCount': reviewCount,
+              'reviews': reviews,
             };
           }).toList();
           _isLoading = false;
@@ -103,30 +157,9 @@ class _AgentSelectionScreenState extends State<AgentSelectionScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     
-    // Get reviews from provider or use default seeded ones
-    final providerReviews = Provider.of<ReviewProvider>(context, listen: false).reviews;
-    
-    // Customize mock reviews specific to the laundry agent, fallback if provider is empty
-    final List<Review> agentReviews = providerReviews.isNotEmpty ? providerReviews : [
-      Review(
-        userName: 'أحمد محمد',
-        comment: 'غسيل ممتاز جداً وسرعة في استلام وتوصيل الملابس. أنصح بالتعامل معهم.',
-        rating: 5.0,
-        date: DateTime.now().subtract(const Duration(days: 2)),
-      ),
-      Review(
-        userName: 'سارة عمر',
-        comment: 'الملابس نظيفة ومعطرة والتعامل راقي. السعر مناسب مقارنة بالجودة.',
-        rating: 4.5,
-        date: DateTime.now().subtract(const Duration(days: 5)),
-      ),
-      Review(
-        userName: 'خالد عبدالله',
-        comment: 'كي الملابس ممتاز، لكن التأخير في التوصيل لبعض الوقت.',
-        rating: 4.0,
-        date: DateTime.now().subtract(const Duration(days: 7)),
-      ),
-    ];
+    final List<Review> agentReviews = agent['reviews'] is List<Review>
+        ? List<Review>.from(agent['reviews'] as List<Review>)
+        : <Review>[];
 
     showModalBottomSheet(
       context: context,

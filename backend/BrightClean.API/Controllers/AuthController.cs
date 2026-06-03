@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -453,6 +454,34 @@ namespace BrightClean.API.Controllers
             });
         }
 
+        // POST: /api/auth/change-password
+        [HttpPost("change-password")]
+        [Authorize]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto dto)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out var userId))
+            {
+                return Unauthorized();
+            }
+
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.UserID == userId);
+            if (user == null)
+            {
+                return NotFound(new { message = "User was not found." });
+            }
+
+            if (!BCrypt.Net.BCrypt.Verify(dto.CurrentPassword, user.PasswordHash))
+            {
+                return BadRequest(new { message = "Current password is incorrect." });
+            }
+
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Password changed successfully." });
+        }
+
         // POST: /api/auth/reset-password
         [HttpPost("reset-password")]
         public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto dto)
@@ -500,6 +529,16 @@ namespace BrightClean.API.Controllers
 
         [Required]
         [MinLength(6, ErrorMessage = "Password must be at least 6 characters.")]
+        public string NewPassword { get; set; } = string.Empty;
+    }
+
+    public class ChangePasswordDto
+    {
+        [Required]
+        public string CurrentPassword { get; set; } = string.Empty;
+
+        [Required]
+        [MinLength(8, ErrorMessage = "Password must be at least 8 characters.")]
         public string NewPassword { get; set; } = string.Empty;
     }
 }

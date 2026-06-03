@@ -110,7 +110,22 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       if (response is List) {
         if (!mounted) return;
         setState(() {
+          final requiredServiceIds = widget.directItems
+                  ?.map((item) => item.serviceId)
+                  .where((id) => id > 0)
+                  .toSet() ??
+              <int>{};
           _agents = response
+              .where((a) {
+                if (requiredServiceIds.isEmpty) return true;
+                final rawServiceIds = a['serviceIds'];
+                if (rawServiceIds is! List) return false;
+                final agentServiceIds = rawServiceIds
+                    .map((id) => id is int ? id : int.tryParse(id.toString()))
+                    .whereType<int>()
+                    .toSet();
+                return requiredServiceIds.every(agentServiceIds.contains);
+              })
               .map((a) => {
                     'id': a['id'] as int,
                     'businessName': a['businessName'] as String,
@@ -180,6 +195,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               'quantity': item.quantity,
             };
           }).toList();
+          if (itemsDto.any((item) => (item['serviceID'] ?? 0) <= 0)) {
+            throw Exception('هذه الخدمة غير مرتبطة بكتالوج الخادم. يرجى اختيار خدمة متوفرة.');
+          }
 
           final addressId = await _ensureAddressRegistered();
           bookingId = await orderProvider
@@ -1003,6 +1021,9 @@ class _CheckoutBottomBarState extends State<_CheckoutBottomBar> {
               .map((item) =>
                   {'serviceID': item.serviceId, 'quantity': item.quantity})
               .toList();
+          if (itemsDto.any((item) => (item['serviceID'] ?? 0) <= 0)) {
+            throw Exception('هذه الخدمة غير مرتبطة بكتالوج الخادم. يرجى اختيار خدمة متوفرة.');
+          }
           final addressId = await widget.ensureAddressRegistered();
           bookingId = await orderProvider.createBooking(
             widget.selectedAgentId!,
