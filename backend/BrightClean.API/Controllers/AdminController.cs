@@ -38,6 +38,29 @@ namespace BrightClean.API.Controllers
                     u.PhoneNo,
                     u.Role,
                     u.CreatedAt,
+                    BusinessName = _context.LaundryAgents
+                        .Where(a => a.UserID == u.UserID)
+                        .Select(a => a.BusinessName)
+                        .FirstOrDefault(),
+                    CommercialRegister = _context.LaundryAgents
+                        .Where(a => a.UserID == u.UserID)
+                        .Select(a => a.CommercialRegister)
+                        .FirstOrDefault(),
+                    NationalIDNumber = _context.LaundryAgents
+                        .Where(a => a.UserID == u.UserID)
+                        .Select(a => a.NationalIDNumber)
+                        .FirstOrDefault() ?? _context.DeliveryStaffs
+                        .Where(d => d.UserID == u.UserID)
+                        .Select(d => d.NationalIDNumber)
+                        .FirstOrDefault(),
+                    VehicleType = _context.DeliveryStaffs
+                        .Where(d => d.UserID == u.UserID)
+                        .Select(d => (VehicleType?)d.VehicleType)
+                        .FirstOrDefault(),
+                    PlateNumber = _context.DeliveryStaffs
+                        .Where(d => d.UserID == u.UserID)
+                        .Select(d => d.PlateNumber)
+                        .FirstOrDefault(),
                     Documents = u.Documents.Select(d => new
                     {
                         d.DocumentID,
@@ -308,7 +331,48 @@ namespace BrightClean.API.Controllers
                     u.Email,
                     u.PhoneNo,
                     u.Role,
-                    u.CreatedAt
+                    u.CreatedAt,
+                    BusinessName = _context.LaundryAgents
+                        .Where(a => a.UserID == u.UserID)
+                        .Select(a => a.BusinessName)
+                        .FirstOrDefault(),
+                    CommercialRegister = _context.LaundryAgents
+                        .Where(a => a.UserID == u.UserID)
+                        .Select(a => a.CommercialRegister)
+                        .FirstOrDefault(),
+                    NationalIDNumber = _context.LaundryAgents
+                        .Where(a => a.UserID == u.UserID)
+                        .Select(a => a.NationalIDNumber)
+                        .FirstOrDefault() ?? _context.DeliveryStaffs
+                        .Where(d => d.UserID == u.UserID)
+                        .Select(d => d.NationalIDNumber)
+                        .FirstOrDefault(),
+                    VehicleType = _context.DeliveryStaffs
+                        .Where(d => d.UserID == u.UserID)
+                        .Select(d => (VehicleType?)d.VehicleType)
+                        .FirstOrDefault(),
+                    PlateNumber = _context.DeliveryStaffs
+                        .Where(d => d.UserID == u.UserID)
+                        .Select(d => d.PlateNumber)
+                        .FirstOrDefault(),
+                    Rating = u.Role == UserRole.LaundryAgent
+                        ? (_context.BookingRatings
+                            .Where(r => r.Booking.LaundryAgentID == u.UserID && r.AgentRating.HasValue)
+                            .Average(r => (double?)r.AgentRating) ?? 0)
+                        : (_context.BookingRatings
+                            .Where(r => r.Booking.DeliveryTasks.Any(t => t.DeliveryStaffID == u.UserID) && r.DeliveryRating.HasValue)
+                            .Average(r => (double?)r.DeliveryRating) ?? 0),
+                    Documents = u.Documents.Select(d => new
+                    {
+                        d.DocumentID,
+                        d.Type,
+                        d.FileURL,
+                        d.OriginalFileName,
+                        d.ContentType,
+                        d.FileSizeBytes,
+                        d.UploadedAt,
+                        d.ReviewStatus
+                    })
                 })
                 .ToListAsync();
 

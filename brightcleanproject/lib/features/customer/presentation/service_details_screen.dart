@@ -21,7 +21,7 @@ class ServiceDetailsScreen extends StatefulWidget {
 }
 
 class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
-  final double basePrice = 10.0;
+  double get basePrice => _resolveServicePrice(selectedOption.displayName);
   int quantity = 1;
   late ServiceOption selectedOption;
   final TextEditingController _lengthController = TextEditingController(text: '1');
@@ -592,36 +592,86 @@ int _resolveServiceId(String itemName) {
   };
 
   if (_catalogServices.isNotEmpty) {
-    final catalogName = arabicToServiceName[itemName] ?? 'Wash & Iron';
+    final catalogName = arabicToServiceName[itemName];
+    final targetType = _targetServiceType();
 
     try {
       final matchingItem = _catalogServices.firstWhere(
-        (s) => s.serviceName == catalogName,
+        (s) =>
+            (catalogName != null && s.serviceName == catalogName) ||
+            s.serviceName == itemName ||
+            s.serviceName.contains(itemName) ||
+            itemName.contains(s.serviceName) ||
+            (s.isAvailable && s.type == targetType),
       );
       return matchingItem.serviceID;
     } catch (_) {
-      try {
-        final defaultItem = _catalogServices.firstWhere(
-          (s) => s.serviceName == 'Wash & Iron',
-        );
-        return defaultItem.serviceID;
-      } catch (_) {
-        return _catalogServices.first.serviceID;
-      }
+      return 0;
     }
   }
 
   // Fallback when catalog has not been loaded yet
   switch (itemName) {
     case 'المعوز':
-      return 2;
+      return 0;
     case 'العمامة':
-      return 3;
+      return 0;
     default:
-      debugPrint('Warning: No catalog services loaded, using fallback ID 1 for item: $itemName');
-      return 1;
+      debugPrint('Warning: No catalog service ID resolved for item: $itemName');
+      return 0;
   }
 }
+
+  int _targetServiceType() {
+    switch (selectedOption.id) {
+      case 'iron_only':
+        return 2; // ServiceType.IronOnly
+      case 'furniture_wash':
+        return 6; // ServiceType.Carpets
+      case 'maid_hourly':
+        return 7; // ServiceType.HomeCleaning
+      case 'ac_indoor':
+      case 'ac_full':
+        return 8; // ServiceType.ACCleaning
+      case 'tank_regular':
+        return 9; // ServiceType.WaterTankCleaning
+      case 'solar_dust':
+      case 'solar_soap':
+      case 'solar_polish':
+        return 10; // ServiceType.SolarPanelCleaning
+      case 'car_exterior':
+      case 'car_full':
+        return 11; // ServiceType.CarWash
+      case 'wash_iron':
+      case 'wash_only':
+      default:
+        return 0; // ServiceType.WashAndIron
+    }
+  }
+
+  double _resolveServicePrice(String itemName) {
+    final serviceId = _resolveServiceId(itemName);
+    if (serviceId <= 0) return 0.0;
+    for (final service in _catalogServices) {
+      if (service.serviceID == serviceId) {
+        return service.price;
+      }
+    }
+    return 0.0;
+  }
+
+  bool _ensureServiceAvailable(String itemName) {
+    if (_resolveServiceId(itemName) > 0) return true;
+
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('هذه الخدمة غير متوفرة في كتالوج الخادم حاليا. يرجى اختيار خدمة أخرى.'),
+        backgroundColor: AppColors.error,
+      ),
+    );
+    return false;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -999,13 +1049,18 @@ int _resolveServiceId(String itemName) {
                   // Add all selected clothing items to the cart
                   for (var entry in _clothingQuantities.entries) {
                     if (entry.value > 0) {
+                      final serviceId = _resolveServiceId(entry.key);
+                      if (serviceId <= 0) {
+                        _ensureServiceAvailable(entry.key);
+                        return;
+                      }
                       await cart.addItem(
                         serviceName: widget.serviceType,
                         selectedType: '${entry.key} - ${selectedOption.displayName}',
                         quantity: entry.value,
                         pricePerUnit: basePrice * selectedOption.priceMultiplier,
                         totalPrice: basePrice * selectedOption.priceMultiplier * entry.value,
-                        serviceId: _resolveServiceId(entry.key),
+                        serviceId: serviceId,
                       );
                     }
                   }
@@ -1056,6 +1111,11 @@ int _resolveServiceId(String itemName) {
                       final widthList = _carpetWidthControllers[entry.key]!;
                       double itemBaseMultiplier = (entry.key == 'غسيل سجاد عادي') ? 1.0 : 1.5;
                       for (int i = 0; i < entry.value; i++) {
+                        final serviceId = _resolveServiceId(entry.key);
+                        if (serviceId <= 0) {
+                          _ensureServiceAvailable(entry.key);
+                          return;
+                        }
                         double l = double.tryParse(lengthList[i].text) ?? 1.0;
                         double w = double.tryParse(widthList[i].text) ?? 1.0;
                         if (l <= 0) l = 1.0;
@@ -1067,7 +1127,7 @@ int _resolveServiceId(String itemName) {
                           quantity: 1,
                           pricePerUnit: itemPrice,
                           totalPrice: itemPrice,
-                          serviceId: _resolveServiceId(entry.key),
+                          serviceId: serviceId,
                         );
                       }
                     }
@@ -1114,9 +1174,14 @@ int _resolveServiceId(String itemName) {
                         quantity: qty,
                         pricePerUnit: unitPrice,
                         totalPrice: unitPrice * qty,
+                        serviceId: _resolveServiceId(type),
                       ));
                     }
                   });
+                  if (list.any((item) => item.serviceId <= 0)) {
+                    _ensureServiceAvailable(widget.serviceType);
+                    return;
+                  }
                   if (list.isEmpty) {
                     ScaffoldMessenger.of(context).clearSnackBars();
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -1137,9 +1202,14 @@ int _resolveServiceId(String itemName) {
                         quantity: qty,
                         pricePerUnit: unitPrice,
                         totalPrice: unitPrice * qty,
+                        serviceId: _resolveServiceId(type),
                       ));
                     }
                   });
+                  if (list.any((item) => item.serviceId <= 0)) {
+                    _ensureServiceAvailable(widget.serviceType);
+                    return;
+                  }
                   if (list.isEmpty) {
                     ScaffoldMessenger.of(context).clearSnackBars();
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -1160,9 +1230,14 @@ int _resolveServiceId(String itemName) {
                         quantity: qty,
                         pricePerUnit: unitPrice,
                         totalPrice: unitPrice * qty,
+                        serviceId: _resolveServiceId(size),
                       ));
                     }
                   });
+                  if (list.any((item) => item.serviceId <= 0)) {
+                    _ensureServiceAvailable(widget.serviceType);
+                    return;
+                  }
                   if (list.isEmpty) {
                     ScaffoldMessenger.of(context).clearSnackBars();
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -1189,10 +1264,15 @@ int _resolveServiceId(String itemName) {
                           quantity: 1,
                           pricePerUnit: unitPrice,
                           totalPrice: unitPrice,
+                          serviceId: _resolveServiceId(type),
                         ));
                       }
                     }
                   });
+                  if (list.any((item) => item.serviceId <= 0)) {
+                    _ensureServiceAvailable(widget.serviceType);
+                    return;
+                  }
                   if (list.isEmpty) {
                     ScaffoldMessenger.of(context).clearSnackBars();
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -1210,7 +1290,12 @@ int _resolveServiceId(String itemName) {
                     quantity: maidPersons,
                     pricePerUnit: unitPrice,
                     totalPrice: unitPrice * maidPersons,
+                    serviceId: _resolveServiceId(widget.serviceType),
                   );
+                  if (directItem.serviceId <= 0) {
+                    _ensureServiceAvailable(widget.serviceType);
+                    return;
+                  }
                   context.push('/checkout', extra: [directItem]);
                 }
               }

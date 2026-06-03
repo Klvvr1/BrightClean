@@ -23,7 +23,61 @@ namespace BrightClean.API.Controllers
             _context = context;
         }
 
-        private IActionResult ValidateScheduledAt(DateTime? scheduledAt)
+        private static object ProjectAgentBooking(Booking b)
+        {
+            return new
+            {
+                b.BookingID,
+                b.ClientID,
+                client = new
+                {
+                    id = b.Client.UserID,
+                    firstName = b.Client.FirstName,
+                    lastName = b.Client.LastName,
+                    phoneNo = b.Client.PhoneNo
+                },
+                b.LaundryAgentID,
+                b.AddressID,
+                address = new
+                {
+                    b.Address.AddressID,
+                    b.Address.Area,
+                    b.Address.Street,
+                    b.Address.Latitude,
+                    b.Address.Longitude
+                },
+                b.Status,
+                b.FinalTotal,
+                b.CreatedAt,
+                b.ScheduledAt,
+                b.SpecialInstructions,
+                payment = b.Payment == null ? null : new
+                {
+                    b.Payment.PaymentID,
+                    b.Payment.Amount,
+                    b.Payment.Method,
+                    b.Payment.Status
+                },
+                bookingItems = b.BookingItems.Select(i => new
+                {
+                    i.BookingItemID,
+                    i.ServiceID,
+                    i.Quantity,
+                    i.UnitPriceAtTimeOfBooking,
+                    serviceCatalogItem = new
+                    {
+                        i.ServiceCatalogItem.ServiceID,
+                        i.ServiceCatalogItem.ServiceName,
+                        i.ServiceCatalogItem.Category,
+                        i.ServiceCatalogItem.Type,
+                        i.ServiceCatalogItem.Price,
+                        i.ServiceCatalogItem.DeliveryModel
+                    }
+                })
+            };
+        }
+
+        private IActionResult? ValidateScheduledAt(DateTime? scheduledAt)
         {
             if (!scheduledAt.HasValue)
             {
@@ -64,6 +118,113 @@ namespace BrightClean.API.Controllers
                 .ToListAsync();
 
             return Ok(bookings);
+        }
+
+        // GET: /api/bookings/my
+        [HttpGet("my")]
+        [Authorize(Roles = "Client")]
+        public async Task<IActionResult> GetMyBookings()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out var clientId))
+            {
+                return Unauthorized();
+            }
+
+            var bookings = await _context.Bookings
+                .AsNoTracking()
+                .Where(b => b.ClientID == clientId && b.Status != BookingStatus.Draft)
+                .OrderByDescending(b => b.CreatedAt)
+                .Select(b => new
+                {
+                    b.BookingID,
+                    b.ClientID,
+                    b.LaundryAgentID,
+                    laundryAgent = new
+                    {
+                        id = b.LaundryAgent.UserID,
+                        businessName = b.LaundryAgent.BusinessName
+                    },
+                    b.AddressID,
+                    address = new
+                    {
+                        b.Address.AddressID,
+                        b.Address.Area,
+                        b.Address.Street,
+                        b.Address.Latitude,
+                        b.Address.Longitude
+                    },
+                    b.OfferID,
+                    b.Status,
+                    b.FinalTotal,
+                    b.CreatedAt,
+                    b.ExpiresAt,
+                    b.ScheduledAt,
+                    b.SpecialInstructions,
+                    payment = b.Payment == null ? null : new
+                    {
+                        b.Payment.PaymentID,
+                        b.Payment.Amount,
+                        b.Payment.Method,
+                        b.Payment.Status,
+                        b.Payment.StatusReason,
+                        b.Payment.PaidAt
+                    },
+                    rating = b.Rating == null ? null : new
+                    {
+                        b.Rating.RatingID,
+                        b.Rating.AgentRating,
+                        b.Rating.DeliveryRating,
+                        b.Rating.RatedAt
+                    },
+                    bookingItems = b.BookingItems.Select(i => new
+                    {
+                        i.BookingItemID,
+                        i.BookingID,
+                        i.ServiceID,
+                        i.Quantity,
+                        i.UnitPriceAtTimeOfBooking,
+                        serviceCatalogItem = new
+                        {
+                            i.ServiceCatalogItem.ServiceID,
+                            i.ServiceCatalogItem.ServiceName,
+                            i.ServiceCatalogItem.Category,
+                            i.ServiceCatalogItem.Type,
+                            i.ServiceCatalogItem.Price,
+                            i.ServiceCatalogItem.PricingModel,
+                            i.ServiceCatalogItem.DeliveryModel,
+                            i.ServiceCatalogItem.IsAvailable
+                        }
+                    })
+                })
+                .ToListAsync();
+
+            return Ok(bookings);
+        }
+
+        // GET: /api/bookings/agent/my
+        [HttpGet("agent/my")]
+        [Authorize(Roles = "LaundryAgent")]
+        public async Task<IActionResult> GetMyAgentBookings()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out var agentId))
+            {
+                return Unauthorized();
+            }
+
+            var bookings = await _context.Bookings
+                .AsNoTracking()
+                .Include(b => b.Client)
+                .Include(b => b.Address)
+                .Include(b => b.Payment)
+                .Include(b => b.BookingItems)
+                    .ThenInclude(i => i.ServiceCatalogItem)
+                .Where(b => b.LaundryAgentID == agentId && b.Status != BookingStatus.Draft)
+                .OrderByDescending(b => b.CreatedAt)
+                .ToListAsync();
+
+            return Ok(bookings.Select(ProjectAgentBooking));
         }
 
         // POST: /api/bookings
@@ -412,6 +573,72 @@ namespace BrightClean.API.Controllers
             }
         }
 
+        // POST: /api/bookings/{bookingId}/reject
+        [HttpPost("{bookingId}/reject")]
+        [Authorize(Roles = "LaundryAgent")]
+        public async Task<IActionResult> RejectBooking(int bookingId, [FromBody] RejectBookingDto? dto)
+        {
+            var booking = await _context.Bookings.FindAsync(bookingId);
+
+            if (booking == null)
+            {
+                return NotFound($"Booking with ID {bookingId} not found.");
+            }
+
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out var agentId) || booking.LaundryAgentID != agentId)
+            {
+                return Forbid();
+            }
+
+            if (booking.Status != BookingStatus.Pending)
+            {
+                return BadRequest("Only pending bookings can be rejected.");
+            }
+
+            booking.Status = BookingStatus.Cancelled;
+            if (!string.IsNullOrWhiteSpace(dto?.Reason))
+            {
+                var existingNotes = string.IsNullOrWhiteSpace(booking.SpecialInstructions)
+                    ? string.Empty
+                    : booking.SpecialInstructions + Environment.NewLine;
+                booking.SpecialInstructions = existingNotes + $"Rejection reason: {dto.Reason.Trim()}";
+            }
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new { booking.BookingID, booking.Status });
+        }
+
+        // POST: /api/bookings/{bookingId}/start
+        [HttpPost("{bookingId}/start")]
+        [Authorize(Roles = "LaundryAgent")]
+        public async Task<IActionResult> StartBookingWork(int bookingId)
+        {
+            var booking = await _context.Bookings.FindAsync(bookingId);
+
+            if (booking == null)
+            {
+                return NotFound($"Booking with ID {bookingId} not found.");
+            }
+
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out var agentId) || booking.LaundryAgentID != agentId)
+            {
+                return Forbid();
+            }
+
+            if (booking.Status != BookingStatus.Accepted)
+            {
+                return BadRequest("Only accepted bookings can be moved to in progress.");
+            }
+
+            booking.Status = BookingStatus.InProgress;
+            await _context.SaveChangesAsync();
+
+            return Ok(new { booking.BookingID, booking.Status });
+        }
+
         // POST: /api/bookings/{bookingId}/ready
         [HttpPost("{bookingId}/ready")]
         [Authorize(Roles = "LaundryAgent")]
@@ -594,6 +821,11 @@ namespace BrightClean.API.Controllers
         public string? AgentComment { get; set; }
         public int? DeliveryRating { get; set; }
         public string? DeliveryComment { get; set; }
+    }
+
+    public class RejectBookingDto
+    {
+        public string? Reason { get; set; }
     }
 }
 

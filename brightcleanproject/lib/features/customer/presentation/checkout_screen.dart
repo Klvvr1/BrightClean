@@ -110,7 +110,22 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       if (response is List) {
         if (!mounted) return;
         setState(() {
+          final requiredServiceIds = widget.directItems
+                  ?.map((item) => item.serviceId)
+                  .where((id) => id > 0)
+                  .toSet() ??
+              <int>{};
           _agents = response
+              .where((a) {
+                if (requiredServiceIds.isEmpty) return true;
+                final rawServiceIds = a['serviceIds'];
+                if (rawServiceIds is! List) return false;
+                final agentServiceIds = rawServiceIds
+                    .map((id) => id is int ? id : int.tryParse(id.toString()))
+                    .whereType<int>()
+                    .toSet();
+                return requiredServiceIds.every(agentServiceIds.contains);
+              })
               .map((a) => {
                     'id': a['id'] as int,
                     'businessName': a['businessName'] as String,
@@ -180,6 +195,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               'quantity': item.quantity,
             };
           }).toList();
+          if (itemsDto.any((item) => (item['serviceID'] ?? 0) <= 0)) {
+            throw Exception('هذه الخدمة غير مرتبطة بكتالوج الخادم. يرجى اختيار خدمة متوفرة.');
+          }
 
           final addressId = await _ensureAddressRegistered();
           bookingId = await orderProvider
@@ -1003,14 +1021,18 @@ class _CheckoutBottomBarState extends State<_CheckoutBottomBar> {
               .map((item) =>
                   {'serviceID': item.serviceId, 'quantity': item.quantity})
               .toList();
+          if (itemsDto.any((item) => (item['serviceID'] ?? 0) <= 0)) {
+            throw Exception('هذه الخدمة غير مرتبطة بكتالوج الخادم. يرجى اختيار خدمة متوفرة.');
+          }
           final addressId = await widget.ensureAddressRegistered();
           bookingId = await orderProvider.createBooking(
             widget.selectedAgentId!,
             itemsDto,
             addressID: addressId,
-            scheduledAt: widget.selectedDate,
-            // TODO: Add dedicated pickupSlot field to backend API instead of using specialInstructions
-            specialInstructions: widget.locationDescription,
+            scheduledAt: widget.selectedDate?.toUtc(),
+            specialInstructions: widget.locationDescription.isNotEmpty
+                ? widget.locationDescription
+                : null,
             notifyOnStateChange: false,
           );
         } else {
@@ -1020,23 +1042,26 @@ class _CheckoutBottomBarState extends State<_CheckoutBottomBar> {
 
       final serverFinalTotal = await orderProvider.submitOrder(
         bookingId,
-        scheduledAt: widget.selectedDate,
-        // TODO: Add dedicated pickupSlot field to backend API instead of using specialInstructions
-        specialInstructions: widget.locationDescription,
+        // إرسال UTC صريح لتجنب خطأ 400 "تاريخ في الماضي" بسبب offset المنطقة الزمنية
+        scheduledAt: widget.selectedDate?.toUtc(),
+        specialInstructions: widget.locationDescription.isNotEmpty
+            ? widget.locationDescription
+            : null,
         notifyOnStateChange: false,
       );
+      // نستخدم القيمة التي أرجعها السيرفر من /submit مباشرةً لضمان مطابقة decimal
+      // إعادة حساب المبلغ بـ double تُسبب 400 بسبب floating-point vs decimal mismatch
       final paymentAmount = serverFinalTotal ?? capturedFinalPrice;
 
       final methodMap = {
         'cash': 'Cash',
         'bank_transfer': 'BankTransfer',
-        'wallet': 'Wallet'
+        'wallet': 'Wallet',
       };
       await widget.apiClient.post('/api/payments', body: {
         'bookingID': bookingId,
         'amount': paymentAmount,
         'method': methodMap[capturedPaymentMethod] ?? 'Cash',
-        'transactionRef': null,
       });
 
       await orderProvider.completeCheckoutAfterPayment(

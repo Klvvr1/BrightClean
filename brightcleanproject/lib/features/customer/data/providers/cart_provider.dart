@@ -23,7 +23,7 @@ class CartProvider with ChangeNotifier {
                 quantity: map['quantity'] as int,
                 pricePerUnit: map['pricePerUnit'] as double,
                 totalPrice: map['totalPrice'] as double,
-                serviceId: map['serviceId'] as int? ?? 1,
+                serviceId: map['serviceId'] as int? ?? 0,
               ))
           .toList();
       notifyListeners();
@@ -54,6 +54,9 @@ class CartProvider with ChangeNotifier {
     if (quantity <= 0) throw ArgumentError('Quantity must be greater than 0');
     if (pricePerUnit < 0) {
       throw ArgumentError('Price per unit must be non-negative');
+    }
+    if (serviceId <= 0) {
+      throw ArgumentError('A valid backend service ID is required');
     }
 
     final expectedTotal = quantity * pricePerUnit;

@@ -7,6 +7,7 @@ import 'package:brightcleanproject/core/theme/app_colors.dart';
 import 'package:brightcleanproject/core/controllers/language_controller.dart';
 import 'package:brightcleanproject/features/agent/presentation/widgets/agent_app_bar_actions.dart';
 import 'package:brightcleanproject/features/agent/presentation/agent_dashboard_screen.dart';
+import 'package:brightcleanproject/features/agent/data/repositories/agent_booking_repository.dart';
 
 class AgentOrderManagementScreen extends StatefulWidget {
   final String orderId;
@@ -28,6 +29,7 @@ class AgentOrderManagementScreen extends StatefulWidget {
 }
 
 class _AgentOrderManagementScreenState extends State<AgentOrderManagementScreen> {
+  final AgentBookingRepository _bookingRepository = AgentBookingRepository();
   late OrderStatus _currentStatus;
   bool _isLoading = false;
   bool _hasChanges = false;
@@ -108,7 +110,7 @@ class _AgentOrderManagementScreenState extends State<AgentOrderManagementScreen>
 
     if (confirm == true) {
       setState(() => _isLoading = true);
-      await Future.delayed(const Duration(seconds: 1)); // Simulate network
+      await _bookingRepository.acceptBooking(int.parse(widget.orderId));
       if (!mounted) return;
       setState(() {
         _isLoading = false;
@@ -170,7 +172,10 @@ class _AgentOrderManagementScreenState extends State<AgentOrderManagementScreen>
 
     if (confirm == true) {
       setState(() => _isLoading = true);
-      await Future.delayed(const Duration(seconds: 1)); // Simulate network
+      await _bookingRepository.rejectBooking(
+        int.parse(widget.orderId),
+        _rejectReasonController.text.trim(),
+      );
       if (!mounted) return;
       setState(() {
         _isLoading = false;
@@ -218,7 +223,13 @@ class _AgentOrderManagementScreenState extends State<AgentOrderManagementScreen>
 
     if (confirm == true) {
       setState(() => _isLoading = true);
-      await Future.delayed(const Duration(seconds: 1)); // Simulate network
+      final bookingId = int.parse(widget.orderId);
+      if (_currentStatus == OrderStatus.washing ||
+          _currentStatus == OrderStatus.ironing) {
+        await _bookingRepository.startBooking(bookingId);
+      } else if (_currentStatus == OrderStatus.ready) {
+        await _bookingRepository.markReady(bookingId);
+      }
       if (!mounted) return;
       setState(() {
         _isLoading = false;

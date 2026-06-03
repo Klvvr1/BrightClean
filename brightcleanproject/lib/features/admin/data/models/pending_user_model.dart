@@ -7,6 +7,10 @@ class PendingUserModel {
   final String? phoneNo;
   final String? businessName;
   final String? commercialRegister;
+  final String? nationalIdNumber;
+  final String? vehicleType;
+  final String? plateNumber;
+  final List<UserDocumentModel> documents;
 
   PendingUserModel({
     required this.id,
@@ -17,6 +21,10 @@ class PendingUserModel {
     this.phoneNo,
     this.businessName,
     this.commercialRegister,
+    this.nationalIdNumber,
+    this.vehicleType,
+    this.plateNumber,
+    this.documents = const [],
   });
 
   factory PendingUserModel.fromJson(Map<String, dynamic> json) {
@@ -56,6 +64,14 @@ class PendingUserModel {
       }
     }
 
+    final rawDocuments = json['documents'] ?? json['Documents'];
+    final documents = rawDocuments is List
+        ? rawDocuments
+            .whereType<Map<String, dynamic>>()
+            .map(UserDocumentModel.fromJson)
+            .toList()
+        : <UserDocumentModel>[];
+
     return PendingUserModel(
       id: parsedId,
       firstName: json['firstName'] as String? ?? '',
@@ -65,6 +81,11 @@ class PendingUserModel {
       phoneNo: json['phoneNo'] as String? ?? json['phone'] as String?,
       businessName: json['businessName'] as String?,
       commercialRegister: json['commercialRegister'] as String?,
+      nationalIdNumber: json['nationalIDNumber'] as String? ??
+          json['nationalIdNumber'] as String?,
+      vehicleType: json['vehicleType']?.toString(),
+      plateNumber: json['plateNumber'] as String?,
+      documents: documents,
     );
   }
 
@@ -78,6 +99,63 @@ class PendingUserModel {
       'phoneNo': phoneNo,
       'businessName': businessName,
       'commercialRegister': commercialRegister,
+      'nationalIdNumber': nationalIdNumber,
+      'vehicleType': vehicleType,
+      'plateNumber': plateNumber,
+      'documents': documents.map((document) => document.toJson()).toList(),
+    };
+  }
+}
+
+class UserDocumentModel {
+  final int documentId;
+  final String type;
+  final String fileUrl;
+  final String? originalFileName;
+  final String? contentType;
+  final int? fileSizeBytes;
+  final String reviewStatus;
+
+  const UserDocumentModel({
+    required this.documentId,
+    required this.type,
+    required this.fileUrl,
+    this.originalFileName,
+    this.contentType,
+    this.fileSizeBytes,
+    required this.reviewStatus,
+  });
+
+  factory UserDocumentModel.fromJson(Map<String, dynamic> json) {
+    return UserDocumentModel(
+      documentId: json['documentID'] as int? ??
+          json['documentId'] as int? ??
+          json['DocumentID'] as int? ??
+          0,
+      type: json['type']?.toString() ?? json['Type']?.toString() ?? '',
+      fileUrl: json['fileURL'] as String? ??
+          json['fileUrl'] as String? ??
+          json['FileURL'] as String? ??
+          '',
+      originalFileName: json['originalFileName'] as String? ??
+          json['OriginalFileName'] as String?,
+      contentType: json['contentType'] as String? ?? json['ContentType'] as String?,
+      fileSizeBytes: json['fileSizeBytes'] as int? ?? json['FileSizeBytes'] as int?,
+      reviewStatus: json['reviewStatus']?.toString() ??
+          json['ReviewStatus']?.toString() ??
+          'Pending',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'documentId': documentId,
+      'type': type,
+      'fileUrl': fileUrl,
+      'originalFileName': originalFileName,
+      'contentType': contentType,
+      'fileSizeBytes': fileSizeBytes,
+      'reviewStatus': reviewStatus,
     };
   }
 }

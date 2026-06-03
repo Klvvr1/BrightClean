@@ -10,8 +10,10 @@ import 'package:brightcleanproject/core/controllers/theme_controller.dart';
 import 'package:provider/provider.dart';
 import '../../auth/data/providers/auth_provider.dart';
 import '../../customer/data/providers/cart_provider.dart';
+import '../../customer/data/models/booking_model.dart';
+import '../data/repositories/agent_booking_repository.dart';
 
-// --- (Mock) نموذج بيانات الطلب ---
+// UI display model mapped from backend booking DTOs.
 class AgentOrderModel {
   final String id;
   final LaundryType laundryType;
@@ -58,7 +60,11 @@ class AgentDashboardScreen extends StatefulWidget {
 }
 
 class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
+  final AgentBookingRepository _bookingRepository = AgentBookingRepository();
   late List<AgentOrderModel> _allOrders;
+  List<ServiceCatalogItemModel> _agentServices = [];
+  bool _isLoadingOrders = false;
+  String? _ordersError;
   bool _isLaundryOpen = true; 
   int _selectedIndex = 0;
 
@@ -74,6 +80,9 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
   @override
   void initState() {
     super.initState();
+    _allOrders = [];
+    _loadAgentData();
+    /*
     _allOrders = [
       AgentOrderModel(
         id: '1025',
@@ -155,10 +164,169 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
         notes: 'مكيفات سبليت - فحص شامل',
       ),
     ];
+    */
+  }
+
+  Future<void> _loadAgentData() async {
+    setState(() {
+      _isLoadingOrders = true;
+      _ordersError = null;
+    });
+
+    try {
+      final profileResponse = await _bookingRepository.getMyProfile();
+      final profile = profileResponse?['profile'];
+      final agent = profileResponse?['agent'];
+      if (profile is Map<String, dynamic>) {
+        final firstName = profile['firstName']?.toString() ?? '';
+        final lastName = profile['lastName']?.toString() ?? '';
+        final displayName = '$firstName $lastName'.trim();
+        if (displayName.isNotEmpty) {
+          _nameController.text = displayName;
+        }
+        _phoneController.text = profile['phoneNo']?.toString() ?? _phoneController.text;
+        _emailController.text = profile['email']?.toString() ?? _emailController.text;
+      }
+      if (agent is Map<String, dynamic>) {
+        _nameController.text = agent['businessName']?.toString() ?? _nameController.text;
+        _isLaundryOpen = !(agent['isStoreClosed'] as bool? ?? false);
+        final rawServices = agent['services'];
+        if (rawServices is List) {
+          _agentServices = rawServices
+              .whereType<Map<String, dynamic>>()
+              .map(ServiceCatalogItemModel.fromJson)
+              .toList();
+        }
+      }
+
+      final bookings = await _bookingRepository.getMyBookings();
+      _allOrders = bookings.map(_mapBookingToAgentOrder).toList();
+    } catch (e) {
+      _ordersError = e.toString();
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingOrders = false);
+      }
+    }
+  }
+
+  AgentOrderModel _mapBookingToAgentOrder(Map<String, dynamic> json) {
+    final items = (json['bookingItems'] ?? json['BookingItems']);
+    final itemMaps = items is List ? items.whereType<Map<String, dynamic>>().toList() : <Map<String, dynamic>>[];
+    final orderItems = itemMaps.map((item) {
+      final service = item['serviceCatalogItem'] ?? item['ServiceCatalogItem'];
+      final serviceName = service is Map<String, dynamic>
+          ? service['serviceName']?.toString() ?? service['ServiceName']?.toString() ?? ''
+          : '';
+      final serviceType = serviceName.isEmpty ? 'Service #${item['serviceID'] ?? item['ServiceID'] ?? ''}' : serviceName;
+      return OrderItemMock(
+        serviceType,
+        serviceType,
+        item['quantity'] as int? ?? item['Quantity'] as int? ?? 0,
+        _iconForService(serviceType),
+      );
+    }).toList();
+
+    final client = json['client'] ?? json['Client'];
+    final address = json['address'] ?? json['Address'];
+    final customerName = client is Map<String, dynamic>
+        ? '${client['firstName'] ?? client['FirstName'] ?? ''} ${client['lastName'] ?? client['LastName'] ?? ''}'.trim()
+        : '';
+    final location = address is Map<String, dynamic>
+        ? '${address['area'] ?? address['Area'] ?? ''} ${address['street'] ?? address['Street'] ?? ''}'.trim()
+        : '';
+
+    return AgentOrderModel(
+      id: (json['bookingID'] ?? json['bookingId'] ?? json['BookingID'] ?? '').toString(),
+      laundryType: _laundryTypeFromItems(itemMaps),
+      services: orderItems.map((item) => item.serviceType).toSet().toList(),
+      status: _orderStatusFromBackend(json['status'] ?? json['Status']),
+      customerLocation: location.isEmpty ? 'No address details' : location,
+      time: _relativeTime(json['createdAt'] ?? json['CreatedAt']),
+      customerName: customerName.isEmpty ? 'Customer #${json['clientID'] ?? json['ClientID'] ?? ''}' : customerName,
+      items: orderItems,
+      notes: json['specialInstructions']?.toString() ??
+          json['SpecialInstructions']?.toString() ??
+          '',
+    );
+  }
+
+  OrderStatus _orderStatusFromBackend(Object? value) {
+    if (value is int) {
+      switch (value) {
+        case 1:
+          return OrderStatus.pending;
+        case 2:
+          return OrderStatus.received;
+        case 3:
+          return OrderStatus.washing;
+        case 4:
+          return OrderStatus.ready;
+        case 5:
+          return OrderStatus.completed;
+        case 6:
+          return OrderStatus.rejected;
+      }
+    }
+    final text = value?.toString().toLowerCase() ?? '';
+    switch (text) {
+      case 'pending':
+        return OrderStatus.pending;
+      case 'accepted':
+        return OrderStatus.received;
+      case 'inprogress':
+        return OrderStatus.washing;
+      case 'ready':
+        return OrderStatus.ready;
+      case 'completed':
+        return OrderStatus.completed;
+      case 'cancelled':
+        return OrderStatus.rejected;
+      default:
+        return OrderStatus.pending;
+    }
+  }
+
+  LaundryType _laundryTypeFromItems(List<Map<String, dynamic>> itemMaps) {
+    for (final item in itemMaps) {
+      final service = item['serviceCatalogItem'] ?? item['ServiceCatalogItem'];
+      if (service is! Map<String, dynamic>) continue;
+      final category = service['category'] ?? service['Category'];
+      final type = service['type'] ?? service['Type'];
+      final categoryText = category?.toString().toLowerCase();
+      final typeText = type?.toString().toLowerCase();
+      if (category == 3 || categoryText == 'vehiclewash') return LaundryType.carsBikes;
+      if (type == 6 || typeText == 'carpets') return LaundryType.carpets;
+      if (type == 8 || typeText == 'accleaning') return LaundryType.ac;
+      if (type == 9 || typeText == 'watertankcleaning') return LaundryType.tanks;
+      if (type == 10 || typeText == 'solarpanelcleaning') return LaundryType.solarPanels;
+    }
+    return LaundryType.clothes;
+  }
+
+  IconData _iconForService(String service) {
+    final lower = service.toLowerCase();
+    if (lower.contains('iron')) return Icons.iron;
+    if (lower.contains('dry')) return Icons.dry_cleaning;
+    if (lower.contains('car')) return Icons.car_rental;
+    if (lower.contains('carpet')) return Icons.texture;
+    if (lower.contains('ac')) return Icons.ac_unit;
+    return Icons.local_laundry_service;
+  }
+
+  String _relativeTime(Object? rawDate) {
+    final parsed = rawDate is String ? DateTime.tryParse(rawDate) : null;
+    if (parsed == null) return '';
+    final diff = DateTime.now().difference(parsed.toLocal());
+    if (diff.inMinutes < 1) return 'Now';
+    if (diff.inHours < 1) return '${diff.inMinutes}m ago';
+    if (diff.inDays < 1) return '${diff.inHours}h ago';
+    if (diff.inDays == 1) return 'Yesterday';
+    return '${diff.inDays}d ago';
   }
 
   List<AgentOrderModel> get _currentOrders => 
-      _allOrders.where((o) => o.laundryType == widget.laundryType && o.status != OrderStatus.completed).toList();
+      _allOrders.where((o) => o.laundryType == widget.laundryType && o.status != OrderStatus.completed && o.status != OrderStatus.rejected).toList();
 
   List<AgentOrderModel> get _previousOrders =>
       _allOrders.where((o) => o.laundryType == widget.laundryType && (o.status == OrderStatus.completed || o.status == OrderStatus.ready)).toList();
@@ -201,6 +369,9 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
       case LaundryType.ac: services = isArabic ? ['تنظيف فلاتر', 'غسيل الوحدة الخارجية', 'تعبئة فريون'] : ['Filters', 'Outdoor Unit', 'Gas Refill']; break;
       case LaundryType.tanks: services = isArabic ? ['تفريغ وتنظيف', 'تعقيم الأسطح', 'عزل وتسكير'] : ['Emptying', 'Sterilization', 'Insulation']; break;
       case LaundryType.solarPanels: services = isArabic ? ['تنظيف جاف', 'غسيل بالمواصفات', 'فحص كفاءة'] : ['Dry Clean', 'Spec Wash', 'Efficiency Check']; break;
+    }
+    if (_agentServices.isNotEmpty) {
+      services = _agentServices.map((service) => service.serviceName).toSet().toList();
     }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -371,6 +542,7 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
                       setState(() {
                         order.status = newStatus;
                       });
+                      await _loadAgentData();
                     }
                   },
                   style: ElevatedButton.styleFrom(
@@ -398,6 +570,27 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
   Widget _buildHomeSection(List<AgentOrderModel> orders) {
     final isArabic = LanguageController().isArabic;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    if (_isLoadingOrders) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_ordersError != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(_ordersError!, textAlign: TextAlign.center),
+              const SizedBox(height: AppSpacing.md),
+              ElevatedButton(
+                onPressed: _loadAgentData,
+                child: Text(isArabic ? 'إعادة المحاولة' : 'Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20.0),
       child: Column(
@@ -437,6 +630,27 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
     final isArabic = LanguageController().isArabic;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final orders = _previousOrders;
+    if (_isLoadingOrders) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_ordersError != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(_ordersError!, textAlign: TextAlign.center),
+              const SizedBox(height: AppSpacing.md),
+              ElevatedButton(
+                onPressed: _loadAgentData,
+                child: Text(isArabic ? 'إعادة المحاولة' : 'Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20.0),
       child: Column(
@@ -470,7 +684,20 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
             ? (_isLaundryOpen ? 'حالة المغسلة (مفتوح)' : 'حالة المغسلة (مغلق)')
             : (_isLaundryOpen ? 'Laundry Status (Open)' : 'Laundry Status (Closed)'),
           _isLaundryOpen,
-          (v) => setState(() => _isLaundryOpen = v),
+          (v) async {
+            final previous = _isLaundryOpen;
+            setState(() => _isLaundryOpen = v);
+            try {
+              final isOpen = await _bookingRepository.toggleStoreStatus();
+              if (mounted) {
+                setState(() => _isLaundryOpen = isOpen);
+              }
+            } catch (_) {
+              if (mounted) {
+                setState(() => _isLaundryOpen = previous);
+              }
+            }
+          },
           icon: Icons.store_outlined,
         ),
         

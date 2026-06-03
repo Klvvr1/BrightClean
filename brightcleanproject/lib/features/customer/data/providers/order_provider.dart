@@ -54,12 +54,30 @@ class OrderProvider extends ChangeNotifier {
 
   Future<void> _initialize() async {
     await _loadOrders();
-    if (kDebugMode && _orders.isEmpty) {
-      seedDemoOrders();
-    }
   }
 
   Future<void> loadLocalOrders() => _loadOrders();
+
+  Future<void> fetchMyOrders() async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final bookingModels = await bookingRepository.getMyBookings();
+      _orders = bookingModels.map(_mapBookingToOrder).toList();
+      await _replaceOrdersCache(_orders);
+      _isLoading = false;
+    } on ServerException catch (e) {
+      _errorMessage = e.message ?? 'حدث خطأ أثناء تحميل الطلبات';
+      _isLoading = false;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _isLoading = false;
+    } finally {
+      notifyListeners();
+    }
+  }
 
   Future<void> _loadOrders() async {
     try {
@@ -93,35 +111,33 @@ class OrderProvider extends ChangeNotifier {
     }
   }
 
-  void seedDemoOrders() {
-    _orders = [
-      Order(
-        orderId: '1025',
-        date: '16 أبريل 2026',
-        details: 'تنظيف سجاد - 2 قطعة',
-        status: 'قيد الانتظار',
-        activeStepIndex: 0,
-        category: 'carpets',
-      ),
-      Order(
-        orderId: '1024',
-        date: '15 أبريل 2026',
-        details: 'غسيل ملابس - 5 قطع',
-        status: 'في الطريق',
-        activeStepIndex: 1,
-        category: 'clothes',
-      ),
-      Order(
-        orderId: '1023',
-        date: '14 أبريل 2026',
-        details: 'غسيل سيارة - كبيرة',
-        status: 'تم التوصيل',
-        activeStepIndex: 4,
-        category: 'carsBikes',
-      ),
-    ];
-    for (var order in _orders) {
-      _saveOrderToDb(order);
+  Future<void> _replaceOrdersCache(List<Order> orders) async {
+    try {
+      final db = await DatabaseHelper.instance.database;
+      await db.transaction((txn) async {
+        await txn.delete('orders');
+        for (final order in orders) {
+          await txn.insert(
+            'orders',
+            {
+              'orderId': order.orderId,
+              'date': order.date,
+              'details': order.details,
+              'status': order.status,
+              'activeStepIndex': order.activeStepIndex,
+              'locationDescription': order.locationDescription,
+              'paymentMethod': order.paymentMethod,
+              'isRated': order.isRated ? 1 : 0,
+              'pickupDate': order.pickupDate?.toIso8601String(),
+              'pickupTimeSlot': order.pickupTimeSlot,
+              'category': order.category,
+            },
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
+        }
+      });
+    } catch (e) {
+      debugPrint('Error replacing orders cache: $e');
     }
   }
 
@@ -188,18 +204,7 @@ class OrderProvider extends ChangeNotifier {
 
     try {
       final bookingModels = await bookingRepository.getPendingBookings(agentId);
-      _orders = bookingModels.map((booking) {
-        return Order(
-          orderId: booking.bookingID.toString(),
-          date:
-              '${booking.createdAt.day} ${_getMonthName(booking.createdAt.month)} ${booking.createdAt.year}',
-          details: _mapBookingItemsToDetails(booking),
-          status: _mapStatusToString(booking.status),
-          activeStepIndex: _mapStatusToStepIndex(booking.status),
-          category: _mapCategory(booking),
-          pickupDate: booking.scheduledAt,
-        );
-      }).toList();
+      _orders = bookingModels.map(_mapBookingToOrder).toList();
       _isLoading = false;
     } on ServerException catch (e) {
       _errorMessage = e.message ?? 'حدث خطأ في الخادم';
@@ -237,6 +242,22 @@ class OrderProvider extends ChangeNotifier {
       final name = item.serviceCatalogItem?.serviceName ?? 'خدمة';
       return '$name - ${item.quantity} قطعة';
     }).join(', ');
+  }
+
+  Order _mapBookingToOrder(BookingModel booking) {
+    return Order(
+      orderId: booking.bookingID.toString(),
+      date:
+          '${booking.createdAt.day} ${_getMonthName(booking.createdAt.month)} ${booking.createdAt.year}',
+      details: _mapBookingItemsToDetails(booking),
+      status: _mapStatusToString(booking.status),
+      activeStepIndex: _mapStatusToStepIndex(booking.status),
+      category: _mapCategory(booking),
+      pickupDate: booking.scheduledAt,
+      pickupTimeSlot: booking.specialInstructions,
+      paymentMethod: booking.paymentMethod,
+      isRated: booking.isRated,
+    );
   }
 
   String _mapStatusToString(int statusInt) {
@@ -286,9 +307,9 @@ class OrderProvider extends ChangeNotifier {
       case 1:
         return 'carpets';
       case 2:
-        return 'carsBikes';
+        return 'homeServices';
       case 3:
-        return 'furniture';
+        return 'carsBikes';
       default:
         return null;
     }

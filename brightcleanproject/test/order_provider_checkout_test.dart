@@ -6,6 +6,9 @@ import 'package:flutter_test/flutter_test.dart';
 
 class _FakeBookingRepository implements BookingRepository {
   @override
+  Future<List<BookingModel>> getMyBookings() async => [];
+
+  @override
   Future<List<BookingModel>> getPendingBookings(int agentId) async => [];
 
   @override

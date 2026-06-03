@@ -6,6 +6,7 @@ import '../data/providers/admin_provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_styles.dart';
+import '../../../../core/network/api_client.dart';
 import '../../../../core/widgets/custom_text_field.dart';
 import 'admin_profile_screen.dart';
 
@@ -59,6 +60,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<AdminProvider>().fetchPendingUsers();
+      context.read<AdminProvider>().fetchApprovedStaff();
     });
   }
 
@@ -110,7 +112,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       'email': 'alnoor.laundry@gmail.com',
       'location': 'صنعاء، التحرير',
       'commercialRegister': 'CR-2026-99211',
-      'nationalId': '1092837465',
+      'nationalId': 'غير متوفر',
       'commercialRegisterImage': 'https://images.unsplash.com/photo-1586281380349-632531db7ed4?q=80&w=600',
       'nationalIdImage': 'https://images.unsplash.com/photo-1554774853-aae0a22c8aa4?q=80&w=600',
       'storefrontImage': 'https://images.unsplash.com/photo-1545173168-9f1947e8017e?q=80&w=600',
@@ -123,7 +125,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       'email': 'alsafaa.laundry@gmail.com',
       'location': 'تعز، شارع جمال',
       'commercialRegister': 'CR-2026-88401',
-      'nationalId': '1088492019',
+      'nationalId': 'غير متوفر',
       'commercialRegisterImage': 'https://images.unsplash.com/photo-1450133064473-71024230f91b?q=80&w=600',
       'nationalIdImage': 'https://images.unsplash.com/photo-1554774853-aae0a22c8aa4?q=80&w=600',
       'storefrontImage': 'https://images.unsplash.com/photo-1528238646472-f23945aca686?q=80&w=600',
@@ -134,10 +136,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       'phone': '733445566',
       'email': 'saeed.abdullah@gmail.com',
       'location': 'عدن، كريتر',
-      'nationalId': '2083746519',
+      'nationalId': 'غير متوفر',
       'licenseNumber': 'DL-9827364',
-      'vehicleType': 'تك تك (أصفر)',
-      'vehiclePlate': 'عدن - 12345',
+      'vehicleType': 'غير متوفر',
+      'vehiclePlate': 'غير متوفر',
       'licenseImage': 'https://images.unsplash.com/photo-1554774853-aae0a22c8aa4?q=80&w=600',
       'nationalIdImage': 'https://images.unsplash.com/photo-1554774853-aae0a22c8aa4?q=80&w=600',
       'vehicleImage': 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?q=80&w=600',
@@ -148,10 +150,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       'phone': '711223344',
       'email': 'mohamed.ali@gmail.com',
       'location': 'حضرموت، المكلا',
-      'nationalId': '2055483921',
+      'nationalId': 'غير متوفر',
       'licenseNumber': 'DL-8840291',
-      'vehicleType': 'سيارة صغيرة (تويوتا)',
-      'vehiclePlate': 'حضرموت - 9982',
+      'vehicleType': 'غير متوفر',
+      'vehiclePlate': 'غير متوفر',
       'licenseImage': 'https://images.unsplash.com/photo-1554774853-aae0a22c8aa4?q=80&w=600',
       'nationalIdImage': 'https://images.unsplash.com/photo-1554774853-aae0a22c8aa4?q=80&w=600',
       'vehicleImage': 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?q=80&w=600',
@@ -162,10 +164,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       'phone': '775566778',
       'email': 'omar.saleem@gmail.com',
       'location': 'تعز، الحوبان',
-      'nationalId': '2094830192',
+      'nationalId': 'غير متوفر',
       'licenseNumber': 'DL-5548392',
-      'vehicleType': 'تك تك (أحمر)',
-      'vehiclePlate': 'تعز - 4820',
+      'vehicleType': 'غير متوفر',
+      'vehiclePlate': 'غير متوفر',
       'licenseImage': 'https://images.unsplash.com/photo-1554774853-aae0a22c8aa4?q=80&w=600',
       'nationalIdImage': 'https://images.unsplash.com/photo-1554774853-aae0a22c8aa4?q=80&w=600',
       'vehicleImage': 'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?q=80&w=600',
@@ -183,7 +185,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       'email': 'alfakhera@laundry.com',
       'location': 'صنعاء، حدة',
       'commercialRegister': 'CR-2025-1029',
-      'nationalId': '1049283719',
+      'nationalId': 'غير متوفر',
       'commercialRegisterImage': 'https://images.unsplash.com/photo-1586281380349-632531db7ed4?q=80&w=600',
       'nationalIdImage': 'https://images.unsplash.com/photo-1554774853-aae0a22c8aa4?q=80&w=600',
       'storefrontImage': 'https://images.unsplash.com/photo-1545173168-9f1947e8017e?q=80&w=600',
@@ -198,7 +200,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       'email': 'albaraka@laundry.com',
       'location': 'صنعاء، السبعين',
       'commercialRegister': 'CR-2025-4820',
-      'nationalId': '1058291039',
+      'nationalId': 'غير متوفر',
       'commercialRegisterImage': 'https://images.unsplash.com/photo-1450133064473-71024230f91b?q=80&w=600',
       'nationalIdImage': 'https://images.unsplash.com/photo-1554774853-aae0a22c8aa4?q=80&w=600',
       'storefrontImage': 'https://images.unsplash.com/photo-1528238646472-f23945aca686?q=80&w=600',
@@ -211,10 +213,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       'phone': '733111222',
       'email': 'khaled.saeed@driver.com',
       'location': 'عدن، المنصورة',
-      'nationalId': '2039281039',
+      'nationalId': 'غير متوفر',
       'licenseNumber': 'DL-1928302',
-      'vehicleType': 'دراجة نارية (ياماها)',
-      'vehiclePlate': 'عدن - 9821',
+      'vehicleType': 'غير متوفر',
+      'vehiclePlate': 'غير متوفر',
       'licenseImage': 'https://images.unsplash.com/photo-1554774853-aae0a22c8aa4?q=80&w=600',
       'nationalIdImage': 'https://images.unsplash.com/photo-1554774853-aae0a22c8aa4?q=80&w=600',
       'vehicleImage': 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?q=80&w=600',
@@ -227,10 +229,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       'phone': '711111222',
       'email': 'yassin.ahmed@driver.com',
       'location': 'إب، الظهار',
-      'nationalId': '2019284029',
+      'nationalId': 'غير متوفر',
       'licenseNumber': 'DL-2938401',
-      'vehicleType': 'سيارة (هوندا)',
-      'vehiclePlate': 'إب - 3381',
+      'vehicleType': 'غير متوفر',
+      'vehiclePlate': 'غير متوفر',
       'licenseImage': 'https://images.unsplash.com/photo-1554774853-aae0a22c8aa4?q=80&w=600',
       'nationalIdImage': 'https://images.unsplash.com/photo-1554774853-aae0a22c8aa4?q=80&w=600',
       'vehicleImage': 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?q=80&w=600',
@@ -243,10 +245,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       'phone': '772233445',
       'email': 'saleh.morshed@driver.com',
       'location': 'صنعاء، باب اليمن',
-      'nationalId': '2093840192',
+      'nationalId': 'غير متوفر',
       'licenseNumber': 'DL-8849201',
-      'vehicleType': 'تكتك (أزرق)',
-      'vehiclePlate': 'صنعاء - 9021',
+      'vehicleType': 'غير متوفر',
+      'vehiclePlate': 'غير متوفر',
       'licenseImage': 'https://images.unsplash.com/photo-1554774853-aae0a22c8aa4?q=80&w=600',
       'nationalIdImage': 'https://images.unsplash.com/photo-1554774853-aae0a22c8aa4?q=80&w=600',
       'vehicleImage': 'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?q=80&w=600',
@@ -646,9 +648,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Widget _buildHomeView() {
-    final driversCount = _staffMembers.where((s) => s['type'] == 'سائق').length;
-    final laundriesCount =
-        _staffMembers.where((s) => s['type'] == 'مغسلة').length;
+    final approvedStaff = _mapApprovedStaff(context.watch<AdminProvider>().approvedStaff);
+    final driversCount = approvedStaff.where((s) => s['type'] == 'سائق').length;
+    final laundriesCount = approvedStaff.where((s) => s['type'] == 'مغسلة').length;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -1153,6 +1155,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
         final List<Map<String, dynamic>> mappedPending = adminProvider.pendingUsers.map((u) {
           final isLaundry = u.role.toLowerCase() == 'laundryagent';
+          String? documentUrl(String type) {
+            for (final document in u.documents) {
+              if (document.type.toLowerCase() == type.toLowerCase() &&
+                  document.fileUrl.isNotEmpty) {
+                return document.fileUrl;
+              }
+            }
+            return null;
+          }
+
           return {
             'id': u.id,
             'name': isLaundry ? (u.businessName ?? '${u.firstName} ${u.lastName}') : '${u.firstName} ${u.lastName}',
@@ -1162,15 +1174,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             'email': u.email,
             'location': 'غير متوفر',
             'commercialRegister': u.commercialRegister ?? 'غير متوفر',
-            'nationalId': 'غير متوفر',
+            'nationalId': u.nationalIdNumber ?? 'غير متوفر',
             'licenseNumber': 'غير متوفر',
-            'vehicleType': 'غير متوفر',
-            'vehiclePlate': 'غير متوفر',
-            'commercialRegisterImage': null,
-            'nationalIdImage': null,
+            'vehicleType': u.vehicleType ?? 'غير متوفر',
+            'vehiclePlate': u.plateNumber ?? 'غير متوفر',
+            'commercialRegisterImage': documentUrl('CommercialRegistration'),
+            'nationalIdImage': documentUrl('NationalID'),
             'storefrontImage': null,
-            'licenseImage': null,
-            'vehicleImage': null,
+            'licenseImage': documentUrl('DriverLicense'),
+            'vehicleImage': documentUrl('VehicleImage'),
           };
         }).toList();
 
@@ -1408,6 +1420,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       );
     }
 
+    final resolvedImageUrl = imageUrl.startsWith('http')
+        ? imageUrl
+        : '${BaseApiClient.defaultBaseUrl}$imageUrl';
+
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 0,
@@ -1419,7 +1435,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         leading: ClipRRect(
           borderRadius: BorderRadius.circular(8),
           child: Image.network(
-            imageUrl,
+            resolvedImageUrl,
             width: 50,
             height: 50,
             fit: BoxFit.cover,
@@ -1440,7 +1456,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           style: TextStyle(fontSize: 11, color: AppColors.primary),
         ),
         trailing: const Icon(Icons.fullscreen, color: AppColors.primary),
-        onTap: () => _showImagePreviewDialog(label, imageUrl),
+        onTap: () => _showImagePreviewDialog(label, resolvedImageUrl),
       ),
     );
   }
@@ -1508,7 +1524,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Widget _buildApprovedStaff() {
-    final filteredStaff = _staffMembers.where((staff) {
+    final adminProvider = context.watch<AdminProvider>();
+    final approvedStaff = _mapApprovedStaff(adminProvider.approvedStaff);
+    final filteredStaff = approvedStaff.where((staff) {
       final name = staff['name'].toString().toLowerCase();
       final query = _searchQuery.toLowerCase();
       return name.contains(query);
@@ -1551,6 +1569,65 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         ),
       ],
     );
+  }
+
+  List<Map<String, dynamic>> _mapApprovedStaff(List<dynamic> rawStaff) {
+    return rawStaff.whereType<Map>().map((staff) {
+      final role = staff['role']?.toString() ?? '';
+      final isLaundry = role.toLowerCase() == 'laundryagent';
+      String? documentUrl(String type) {
+        final documents = staff['documents'] ?? staff['Documents'];
+        if (documents is! List) return null;
+        for (final document in documents.whereType<Map>()) {
+          final documentType = document['type']?.toString() ?? document['Type']?.toString() ?? '';
+          final fileUrl = document['fileURL'] ??
+              document['fileUrl'] ??
+              document['FileURL'];
+          if (documentType.toLowerCase() == type.toLowerCase() &&
+              fileUrl != null &&
+              fileUrl.toString().isNotEmpty) {
+            return fileUrl.toString();
+          }
+        }
+        return null;
+      }
+
+      final firstName = staff['firstName'] ?? staff['FirstName'] ?? '';
+      final lastName = staff['lastName'] ?? staff['LastName'] ?? '';
+      final businessName = staff['businessName'] ?? staff['BusinessName'];
+      final ratingRaw = staff['rating'] ?? staff['Rating'];
+
+      return {
+        'id': staff['userID'] ?? staff['userId'] ?? staff['UserID'],
+        'name': isLaundry && businessName != null && businessName.toString().isNotEmpty
+            ? businessName.toString()
+            : '$firstName $lastName'.trim(),
+        'managerName': '$firstName $lastName'.trim(),
+        'type': isLaundry ? 'مغسلة' : 'سائق',
+        'rating': ratingRaw is num ? ratingRaw.toDouble() : 0.0,
+        'phone': staff['phoneNo'] ?? staff['PhoneNo'] ?? 'غير متوفر',
+        'email': staff['email'] ?? staff['Email'] ?? '',
+        'location': 'غير متوفر',
+        'commercialRegister': staff['commercialRegister'] ??
+            staff['CommercialRegister'] ??
+            'غير متوفر',
+        'nationalId': staff['nationalIDNumber'] ??
+            staff['nationalIdNumber'] ??
+            staff['NationalIDNumber'] ??
+            'غير متوفر',
+        'licenseNumber': 'غير متوفر',
+        'vehicleType': staff['vehicleType']?.toString() ??
+            staff['VehicleType']?.toString() ??
+            'غير متوفر',
+        'vehiclePlate': staff['plateNumber'] ?? staff['PlateNumber'] ?? 'غير متوفر',
+        'commercialRegisterImage': documentUrl('CommercialRegistration'),
+        'nationalIdImage': documentUrl('NationalID'),
+        'storefrontImage': null,
+        'licenseImage': documentUrl('DriverLicense'),
+        'vehicleImage': documentUrl('VehicleImage'),
+        'orders': const <String>[],
+      };
+    }).toList();
   }
 
   Widget _buildSectionHeader(String title) {

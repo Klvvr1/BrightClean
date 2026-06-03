@@ -492,6 +492,9 @@ class _CartScreenState extends State<CartScreen> {
                                   'quantity': item.quantity,
                                 };
                               }).toList();
+                              if (itemsDto.any((item) => (item['serviceID'] ?? 0) <= 0)) {
+                                throw Exception('تحتوي السلة على خدمة غير مرتبطة بكتالوج الخادم. يرجى حذفها وإضافتها من جديد.');
+                              }
 
                               final selectedAgentId = _selectedAgentId!;
 

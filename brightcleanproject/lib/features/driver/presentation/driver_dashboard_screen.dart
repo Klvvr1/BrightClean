@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/network/api_client.dart';
 import '../../../core/controllers/theme_controller.dart';
 import '../../../core/controllers/language_controller.dart';
 import '../data/providers/driver_provider.dart';
@@ -23,9 +24,12 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
   int _selectedIndex = 0;
   bool _isOnline = false;
 
-  // Mock data for user profile
+  // User profile is loaded from the API, with local values only as fallback.
   String _userName = 'سائق برايت كلين';
   String _userPhone = '0533333333';
+  String _userEmail = '';
+  String _vehicleType = '';
+  String _plateNumber = '';
 
   @override
   void initState() {
@@ -41,11 +45,27 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
   Future<void> _loadUserData() async {
     final isAr = LanguageController().isArabic;
     final prefs = await SharedPreferences.getInstance();
+    Map<String, dynamic>? profileResponse;
+    try {
+      final response = await BaseApiClient().get('/api/users/me');
+      if (response is Map<String, dynamic>) {
+        profileResponse = response;
+      }
+    } catch (_) {
+      profileResponse = null;
+    }
 
     if (!mounted) return;
 
     setState(() {
-      final savedName = prefs.getString('user_name');
+      final profile = profileResponse?['profile'];
+      final driver = profileResponse?['driver'];
+      final serverFirstName =
+          profile is Map<String, dynamic> ? profile['firstName']?.toString() ?? '' : '';
+      final serverLastName =
+          profile is Map<String, dynamic> ? profile['lastName']?.toString() ?? '' : '';
+      final serverName = '$serverFirstName $serverLastName'.trim();
+      final savedName = serverName.isNotEmpty ? serverName : prefs.getString('user_name');
       final isDefaultName = prefs.getBool('user_name_is_default') ?? true;
 
       // Only localize if explicitly marked as default
@@ -59,7 +79,21 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
       } else {
         _userName = savedName;
       }
-      _userPhone = prefs.getString('user_phone') ?? '0533333333';
+      _userPhone = profile is Map<String, dynamic>
+          ? profile['phoneNo']?.toString() ?? prefs.getString('user_phone') ?? '0533333333'
+          : prefs.getString('user_phone') ?? '0533333333';
+      _userEmail = profile is Map<String, dynamic>
+          ? profile['email']?.toString() ?? ''
+          : '';
+      final make = driver is Map<String, dynamic> ? driver['vehicleMake']?.toString() ?? '' : '';
+      final model = driver is Map<String, dynamic> ? driver['vehicleModel']?.toString() ?? '' : '';
+      _vehicleType = '$make $model'.trim();
+      if (_vehicleType.isEmpty && driver is Map<String, dynamic>) {
+        _vehicleType = driver['vehicleType']?.toString() ?? '';
+      }
+      _plateNumber = driver is Map<String, dynamic>
+          ? driver['plateNumber']?.toString() ?? ''
+          : '';
     });
   }
 
@@ -889,13 +923,13 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
         _buildProfileItem(
             Icons.email_outlined,
             isAr ? 'البريد الإلكتروني' : 'Email Address',
-            'driver@brightclean.com'),
+            _userEmail.isEmpty ? '-' : _userEmail),
         _buildProfileItem(
             Icons.drive_eta_outlined,
             isAr ? 'نوع المركبة' : 'Vehicle Type',
-            isAr ? 'سيارة صالون' : 'Sedan Car'),
+            _vehicleType.isEmpty ? '-' : _vehicleType),
         _buildProfileItem(Icons.confirmation_number_outlined,
-            isAr ? 'رقم اللوحة' : 'Plate Number', 'A 12345'),
+            isAr ? 'رقم اللوحة' : 'Plate Number', _plateNumber.isEmpty ? '-' : _plateNumber),
 
         const SizedBox(height: AppSpacing.lg),
 
