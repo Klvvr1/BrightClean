@@ -158,9 +158,32 @@ namespace BrightClean.API.Controllers
         public async Task<IActionResult> GetApprovedAgents()
         {
             var agents = await _context.LaundryAgents
+                .AsNoTracking()
                 .Where(a => a.IsApproved && a.AccountStatus == AccountStatus.Active && !a.IsStoreClosed)
                 .Include(a => a.Address)
-                .Select(a => new
+                .Include(a => a.SubscribedServices)
+                    .ThenInclude(s => s.ServiceCatalogItem)
+                .ToListAsync();
+
+            var agentIds = agents.Select(a => a.UserID).ToList();
+            var ratings = await _context.BookingRatings
+                .AsNoTracking()
+                .Where(r => agentIds.Contains(r.Booking.LaundryAgentID) && r.AgentRating.HasValue)
+                .Include(r => r.Booking)
+                    .ThenInclude(b => b.Client)
+                .ToListAsync();
+
+            var response = agents.Select(a =>
+            {
+                var agentRatings = ratings
+                    .Where(r => r.Booking.LaundryAgentID == a.UserID)
+                    .ToList();
+                var serviceIds = a.SubscribedServices
+                    .Where(s => s.IsActive && s.ServiceCatalogItem != null && s.ServiceCatalogItem.IsAvailable)
+                    .Select(s => s.ServiceID)
+                    .ToList();
+
+                return new
                 {
                     id = a.UserID,
                     businessName = a.BusinessName,
@@ -173,30 +196,27 @@ namespace BrightClean.API.Controllers
                         a.Address.Longitude
                     },
                     isStoreClosed = a.IsStoreClosed,
-                    serviceIds = a.SubscribedServices
-                        .Where(s => s.IsActive && s.ServiceCatalogItem.IsAvailable)
-                        .Select(s => s.ServiceID),
-                    serviceCount = a.SubscribedServices.Count(s => s.IsActive && s.ServiceCatalogItem.IsAvailable),
-                    averageRating = _context.BookingRatings
-                        .Where(r => r.Booking.LaundryAgentID == a.UserID && r.AgentRating.HasValue)
-                        .Average(r => (double?)r.AgentRating) ?? 0,
-                    reviewCount = _context.BookingRatings
-                        .Count(r => r.Booking.LaundryAgentID == a.UserID && r.AgentRating.HasValue),
-                    recentReviews = _context.BookingRatings
-                        .Where(r => r.Booking.LaundryAgentID == a.UserID && r.AgentRating.HasValue)
+                    serviceIds,
+                    serviceCount = serviceIds.Count,
+                    averageRating = agentRatings.Count == 0
+                        ? 0
+                        : agentRatings.Average(r => r.AgentRating!.Value),
+                    reviewCount = agentRatings.Count,
+                    recentReviews = agentRatings
                         .OrderByDescending(r => r.RatedAt)
                         .Take(3)
                         .Select(r => new
                         {
-                            userName = r.Booking.Client.FirstName + " " + r.Booking.Client.LastName,
+                            userName = $"{r.Booking.Client.FirstName} {r.Booking.Client.LastName}".Trim(),
                             rating = r.AgentRating,
                             comment = r.AgentComment,
                             ratedAt = r.RatedAt
                         })
-                })
-                .ToListAsync();
+                        .ToList()
+                };
+            }).ToList();
 
-            return Ok(agents);
+            return Ok(response);
         }
 
         // GET: /api/users/agents/{agentId}
