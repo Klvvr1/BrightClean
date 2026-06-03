@@ -160,12 +160,14 @@ class _AgentSelectionScreenState extends State<AgentSelectionScreen> {
           _isLoading = false;
         });
       } else {
+        if (!mounted) return;
         setState(() {
           _error = 'فشل في تحميل قائمة الوكلاء';
           _isLoading = false;
         });
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _error = 'خطأ في الاتصال بالخادم. يرجى المحاولة مرة أخرى.';
         _isLoading = false;
