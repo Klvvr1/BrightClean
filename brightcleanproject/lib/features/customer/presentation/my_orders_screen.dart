@@ -34,11 +34,16 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Listen for auth changes and retry loading orders when auth becomes available
-    _tryLoadOrders();
+    // Avoid notifying OrderProvider while this page is still being built inside
+    // CustomerMainLayout's AnimatedOpacity stack.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _tryLoadOrders();
+    });
   }
 
   void _tryLoadOrders() {
+    if (!mounted) return;
+
     final userId = Provider.of<AuthProvider>(context, listen: false).userId;
     if (userId != null && !_hasLoadedOrders) {
       Provider.of<OrderProvider>(context, listen: false).fetchMyOrders();

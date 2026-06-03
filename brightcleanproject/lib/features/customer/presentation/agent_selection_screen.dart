@@ -26,6 +26,59 @@ class _AgentSelectionScreenState extends State<AgentSelectionScreen> {
     _loadAgents();
   }
 
+  int? _readInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '');
+  }
+
+  double _readDouble(dynamic value) {
+    if (value is num) return value.toDouble();
+    return double.tryParse(value?.toString() ?? '') ?? 0.0;
+  }
+
+  dynamic _readAny(Map<dynamic, dynamic> map, List<String> keys) {
+    for (final key in keys) {
+      if (map.containsKey(key)) return map[key];
+    }
+    return null;
+  }
+
+  Set<int> _readServiceIds(Map<dynamic, dynamic> agentJson) {
+    final rawServiceIds = _readAny(agentJson, [
+      'serviceIds',
+      'ServiceIds',
+      'serviceIDs',
+      'ServiceIDs',
+    ]);
+    if (rawServiceIds is List) {
+      return rawServiceIds.map(_readInt).whereType<int>().toSet();
+    }
+
+    final rawServices = _readAny(agentJson, [
+      'services',
+      'Services',
+      'subscribedServices',
+      'SubscribedServices',
+    ]);
+    if (rawServices is List) {
+      return rawServices
+          .whereType<Map>()
+          .map((service) => _readAny(service, [
+                'serviceID',
+                'serviceId',
+                'ServiceID',
+                'id',
+                'ID',
+              ]))
+          .map(_readInt)
+          .whereType<int>()
+          .toSet();
+    }
+
+    return {};
+  }
+
   Future<void> _loadAgents() async {
     setState(() {
       _isLoading = true;
@@ -45,33 +98,28 @@ class _AgentSelectionScreenState extends State<AgentSelectionScreen> {
           _agents = response.where((a) {
             // Validate required fields exist and are of correct type
             if (a == null || a is! Map) return false;
-            final idValue = a['id'];
-            final nameValue = a['businessName'];
+            final idValue = _readAny(a, ['id', 'ID', 'userID', 'userId', 'UserID']);
+            final nameValue = _readAny(a, ['businessName', 'BusinessName', 'name', 'Name']);
             if (idValue == null || nameValue == null) return false;
             // Accept int or parseable String for id
-            if (idValue is! int && (idValue is! String || int.tryParse(idValue) == null)) return false;
+            if (_readInt(idValue) == null) return false;
             if (requiredServiceIds.isNotEmpty) {
-              final rawServiceIds = a['serviceIds'];
-              if (rawServiceIds is! List) return false;
-              final agentServiceIds = rawServiceIds
-                  .map((id) => id is int ? id : int.tryParse(id.toString()))
-                  .whereType<int>()
-                  .toSet();
+              final agentServiceIds = _readServiceIds(a);
               if (!requiredServiceIds.every(agentServiceIds.contains)) return false;
             }
             return true;
           }).map((a) {
             // Safe extraction with type coercion
-            final idValue = a['id'];
-            final id = idValue is int ? idValue : int.parse(idValue as String);
-            final businessName = (a['businessName'] ?? '').toString();
+            final idValue = _readAny(a, ['id', 'ID', 'userID', 'userId', 'UserID']);
+            final id = _readInt(idValue)!;
+            final businessName = (_readAny(a, ['businessName', 'BusinessName', 'name', 'Name']) ?? '').toString();
 
             // Read address from server response
             String address = 'غير متوفر';
-            final addressJson = a['address'];
+            final addressJson = _readAny(a, ['address', 'Address']);
             if (addressJson is Map) {
-              final area = addressJson['area'] ?? addressJson['Area'];
-              final street = addressJson['street'] ?? addressJson['Street'];
+              final area = _readAny(addressJson, ['area', 'Area']);
+              final street = _readAny(addressJson, ['street', 'Street']);
               final serverAddress = [area, street]
                   .where((value) => value != null && value.toString().trim().isNotEmpty)
                   .join('، ');
@@ -81,23 +129,21 @@ class _AgentSelectionScreenState extends State<AgentSelectionScreen> {
             }
 
             // Read ratings from server response
-            final ratingRaw = a['averageRating'] ?? a['rating'];
-            final reviewCountRaw = a['reviewCount'];
-            final double rating = ratingRaw is num ? ratingRaw.toDouble() : 0.0;
-            final int reviewCount = reviewCountRaw is int
-                ? reviewCountRaw
-                : int.tryParse(reviewCountRaw?.toString() ?? '') ?? 0;
+            final ratingRaw = _readAny(a, ['averageRating', 'AverageRating', 'rating', 'Rating']);
+            final reviewCountRaw = _readAny(a, ['reviewCount', 'ReviewCount', 'totalRatings', 'TotalRatings']);
+            final double rating = _readDouble(ratingRaw);
+            final int reviewCount = _readInt(reviewCountRaw) ?? 0;
 
             // Read recent reviews from server response
-            final rawReviews = a['recentReviews'];
+            final rawReviews = _readAny(a, ['recentReviews', 'RecentReviews', 'reviews', 'Reviews']);
             final reviews = rawReviews is List
                 ? rawReviews
                     .whereType<Map>()
                     .map((review) => Review(
-                          userName: (review['userName'] ?? '').toString(),
-                          comment: (review['comment'] ?? '').toString(),
-                          rating: (review['rating'] as num?)?.toDouble() ?? 0.0,
-                          date: DateTime.tryParse((review['ratedAt'] ?? '').toString()) ?? DateTime.now(),
+                          userName: (_readAny(review, ['userName', 'UserName']) ?? '').toString(),
+                          comment: (_readAny(review, ['comment', 'Comment']) ?? '').toString(),
+                          rating: _readDouble(_readAny(review, ['rating', 'Rating'])),
+                          date: DateTime.tryParse((_readAny(review, ['ratedAt', 'RatedAt', 'date', 'Date']) ?? '').toString()) ?? DateTime.now(),
                         ))
                     .toList()
                 : <Review>[];
@@ -114,12 +160,14 @@ class _AgentSelectionScreenState extends State<AgentSelectionScreen> {
           _isLoading = false;
         });
       } else {
+        if (!mounted) return;
         setState(() {
           _error = 'فشل في تحميل قائمة الوكلاء';
           _isLoading = false;
         });
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _error = 'خطأ في الاتصال بالخادم. يرجى المحاولة مرة أخرى.';
         _isLoading = false;
