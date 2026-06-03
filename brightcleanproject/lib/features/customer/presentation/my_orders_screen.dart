@@ -76,7 +76,8 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
       children: [
         CircleAvatar(
           radius: 12,
-          backgroundColor: isActive ? activeColor : theme.colorScheme.onSurface.withValues(alpha: 0.2),
+          backgroundColor:
+              isActive ? activeColor : theme.colorScheme.onSurface.withValues(alpha: 0.2),
           child: isActive
               ? Icon(Icons.check, size: 16, color: theme.colorScheme.surface)
               : null,
@@ -85,7 +86,9 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
         Text(
           title,
           style: theme.textTheme.labelSmall?.copyWith(
-            color: isActive ? theme.colorScheme.onSurface : theme.colorScheme.onSurface.withValues(alpha: 0.5),
+            color: isActive
+                ? theme.colorScheme.onSurface
+                : theme.colorScheme.onSurface.withValues(alpha: 0.5),
           ),
         ),
       ],
@@ -248,9 +251,12 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                   icon: Icon(isRated ? Icons.star : Icons.star_outline),
                   label: Text(isRated ? 'تم التقييم' : 'تقييم الخدمة'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                        isRated ? theme.colorScheme.surfaceContainerHighest : theme.colorScheme.primary,
-                    foregroundColor: isRated ? theme.colorScheme.onSurfaceVariant : theme.colorScheme.onPrimary,
+                    backgroundColor: isRated
+                        ? theme.colorScheme.surfaceContainerHighest
+                        : theme.colorScheme.primary,
+                    foregroundColor: isRated
+                        ? theme.colorScheme.onSurfaceVariant
+                        : theme.colorScheme.onPrimary,
                   ),
                 ),
               ),
@@ -261,7 +267,8 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
     );
   }
 
-  void _showRatingDialog(BuildContext parentContext, String orderId, bool requiresDriverRating) {
+  void _showRatingDialog(
+      BuildContext parentContext, String orderId, bool requiresDriverRating) {
     double serviceRating = 5;
     double driverRating = 5;
     final TextEditingController reviewController = TextEditingController();
@@ -292,7 +299,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                   ),
                 ),
                 const SizedBox(height: AppSpacing.lg),
-                
+
                 // 1. Service Rating Section
                 Text(
                   'تقييم الخدمة والنظافة',
@@ -304,19 +311,24 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                 const SizedBox(height: AppSpacing.sm),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(5, (index) => GestureDetector(
-                    onTap: () => setState(() => serviceRating = index + 1.0),
-                    child: Icon(
-                      index < serviceRating ? Icons.star : Icons.star_border,
-                      color: index < serviceRating ? Colors.amber : theme.colorScheme.onSurface.withValues(alpha: 0.3),
-                      size: 36,
+                  children: List.generate(
+                    5,
+                    (index) => GestureDetector(
+                      onTap: () => setState(() => serviceRating = index + 1.0),
+                      child: Icon(
+                        index < serviceRating ? Icons.star : Icons.star_border,
+                        color: index < serviceRating
+                            ? Colors.amber
+                            : theme.colorScheme.onSurface.withValues(alpha: 0.3),
+                        size: 36,
+                      ),
                     ),
-                  )),
+                  ),
                 ),
-                
+
                 if (requiresDriverRating) ...[
                   const SizedBox(height: AppSpacing.lg),
-                  
+
                   // 2. Driver Rating Section
                   Text(
                     'تقييم تعامل وسرعة المندوب',
@@ -328,18 +340,23 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                   const SizedBox(height: AppSpacing.sm),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(5, (index) => GestureDetector(
-                      onTap: () => setState(() => driverRating = index + 1.0),
-                      child: Icon(
-                        index < driverRating ? Icons.star : Icons.star_border,
-                        color: index < driverRating ? Colors.amber : theme.colorScheme.onSurface.withValues(alpha: 0.3),
-                        size: 36,
+                    children: List.generate(
+                      5,
+                      (index) => GestureDetector(
+                        onTap: () => setState(() => driverRating = index + 1.0),
+                        child: Icon(
+                          index < driverRating ? Icons.star : Icons.star_border,
+                          color: index < driverRating
+                              ? Colors.amber
+                              : theme.colorScheme.onSurface.withValues(alpha: 0.3),
+                          size: 36,
+                        ),
                       ),
-                    )),
+                    ),
                   ),
                 ],
                 const SizedBox(height: AppSpacing.xl),
-                
+
                 // Comments
                 TextField(
                   controller: reviewController,
@@ -352,10 +369,12 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                     ),
                     border: OutlineInputBorder(
                       borderRadius: AppRadius.button,
-                      borderSide: BorderSide(color: theme.colorScheme.onSurface.withValues(alpha: 0.2)),
+                      borderSide: BorderSide(
+                          color: theme.colorScheme.onSurface.withValues(alpha: 0.2)),
                     ),
                     filled: true,
-                    fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                    fillColor:
+                        theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
                   ),
                 ),
               ],
@@ -365,7 +384,8 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                 onPressed: () => Navigator.pop(dialogContext),
                 child: Text(
                   'إلغاء',
-                  style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
+                  style: TextStyle(
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
                 ),
               ),
               ElevatedButton(
@@ -374,16 +394,22 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
 
                   final review = Review(
                     userName: 'عميل برايت كلين',
-                    comment: reviewController.text.trim().isEmpty ? 'خدمة ممتازة! شكراً لكم.' : reviewController.text.trim(),
-                    rating: requiresDriverRating ? (serviceRating + driverRating) / 2.0 : serviceRating,
+                    comment: reviewController.text.trim().isEmpty
+                        ? 'خدمة ممتازة! شكراً لكم.'
+                        : reviewController.text.trim(),
+                    rating: requiresDriverRating
+                        ? (serviceRating + driverRating) / 2.0
+                        : serviceRating,
                     serviceRating: serviceRating,
                     driverRating: requiresDriverRating ? driverRating : null,
                     date: DateTime.now(),
                   );
 
                   // Capture context-sensitive objects BEFORE the async gap
-                  final reviewProvider = Provider.of<ReviewProvider>(parentContext, listen: false);
-                  final orderProvider = Provider.of<OrderProvider>(parentContext, listen: false);
+                  final reviewProvider =
+                      Provider.of<ReviewProvider>(parentContext, listen: false);
+                  final orderProvider =
+                      Provider.of<OrderProvider>(parentContext, listen: false);
                   final messenger = ScaffoldMessenger.of(parentContext);
                   final commentText = reviewController.text.trim();
 
@@ -394,7 +420,8 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                     if (bookingIdInt == null) {
                       messenger.showSnackBar(
                         const SnackBar(
-                          content: Text('خطأ: معرف الطلب غير صالح، لا يمكن إرسال التقييم.'),
+                          content: Text(
+                              'خطأ: معرف الطلب غير صالح، لا يمكن إرسال التقييم.'),
                           backgroundColor: AppColors.error,
                           behavior: SnackBarBehavior.floating,
                         ),
@@ -407,7 +434,8 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                       body: {
                         'agentRating': serviceRating.toInt(),
                         'agentComment': commentText.isEmpty ? null : commentText,
-                        'deliveryRating': requiresDriverRating ? driverRating.toInt() : null,
+                        'deliveryRating':
+                            requiresDriverRating ? driverRating.toInt() : null,
                         'deliveryComment': null,
                       },
                     );
@@ -417,9 +445,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
 
                     messenger.showSnackBar(
                       const SnackBar(
-                        content: Text(
-                          'شكراً لتقييمك! تم إضافة رأيك بنجاح.',
-                        ),
+                        content: Text('شكراً لتقييمك! تم إضافة رأيك بنجاح.'),
                         backgroundColor: AppColors.success,
                         behavior: SnackBarBehavior.floating,
                       ),
@@ -427,17 +453,18 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                   } on ServerException catch (e) {
                     messenger.showSnackBar(
                       SnackBar(
-                        content: Text('فشل إرسال التقييم: ${e.message ?? "خطأ في الخادم"}'),
+                        content: Text(
+                            'فشل إرسال التقييم: ${e.message ?? "خطأ في الخادم"}'),
                         backgroundColor: AppColors.error,
                         behavior: SnackBarBehavior.floating,
                       ),
                     );
                   } catch (e) {
-                    // Log the error and show appropriate message
                     debugPrint('Rating submission error: $e');
                     messenger.showSnackBar(
                       SnackBar(
-                        content: Text('حدث خطأ غير متوقع أثناء إرسال التقييم: $e'),
+                        content:
+                            Text('حدث خطأ غير متوقع أثناء إرسال التقييم: $e'),
                         backgroundColor: AppColors.error,
                         behavior: SnackBarBehavior.floating,
                       ),
@@ -448,7 +475,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
               ),
             ],
           );
-        }
+        },
       ),
     ).then((_) {
       reviewController.dispose();
@@ -511,7 +538,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return DefaultTabController(
       length: 2,
       child: Scaffold(
@@ -532,12 +559,11 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
         ),
         body: TabBarView(
           children: [
+            // ─── Tab 1: الطلبات الحالية ────────────────────────────────────
             Consumer<OrderProvider>(
               builder: (context, orderProvider, child) {
                 if (orderProvider.isLoading) {
-                  return const Center(
-                    child: CircularProgressIndicator(),
-                  );
+                  return const Center(child: CircularProgressIndicator());
                 }
 
                 if (orderProvider.errorMessage != null) {
@@ -547,7 +573,8 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.error_outline, color: AppColors.error, size: 48),
+                          const Icon(Icons.error_outline,
+                              color: AppColors.error, size: 48),
                           const SizedBox(height: AppSpacing.md),
                           Text(
                             orderProvider.errorMessage!,
@@ -559,7 +586,9 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                           const SizedBox(height: AppSpacing.lg),
                           ElevatedButton(
                             onPressed: () {
-                              final userId = Provider.of<AuthProvider>(context, listen: false).userId;
+                              final userId =
+                                  Provider.of<AuthProvider>(context, listen: false)
+                                      .userId;
                               if (userId != null) {
                                 orderProvider.fetchMyOrders();
                               }
@@ -572,7 +601,10 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                   );
                 }
 
-                final currentOrders = orderProvider.orders;
+                // الطلبات الحالية = كل ما ليس مكتملاً أو ملغياً
+                final currentOrders = orderProvider.orders
+                    .where((o) => o.status != 'تم التوصيل' && o.status != 'ملغي')
+                    .toList();
 
                 return currentOrders.isEmpty
                     ? _buildEmptyState(
@@ -600,21 +632,64 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                             statusColor: _getStatusColor(order.status),
                             activeStepIndex: order.activeStepIndex,
                             isRated: order.isRated,
-                            onRatePressed: () =>
-                                _showRatingDialog(context, order.orderId, order.requiresDriverRating),
-                            showTracker: order.status != 'تم التوصيل' &&
-                                order.status != 'ملغي',
+                            onRatePressed: () => _showRatingDialog(
+                                context, order.orderId, order.requiresDriverRating),
+                            showTracker: true,
                           );
                         },
                       );
               },
             ),
-            _buildEmptyState(
-              context,
-              title: 'لا توجد طلبات سابقة',
-              subtitle:
-                  'يبدو أنك لم تقم بأي طلبات في الماضي. اطلب الآن لتجربة خدماتنا المميزة.',
-              icon: Icons.receipt_long_rounded,
+
+            // ─── Tab 2: الطلبات السابقة ────────────────────────────────────
+            Consumer<OrderProvider>(
+              builder: (context, orderProvider, child) {
+                if (orderProvider.isLoading) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                // الطلبات السابقة = المكتملة أو الملغاة
+                final pastOrders = orderProvider.orders
+                    .where((o) => o.status == 'تم التوصيل' || o.status == 'ملغي')
+                    .toList();
+
+                return pastOrders.isEmpty
+                    ? _buildEmptyState(
+                        context,
+                        title: 'لا توجد طلبات سابقة',
+                        subtitle:
+                            'يبدو أنك لم تقم بأي طلبات مكتملة بعد. اطلب الآن لتجربة خدماتنا المميزة.',
+                        icon: Icons.receipt_long_rounded,
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.all(AppSpacing.lg),
+                        itemCount: pastOrders.length,
+                        itemBuilder: (context, index) {
+                          final Order order = pastOrders[index];
+
+                          final displayOrderId = order.orderId.length > 8
+                              ? order.orderId.substring(0, 8)
+                              : order.orderId;
+
+                          return _buildOrderCard(
+                            context,
+                            orderId: displayOrderId,
+                            date: order.date,
+                            details: order.details,
+                            status: order.status,
+                            statusColor: _getStatusColor(order.status),
+                            activeStepIndex: order.activeStepIndex,
+                            isRated: order.isRated,
+                            // يمكن التقييم فقط للمكتملة وليس الملغاة
+                            onRatePressed: order.status == 'تم التوصيل'
+                                ? () => _showRatingDialog(
+                                    context, order.orderId, order.requiresDriverRating)
+                                : null,
+                            showTracker: false,
+                          );
+                        },
+                      );
+              },
             ),
           ],
         ),

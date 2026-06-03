@@ -65,35 +65,9 @@ class _AgentSelectionScreenState extends State<AgentSelectionScreen> {
             final idValue = a['id'];
             final id = idValue is int ? idValue : int.parse(idValue as String);
             final businessName = (a['businessName'] ?? '').toString();
-            
-            // Initialize display fields before overriding them with server values.
-            String address = 'شارع بيروت، حولي';
-            String workingHours = '8:00 ص - 10:00 م';
-            double rating = 4.8;
-            int reviewCount = 85;
-            
-            if (id == 1) {
-              address = 'شارع تونس، حولي (بجانب مجمع البحر)';
-              workingHours = '7:30 ص - 11:00 م';
-              rating = 4.9;
-              reviewCount = 124;
-            } else if (id == 2) {
-              address = 'شارع بغداد، السالمية';
-              workingHours = '8:00 ص - 10:00 م';
-              rating = 4.7;
-              reviewCount = 68;
-            } else {
-              address = 'شارع عمان، السالمية';
-              workingHours = '9:00 ص - 9:30 م';
-              rating = 4.5;
-              reviewCount = 42;
-            }
 
-            address = 'غير متوفر';
-            workingHours = 'غير متوفر';
-            rating = 0.0;
-            reviewCount = 0;
-
+            // Read address from server response
+            String address = 'غير متوفر';
             final addressJson = a['address'];
             if (addressJson is Map) {
               final area = addressJson['area'] ?? addressJson['Area'];
@@ -106,14 +80,15 @@ class _AgentSelectionScreenState extends State<AgentSelectionScreen> {
               }
             }
 
+            // Read ratings from server response
             final ratingRaw = a['averageRating'] ?? a['rating'];
             final reviewCountRaw = a['reviewCount'];
-            rating = ratingRaw is num ? ratingRaw.toDouble() : 0.0;
-            reviewCount = reviewCountRaw is int
+            final double rating = ratingRaw is num ? ratingRaw.toDouble() : 0.0;
+            final int reviewCount = reviewCountRaw is int
                 ? reviewCountRaw
                 : int.tryParse(reviewCountRaw?.toString() ?? '') ?? 0;
-            workingHours = 'غير متوفر';
 
+            // Read recent reviews from server response
             final rawReviews = a['recentReviews'];
             final reviews = rawReviews is List
                 ? rawReviews
@@ -131,7 +106,6 @@ class _AgentSelectionScreenState extends State<AgentSelectionScreen> {
               'id': id,
               'businessName': businessName,
               'address': address,
-              'workingHours': workingHours,
               'rating': rating,
               'reviewCount': reviewCount,
               'reviews': reviews,
@@ -156,7 +130,7 @@ class _AgentSelectionScreenState extends State<AgentSelectionScreen> {
   void _showLaundryDetailsBottomSheet(BuildContext context, Map<String, dynamic> agent) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    
+
     final List<Review> agentReviews = agent['reviews'] is List<Review>
         ? List<Review>.from(agent['reviews'] as List<Review>)
         : <Review>[];
@@ -185,7 +159,7 @@ class _AgentSelectionScreenState extends State<AgentSelectionScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              
+
               // Header
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
@@ -207,7 +181,7 @@ class _AgentSelectionScreenState extends State<AgentSelectionScreen> {
                 ),
               ),
               const Divider(),
-              
+
               // Content Scroll
               Expanded(
                 child: SingleChildScrollView(
@@ -219,24 +193,43 @@ class _AgentSelectionScreenState extends State<AgentSelectionScreen> {
                       Container(
                         padding: const EdgeInsets.all(AppSpacing.md),
                         decoration: BoxDecoration(
-                          color: isDark ? Colors.white.withValues(alpha: 0.03) : AppColors.background,
+                          color: isDark
+                              ? Colors.white.withValues(alpha: 0.03)
+                              : AppColors.background,
                           borderRadius: AppRadius.card,
-                          border: Border.all(color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05)),
+                          border: Border.all(
+                            color: isDark
+                                ? Colors.white10
+                                : Colors.black.withValues(alpha: 0.05),
+                          ),
                         ),
                         child: Column(
                           children: [
-                            _buildDetailRow(context, Icons.storefront, 'الاسم التجاري', agent['businessName'] as String),
+                            _buildDetailRow(
+                              context,
+                              Icons.storefront,
+                              'الاسم التجاري',
+                              agent['businessName'] as String,
+                            ),
                             const Divider(height: 24),
-                            _buildDetailRow(context, Icons.location_on_outlined, 'العنوان', agent['address'] as String),
+                            _buildDetailRow(
+                              context,
+                              Icons.location_on_outlined,
+                              'العنوان',
+                              agent['address'] as String,
+                            ),
                             const Divider(height: 24),
-                            _buildDetailRow(context, Icons.access_time, 'أوقات العمل', agent['workingHours'] as String),
-                            const Divider(height: 24),
-                            _buildDetailRow(context, Icons.star_outline, 'التقييم العام', '${agent['rating']} ⭐ (${agent['reviewCount']} تقييم)'),
+                            _buildDetailRow(
+                              context,
+                              Icons.star_outline,
+                              'التقييم العام',
+                              '${agent['rating']} ⭐ (${agent['reviewCount']} تقييم)',
+                            ),
                           ],
                         ),
                       ),
                       const SizedBox(height: AppSpacing.xl),
-                      
+
                       // Reviews Header
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -266,13 +259,16 @@ class _AgentSelectionScreenState extends State<AgentSelectionScreen> {
                         ],
                       ),
                       const SizedBox(height: AppSpacing.md),
-                      
+
                       // Reviews List
                       if (agentReviews.isEmpty)
                         const Center(
                           child: Padding(
                             padding: EdgeInsets.all(AppSpacing.xl),
-                            child: Text('لا توجد تقييمات بعد لهذه المغسلة', style: TextStyle(color: Colors.grey)),
+                            child: Text(
+                              'لا توجد تقييمات بعد لهذه المغسلة',
+                              style: TextStyle(color: Colors.grey),
+                            ),
                           ),
                         )
                       else
@@ -296,13 +292,20 @@ class _AgentSelectionScreenState extends State<AgentSelectionScreen> {
                                         children: [
                                           CircleAvatar(
                                             radius: 16,
-                                            backgroundColor: isDark ? Colors.white10 : AppColors.primary.withValues(alpha: 0.1),
-                                            child: Icon(Icons.person, size: 20, color: isDark ? Colors.white : AppColors.primary),
+                                            backgroundColor: isDark
+                                                ? Colors.white10
+                                                : AppColors.primary.withValues(alpha: 0.1),
+                                            child: Icon(
+                                              Icons.person,
+                                              size: 20,
+                                              color: isDark ? Colors.white : AppColors.primary,
+                                            ),
                                           ),
                                           const SizedBox(width: AppSpacing.sm),
                                           Text(
                                             review.userName,
-                                            style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                                            style: theme.textTheme.titleSmall
+                                                ?.copyWith(fontWeight: FontWeight.bold),
                                           ),
                                         ],
                                       ),
@@ -310,7 +313,9 @@ class _AgentSelectionScreenState extends State<AgentSelectionScreen> {
                                         children: List.generate(5, (starIdx) {
                                           return Icon(
                                             Icons.star,
-                                            color: starIdx < review.rating.floor() ? AppColors.warning : Colors.grey.shade300,
+                                            color: starIdx < review.rating.floor()
+                                                ? AppColors.warning
+                                                : Colors.grey.shade300,
                                             size: 14,
                                           );
                                         }),
@@ -321,7 +326,8 @@ class _AgentSelectionScreenState extends State<AgentSelectionScreen> {
                                   Text(
                                     review.comment,
                                     style: theme.textTheme.bodyMedium?.copyWith(
-                                      color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
+                                      color:
+                                          theme.colorScheme.onSurface.withValues(alpha: 0.8),
                                     ),
                                   ),
                                 ],
@@ -333,7 +339,7 @@ class _AgentSelectionScreenState extends State<AgentSelectionScreen> {
                   ),
                 ),
               ),
-              
+
               // Select Action Button at Bottom
               SafeArea(
                 child: Padding(
@@ -348,7 +354,10 @@ class _AgentSelectionScreenState extends State<AgentSelectionScreen> {
                       padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
                       minimumSize: const Size(double.infinity, 50),
                     ),
-                    child: const Text('تأكيد اختيار هذه المغسلة', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    child: const Text(
+                      'تأكيد اختيار هذه المغسلة',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ),
               ),
@@ -362,7 +371,7 @@ class _AgentSelectionScreenState extends State<AgentSelectionScreen> {
   Widget _buildDetailRow(BuildContext context, IconData icon, String label, String value) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -372,9 +381,17 @@ class _AgentSelectionScreenState extends State<AgentSelectionScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.6))),
+              Text(
+                label,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                ),
+              ),
               const SizedBox(height: 2),
-              Text(value, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+              Text(
+                value,
+                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              ),
             ],
           ),
         ),
@@ -403,7 +420,11 @@ class _AgentSelectionScreenState extends State<AgentSelectionScreen> {
                       children: [
                         const Icon(Icons.error_outline, color: AppColors.error, size: 60),
                         const SizedBox(height: AppSpacing.md),
-                        Text(_error!, style: const TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center),
+                        Text(
+                          _error!,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                          textAlign: TextAlign.center,
+                        ),
                         const SizedBox(height: AppSpacing.lg),
                         ElevatedButton(
                           onPressed: _loadAgents,
@@ -415,7 +436,10 @@ class _AgentSelectionScreenState extends State<AgentSelectionScreen> {
                 )
               : _agents.isEmpty
                   ? const Center(
-                      child: Text('لا توجد مغاسل متوفرة حالياً في النظام.', style: TextStyle(color: Colors.grey)),
+                      child: Text(
+                        'لا توجد مغاسل متوفرة حالياً في النظام.',
+                        style: TextStyle(color: Colors.grey),
+                      ),
                     )
                   : ListView.builder(
                       padding: const EdgeInsets.all(AppSpacing.md),
@@ -437,13 +461,19 @@ class _AgentSelectionScreenState extends State<AgentSelectionScreen> {
                                     width: 60,
                                     height: 60,
                                     decoration: BoxDecoration(
-                                      color: isDark ? Colors.white10 : AppColors.primary.withValues(alpha: 0.1),
+                                      color: isDark
+                                          ? Colors.white10
+                                          : AppColors.primary.withValues(alpha: 0.1),
                                       shape: BoxShape.circle,
                                     ),
-                                    child: Icon(Icons.storefront, size: 30, color: isDark ? Colors.white : AppColors.primary),
+                                    child: Icon(
+                                      Icons.storefront,
+                                      size: 30,
+                                      color: isDark ? Colors.white : AppColors.primary,
+                                    ),
                                   ),
                                   const SizedBox(width: AppSpacing.md),
-                                  
+
                                   // Information
                                   Expanded(
                                     child: Column(
@@ -451,29 +481,38 @@ class _AgentSelectionScreenState extends State<AgentSelectionScreen> {
                                       children: [
                                         Text(
                                           agent['businessName'] as String,
-                                          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                                          style: theme.textTheme.titleMedium
+                                              ?.copyWith(fontWeight: FontWeight.bold),
                                         ),
                                         const SizedBox(height: AppSpacing.xs),
                                         Row(
                                           children: [
-                                            const Icon(Icons.star, color: AppColors.warning, size: 16),
+                                            const Icon(Icons.star,
+                                                color: AppColors.warning, size: 16),
                                             const SizedBox(width: 4),
                                             Text(
                                               '${agent['rating']} (${agent['reviewCount']} تقييم)',
-                                              style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold),
+                                              style: theme.textTheme.bodySmall
+                                                  ?.copyWith(fontWeight: FontWeight.bold),
                                             ),
                                           ],
                                         ),
                                         const SizedBox(height: AppSpacing.xs),
                                         Row(
                                           children: [
-                                            Icon(Icons.location_on_outlined, color: theme.colorScheme.onSurface.withValues(alpha: 0.5), size: 14),
+                                            Icon(
+                                              Icons.location_on_outlined,
+                                              color: theme.colorScheme.onSurface
+                                                  .withValues(alpha: 0.5),
+                                              size: 14,
+                                            ),
                                             const SizedBox(width: 4),
                                             Expanded(
                                               child: Text(
                                                 agent['address'] as String,
                                                 style: theme.textTheme.bodySmall?.copyWith(
-                                                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                                                  color: theme.colorScheme.onSurface
+                                                      .withValues(alpha: 0.6),
                                                 ),
                                                 maxLines: 1,
                                                 overflow: TextOverflow.ellipsis,
@@ -485,12 +524,13 @@ class _AgentSelectionScreenState extends State<AgentSelectionScreen> {
                                     ),
                                   ),
                                   const SizedBox(width: AppSpacing.sm),
-                                  
+
                                   // Action Icon
                                   Icon(
                                     Icons.arrow_forward_ios,
                                     size: 16,
-                                    color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                                    color:
+                                        theme.colorScheme.onSurface.withValues(alpha: 0.4),
                                   ),
                                 ],
                               ),
