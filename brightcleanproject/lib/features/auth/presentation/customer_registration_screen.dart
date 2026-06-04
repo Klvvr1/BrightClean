@@ -193,8 +193,8 @@ class _CustomerRegistrationScreenState
     if (value.contains(RegExp(r'[a-zA-Z]'))) {
       return 'الرجاء إدخال رقم صالح';
     }
-    if (!RegExp(r'^[0-9]{9}$').hasMatch(value)) {
-      return 'الرجاء إدخال رقم هاتف يمني صالح مكون من 9 أرقام';
+    if (!RegExp(r'^(77|78|73|71|70)[0-9]{7}$').hasMatch(value)) {
+      return 'رقم الهاتف يجب أن يتكون من 9 أرقام ويبدأ بـ (77, 78, 73, 71, 70)';
     }
     return null;
   }

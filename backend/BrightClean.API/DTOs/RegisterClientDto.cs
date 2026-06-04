@@ -24,7 +24,7 @@ namespace BrightClean.API.DTOs
         public string Password { get; set; } = string.Empty;
 
         [Required]
-        [RegularExpression(@"^[0-9]{9}$", ErrorMessage = "Phone number must be exactly 9 digits.")]
+        [RegularExpression(@"^(77|78|73|71|70)[0-9]{7}$", ErrorMessage = "رقم الهاتف يجب أن يتكون من 9 أرقام ويبدأ بـ (77, 78, 73, 71, 70).")]
         public string PhoneNo { get; set; } = string.Empty;
 
         [Required]

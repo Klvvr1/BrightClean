@@ -23,7 +23,7 @@ namespace BrightClean.API.DTOs
         public string Password { get; set; } = string.Empty;
 
         [Required]
-        [RegularExpression(@"^[0-9]{9}$", ErrorMessage = "Phone number must be exactly 9 digits.")]
+        [RegularExpression(@"^(77|78|73|71|70)[0-9]{7}$", ErrorMessage = "رقم الهاتف يجب أن يتكون من 9 أرقام ويبدأ بـ (77, 78, 73, 71, 70).")]
         public string PhoneNo { get; set; } = string.Empty;
 
         [Required]
@@ -38,6 +38,7 @@ namespace BrightClean.API.DTOs
         public string GrandfatherName { get; set; } = string.Empty;
 
         [Required]
+        [RegularExpression(@"^[0-9]{11}$", ErrorMessage = "رقم الهوية الوطنية يجب أن يتكون من 11 رقماً.")]
         public string NationalIDNumber { get; set; } = string.Empty;
 
         [Required]
@@ -48,6 +49,7 @@ namespace BrightClean.API.DTOs
         public string CommercialRegister { get; set; } = string.Empty;
 
         [Required]
+        [RegularExpression(@"^[0-9]{5,9}$", ErrorMessage = "رقم الحساب يجب أن يتكون من 5 إلى 9 أرقام (حسب البنك).")]
         public string BankAcc { get; set; } = string.Empty;
 
         // Address details
