@@ -5,22 +5,27 @@ import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/controllers/language_controller.dart';
 import '../../../../core/controllers/theme_controller.dart';
+import '../../auth/data/providers/auth_provider.dart';
+import '../data/models/delivery_task_model.dart';
+import '../data/providers/driver_provider.dart';
 
 enum TrackingWorkflow { pickup, delivery }
 
 class DriverTrackingScreen extends StatefulWidget {
   final String taskId;
   final TrackingWorkflow workflow;
+  final DeliveryTaskModel? task;
 
   const DriverTrackingScreen({
     super.key,
     required this.taskId,
     required this.workflow,
+    this.task,
   });
 
   @override
@@ -51,6 +56,131 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
     super.initState();
     // Initialize workflow from the parameter passed by the caller
     _workflow = widget.workflow;
+    final status = widget.task?.status;
+    if (status == 3) {
+      _currentStep = widget.workflow == TrackingWorkflow.pickup ? 3 : 2;
+    } else if (status == 2) {
+      _currentStep = 1;
+    }
+  }
+
+  DeliveryTaskModel? _findCurrentTask(DriverProvider provider) {
+    for (final task in provider.tasks) {
+      if (task.taskID.toString() == widget.taskId) {
+        return task;
+      }
+    }
+    return widget.task;
+  }
+
+  String _formatAddress(Map<String, dynamic>? address, int? fallbackId) {
+    if (address == null) {
+      return fallbackId == null ? '-' : 'Address ID $fallbackId';
+    }
+    final parts = [
+      address['area'],
+      address['street'],
+      address['buildingNo'],
+      address['city'],
+    ]
+        .where((part) => part != null && part.toString().trim().isNotEmpty)
+        .map((part) => part.toString().trim())
+        .toList();
+    return parts.isEmpty
+        ? (fallbackId == null ? '-' : 'Address ID $fallbackId')
+        : parts.join(' ');
+  }
+
+  Future<void> _claimTask(DriverProvider provider, bool isAr) async {
+    final driverId = context.read<AuthProvider>().userId;
+    final taskId = int.tryParse(widget.taskId);
+    if (driverId == null || taskId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(isAr
+              ? 'تعذر تحديد المندوب أو الطلب'
+              : 'Could not identify the driver or task'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(isAr ? 'تأكيد قبول الطلب' : 'Confirm Order Claim'),
+        content: Text(isAr
+            ? 'هل تريد قبول هذا الطلب وإضافته إلى طلباتي؟'
+            : 'Do you want to claim this order and move it to My Orders?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(isAr ? 'إلغاء' : 'Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(isAr ? 'قبول الطلب' : 'Claim Order'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || confirmed != true) return;
+
+    try {
+      await provider.claimTask(taskId, driverId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(isAr
+              ? 'تم قبول الطلب بنجاح وسيظهر في طلباتي'
+              : 'Order claimed successfully and moved to My Orders'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+      context.pop('claimed');
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(isAr ? 'فشل قبول الطلب: $e' : 'Failed to claim order: $e'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
+  }
+
+  Future<void> _completeTask(DriverProvider provider, bool isAr) async {
+    final taskId = int.tryParse(widget.taskId);
+    if (taskId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(isAr ? 'Ø±Ù‚Ù… Ø§Ù„Ù…Ù‡Ù…Ø© ØºÙŠØ± ØµØ­ÙŠØ­' : 'Invalid task number'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    try {
+      await provider.completeTask(taskId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(isAr ? 'ØªÙ… Ø¥ÙƒÙ…Ø§Ù„ Ø§Ù„Ù…Ù‡Ù…Ø© Ø¨Ù†Ø¬Ø§Ø­' : 'Task completed successfully'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+      context.pop();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(isAr ? 'ÙØ´Ù„ Ø¥ÙƒÙ…Ø§Ù„ Ø§Ù„Ù…Ù‡Ù…Ø©: $e' : 'Failed to complete task: $e'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
   }
 
   Future<void> _makePhoneCall(String phoneNumber) async {
@@ -132,6 +262,14 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
     final isAr = LanguageController().isArabic;
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final provider = context.watch<DriverProvider>();
+    final task = _findCurrentTask(provider);
+    final pickupAddress = _formatAddress(task?.pickupAddress, task?.pickupAddressID);
+    final dropoffAddress = _formatAddress(task?.dropoffAddress, task?.dropoffAddressID);
+    final activeAddress = _workflow == TrackingWorkflow.pickup ? pickupAddress : dropoffAddress;
+    final isTaskUnassigned = task?.status == 0;
+    final isTaskCompleted = task?.status == 3;
+    final isTaskEditable = task == null || task.status == 1 || task.status == 2;
     
     // Workflow Labels
     final List<String> pickupStatuses = isAr 
@@ -297,11 +435,15 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
+                    Expanded(
+                      flex: 2,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                         Text(
                           _customerName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
@@ -312,8 +454,26 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
                           isAr ? 'شارع الشيخ زايد، دبي' : 'Sheikh Zayed Rd, Dubai',
                           style: TextStyle(color: isDark ? Colors.white : Colors.grey, fontSize: 14),
                         ),
-                      ],
+                        ],
+                      ),
                     ),
+                    if (task != null)
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: Text(
+                            activeAddress,
+                            textAlign: TextAlign.end,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: isDark ? Colors.white70 : Colors.grey.shade700,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
                     Row(
                       children: [
                         IconButton.filled(
@@ -425,7 +585,7 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
                         );
                       }),
                       onChanged: (newValue) {
-                        if (newValue != null) {
+                        if (newValue != null && isTaskEditable) {
                           setState(() => _currentStep = newValue);
                         }
                       },
@@ -434,21 +594,90 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
                 ),
                 
                 const SizedBox(height: AppSpacing.xl),
+
+                if (isTaskUnassigned)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
+                    ),
+                    child: Text(
+                      isAr
+                          ? 'ÙŠØ¬Ø¨ Ù‚Ø¨ÙˆÙ„ Ø§Ù„Ù…Ù‡Ù…Ø© Ù…Ù† Ø§Ù„Ù‚Ø§Ø¦Ù…Ø© Ù‚Ø¨Ù„ ØªØºÙŠÙŠØ± Ø­Ø§Ù„ØªÙ‡Ø§.'
+                          : 'Claim this task from the list before changing its status.',
+                      style: TextStyle(
+                        color: isDark ? Colors.white : Colors.black87,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                if (isTaskUnassigned) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 55,
+                    child: ElevatedButton.icon(
+                      onPressed: provider.isActionLoading
+                          ? null
+                          : () => _claimTask(provider, isAr),
+                      icon: provider.isActionLoading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(Icons.assignment_turned_in),
+                      label: Text(
+                        isAr ? 'قبول الطلب' : 'Claim Order',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(15),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+                if (isTaskCompleted)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    decoration: BoxDecoration(
+                      color: AppColors.success.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.success.withValues(alpha: 0.3)),
+                    ),
+                    child: Text(
+                      isAr ? 'ØªÙ… Ø¥ÙƒÙ…Ø§Ù„ Ù‡Ø°Ù‡ Ø§Ù„Ù…Ù‡Ù…Ø©.' : 'This task has been completed.',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: AppColors.success,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
                 
                 // Finish Task Button (Only shows when on the last step)
-                if (_currentStep == currentStatuses.length - 1)
+                if (_currentStep == currentStatuses.length - 1 && isTaskEditable)
                   SizedBox(
                     width: double.infinity,
                     height: 55,
                     child: ElevatedButton(
-                      onPressed: () async {
-                        // Save completion status to SharedPreferences
-                        final prefs = await SharedPreferences.getInstance();
-                        await prefs.setBool('task_completed_${widget.taskId}', true);
-                        
-                        if (!context.mounted) return;
-                        context.pop(); // Complete task and return to dashboard
-                      },
+                      onPressed: provider.isActionLoading
+                          ? null
+                          : () => _completeTask(provider, isAr),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.success,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),

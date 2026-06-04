@@ -15,6 +15,7 @@ class RegisterAgentModel {
   final String street;
   final double latitude;
   final double longitude;
+  final List<int> selectedServiceCategories;
 
   RegisterAgentModel({
     required this.firstName,
@@ -33,6 +34,7 @@ class RegisterAgentModel {
     required this.street,
     required this.latitude,
     required this.longitude,
+    required this.selectedServiceCategories,
   });
 
   Map<String, dynamic> toJson() {
@@ -53,6 +55,7 @@ class RegisterAgentModel {
       'street': street,
       'latitude': latitude,
       'longitude': longitude,
+      'selectedServiceCategories': selectedServiceCategories.join(','),
     };
   }
 }

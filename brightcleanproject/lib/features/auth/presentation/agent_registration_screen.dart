@@ -321,6 +321,28 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
     return null;
   }
 
+  int? _serviceCategoryForRegistrationLabel(String label) {
+    final normalized = label.trim();
+    final labels = _availableServices.keys.toList();
+    final index = labels.indexOf(normalized);
+    switch (index) {
+      case 0:
+        return 0; // ServiceCategory.Laundry
+      case 1:
+      case 2:
+        return 1; // ServiceCategory.HomeWovens
+      case 3:
+      case 4:
+        return 3; // ServiceCategory.VehicleWash
+      case 5:
+      case 6:
+      case 7:
+        return 2; // ServiceCategory.HomeServices
+      default:
+        return null;
+    }
+  }
+
   void _submitForm() {
     setState(() => _hasAttemptedSubmit = true);
 
@@ -381,6 +403,11 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
     
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final selectedServiceCategories = selectedServices
+          .map(_serviceCategoryForRegistrationLabel)
+          .whereType<int>()
+          .toSet()
+          .toList();
       
       final agentModel = RegisterAgentModel(
         firstName: _firstNameController.text.trim(),
@@ -399,6 +426,7 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
         street: _selectedAddress ?? '',
         latitude: _selectedCoordinates?.latitude ?? 0.0,
         longitude: _selectedCoordinates?.longitude ?? 0.0,
+        selectedServiceCategories: selectedServiceCategories,
       );
 
       final cartProvider = Provider.of<CartProvider>(context, listen: false);

@@ -3,6 +3,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Authorization;
@@ -82,6 +83,21 @@ namespace BrightClean.API.Controllers
 
             if (nationalIdImage == null || nationalIdImage.Length == 0)
                 return BadRequest(new { message = "صورة الهوية الوطنية مطلوبة." });
+
+            var selectedCategories = ParseSelectedServiceCategories(dto.SelectedServiceCategories);
+            if (selectedCategories.Count == 0)
+            {
+                return BadRequest(new { message = "At least one service category must be selected." });
+            }
+
+            var selectedCatalogServices = await _context.ServiceCatalogItems
+                .Where(s => s.IsAvailable && selectedCategories.Contains(s.Category))
+                .ToListAsync();
+
+            if (selectedCatalogServices.Count == 0)
+            {
+                return BadRequest(new { message = "No available catalog services match the selected service categories." });
+            }
 
             // Ensure directory exists
             var uploadDir = System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), "wwwroot", "uploads");
@@ -189,6 +205,19 @@ namespace BrightClean.API.Controllers
                 });
 
                 _context.LaundryAgents.Add(agent);
+                await _context.SaveChangesAsync();
+
+                foreach (var service in selectedCatalogServices)
+                {
+                    _context.AgentServices.Add(new AgentService
+                    {
+                        LaundryAgentID = agent.UserID,
+                        ServiceID = service.ServiceID,
+                        IsActive = false,
+                        Notes = "Selected during agent registration; pending admin activation."
+                    });
+                }
+
                 await _context.SaveChangesAsync();
 
                 await transaction.CommitAsync();
@@ -420,6 +449,25 @@ namespace BrightClean.API.Controllers
         }
 
         private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, (string Token, DateTime Expires)> _resetTokens = new();
+
+        private static List<ServiceCategory> ParseSelectedServiceCategories(string? rawCategories)
+        {
+            if (string.IsNullOrWhiteSpace(rawCategories))
+            {
+                return new List<ServiceCategory>();
+            }
+
+            return rawCategories
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(value => int.TryParse(value, out var parsed) &&
+                                 Enum.IsDefined(typeof(ServiceCategory), parsed)
+                    ? (ServiceCategory?)parsed
+                    : null)
+                .Where(category => category.HasValue)
+                .Select(category => category!.Value)
+                .Distinct()
+                .ToList();
+        }
 
         // POST: /api/auth/forgot-password
         [HttpPost("forgot-password")]

@@ -45,6 +45,12 @@
 > - Added agent order actions `POST /api/bookings/{bookingId}/reject` and `POST /api/bookings/{bookingId}/start`; existing accept/ready actions are now called from Flutter instead of simulated delays
 > - Customer ratings are only cached locally after the backend rating API succeeds; default seeded local reviews are no longer shown for empty review history
 > - Added authenticated `POST /api/auth/change-password`; the Flutter change-password screen no longer uses simulated success
+> - `GET /api/users/agents` now accepts repeated `serviceIds` query parameters so cart/checkout can request only agents that support every selected service
+> - Delivery task pool now returns the current driver's `Assigned` and `InProgress` tasks, not only newly assigned tasks
+> - Agent registration now persists selected service categories into `AgentService` rows; admin approval activates those pending service subscriptions
+> - Added admin service assignment endpoint `POST /api/admin/agents/{agentId}/services` for correcting or updating existing laundry-agent service subscriptions
+> - Driver task cards now open the tracking/detail workflow with the selected `DeliveryTaskModel`; task completion is sent through `DriverProvider.completeTask()` instead of local-only state
+> - Driver available tasks now use an `Manage Order` / `إدارة الطلب` flow: details first, then confirmed claim, then the task moves to the driver's current orders for staged status updates and completion
 >
 > **Changelog v6.2:**
 > - `SystemStatus.Reason` removed — `Message` is the sole public-facing explanation shown on the login screen
@@ -1034,7 +1040,7 @@ LIMIT 1
 - `TechnicianDispatch` bookings generate 0 `DeliveryTask` records
 - Stage 2 remains `Unassigned` until Stage 1 is `Completed`
 - Different drivers may handle Stage 1 and Stage 2 of the same booking
-- The driver pool returns unassigned tasks and the current driver's own assigned tasks; tasks assigned to other drivers are hidden
+- The driver pool returns eligible unassigned tasks plus the current driver's own `Assigned` and `InProgress` tasks; tasks assigned to other drivers are hidden
 
 ### Pricing Rules
 - All prices are set by the admin — agents have no pricing authority
@@ -1206,6 +1212,7 @@ Repositories serve as the data access layer, abstracting direct API communicatio
   * `BookingRepository.getPendingBookings()`: Parses both raw list responses and wrapped list responses defensively for backward compatibility.
 * **Agent / Service Catalog APIs**:
   * `GET /api/users/agents`: Returns approved, active, open agents with address, rating summary, recent reviews, and supported `serviceIds`.
+  * `GET /api/users/agents?serviceIds=1&serviceIds=11`: Returns only agents whose active subscriptions include every requested service ID; cart and checkout use this to show compatible agents only.
   * `GET /api/users/agents/{agentId}`: Returns public agent details, services, and recent reviews.
   * `GET /api/users/agents/{agentId}/ratings-summary`: Returns rating distribution and average rating for the agent.
   * `GET /api/services/agents/{agentId}`: Returns only active catalog services that the selected available agent provides.
@@ -1221,8 +1228,10 @@ Repositories serve as the data access layer, abstracting direct API communicatio
 * **Admin Repository**:
   * `AdminRepository.getPendingApprovals()`: Fetches pending agent/driver approvals with real `UserDocument` metadata and file URLs.
   * `AdminRepository.getApprovedStaff()`: Fetches approved drivers and agents with real role-specific fields, rating, and document data from `/api/admin/staff`.
+  * `POST /api/admin/agents/{agentId}/services`: Replaces the active service subscriptions for an existing laundry agent with validated available catalog services.
 * **Auth Repository**:
   * `AuthRepository.registerAgent(...)`: Calls `POST /api/auth/register/agent` using multipart form data and the file keys `commercialRegisterImage` and `nationalIdImage`.
+  * Agent registration sends `selectedServiceCategories` as comma-separated `ServiceCategory` numeric values. The backend creates pending `AgentService` subscriptions for all available catalog services in those categories.
   * `AuthRepository.updateProfile(String firstName, String lastName, String phone)`: Calls `PUT /api/users/profile` to update user account info.
   * `POST /api/auth/change-password`: Authenticated password change endpoint; verifies the current password before writing a new BCrypt hash.
   * `AuthRepository.forgotPassword(String email)`: Calls `POST /api/auth/forgot-password` to initiate recovery.

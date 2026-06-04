@@ -331,6 +331,20 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
     }
   }
 
+  Future<void> _openTaskDetails(DeliveryTaskModel task) async {
+    final result = await context.push(
+      '/driver_tracking/${task.taskID}',
+      extra: {
+        'workflow': task.type == 0 ? 'pickup' : 'delivery',
+        'task': task.toJson(),
+      },
+    );
+    if (!mounted) return;
+    if (result == 'claimed') {
+      setState(() => _selectedIndex = 1);
+    }
+  }
+
   Widget _buildRealTaskCard({
     required DeliveryTaskModel task,
     required bool isAr,
@@ -354,12 +368,15 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => _openTaskDetails(task),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Row(
@@ -464,7 +481,23 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                             color: isDark ? Colors.white : Colors.black87))),
               ],
             ),
-            if (isUnassigned) ...[
+            if (isUnassigned || isAssigned) ...[
+              const SizedBox(height: AppSpacing.md),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () => _openTaskDetails(task),
+                  icon: const Icon(Icons.manage_search),
+                  label: Text(isAr ? 'إدارة الطلب' : 'Manage Order'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor:
+                        isUnassigned ? AppColors.primary : AppColors.success,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+            if (isUnassigned && provider.errorMessage == '__legacy_claim_action__') ...[
               const SizedBox(height: AppSpacing.md),
               SizedBox(
                 width: double.infinity,
@@ -523,7 +556,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                 ),
               ),
             ],
-            if (isAssigned) ...[
+            if (isAssigned && provider.errorMessage == '__legacy_complete_action__') ...[
               const SizedBox(height: AppSpacing.md),
               SizedBox(
                 width: double.infinity,
@@ -587,7 +620,8 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                 ),
               ),
             ],
-          ],
+            ],
+          ),
         ),
       ),
     );

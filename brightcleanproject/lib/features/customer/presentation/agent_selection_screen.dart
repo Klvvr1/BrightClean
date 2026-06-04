@@ -86,14 +86,17 @@ class _AgentSelectionScreenState extends State<AgentSelectionScreen> {
     });
     try {
       final apiClient = BaseApiClient();
-      final response = await apiClient.get('/api/users/agents');
+      final requiredServiceIds = Provider.of<CartProvider>(context, listen: false)
+          .items
+          .map((item) => item.serviceId)
+          .where((id) => id > 0)
+          .toSet();
+      final query = requiredServiceIds.isEmpty
+          ? ''
+          : '?${requiredServiceIds.map((id) => 'serviceIds=$id').join('&')}';
+      final response = await apiClient.get('/api/users/agents$query');
       if (response is List) {
         if (!mounted) return;
-        final requiredServiceIds = Provider.of<CartProvider>(context, listen: false)
-            .items
-            .map((item) => item.serviceId)
-            .where((id) => id > 0)
-            .toSet();
         setState(() {
           _agents = response.where((a) {
             // Validate required fields exist and are of correct type

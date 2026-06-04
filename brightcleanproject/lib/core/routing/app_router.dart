@@ -17,6 +17,7 @@ import '../../features/customer/presentation/checkout_screen.dart';
 import '../../features/customer/presentation/order_success_screen.dart';
 import '../../features/agent/presentation/agent_dashboard_screen.dart';
 import '../../features/agent/presentation/agent_order_management_screen.dart';
+import '../../features/driver/data/models/delivery_task_model.dart';
 import '../../features/driver/presentation/driver_dashboard_screen.dart';
 import '../../features/driver/presentation/driver_tracking_screen.dart';
 import '../../features/admin/presentation/admin_dashboard_screen.dart';
@@ -205,10 +206,12 @@ class AppRouter {
 
           // Safely extract and normalize workflow from extra data
           TrackingWorkflow workflow = TrackingWorkflow.pickup; // default fallback
+          DeliveryTaskModel? task;
 
           if (state.extra != null && state.extra is Map<String, dynamic>) {
             final extra = state.extra as Map<String, dynamic>;
             final workflowValue = extra['workflow'];
+            final taskValue = extra['task'];
 
             if (workflowValue is TrackingWorkflow) {
               // Direct enum instance
@@ -228,12 +231,20 @@ class AppRouter {
                 workflow = TrackingWorkflow.pickup;
               }
             }
+            if (taskValue is DeliveryTaskModel) {
+              task = taskValue;
+            } else if (taskValue is Map<String, dynamic>) {
+              task = DeliveryTaskModel.fromJson(taskValue);
+            } else if (taskValue is Map) {
+              task = DeliveryTaskModel.fromJson(Map<String, dynamic>.from(taskValue));
+            }
             // For any other type or null, use default (pickup)
           }
 
           return DriverTrackingScreen(
             taskId: id,
             workflow: workflow,
+            task: task,
           );
         },
       ),

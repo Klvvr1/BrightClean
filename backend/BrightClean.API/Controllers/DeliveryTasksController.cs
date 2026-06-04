@@ -45,7 +45,8 @@ namespace BrightClean.API.Controllers
                         prev.StageNumber == 1 &&
                         prev.Status == DeliveryTaskStatus.Completed) &&
                      _context.Bookings.Any(b => b.BookingID == t.BookingID && b.Status == BookingStatus.Ready)))) ||
-                    (t.Status == DeliveryTaskStatus.Assigned && t.DeliveryStaffID == driverId))
+                    ((t.Status == DeliveryTaskStatus.Assigned || t.Status == DeliveryTaskStatus.InProgress) &&
+                     t.DeliveryStaffID == driverId))
                 .ToListAsync();
 
             return Ok(pool);
@@ -115,9 +116,9 @@ namespace BrightClean.API.Controllers
                 return Forbid();
             }
 
-            if (task.Status != DeliveryTaskStatus.Assigned)
+            if (task.Status != DeliveryTaskStatus.Assigned && task.Status != DeliveryTaskStatus.InProgress)
             {
-                return BadRequest("Only assigned tasks can be completed.");
+                return BadRequest("Only assigned or in-progress tasks can be completed.");
             }
 
             task.Status = DeliveryTaskStatus.Completed;

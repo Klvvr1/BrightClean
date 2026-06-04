@@ -62,5 +62,9 @@ namespace BrightClean.API.DTOs
 
         [Required]
         public decimal Longitude { get; set; }
+
+        // Comma-separated ServiceCategory numeric values selected by the agent UI.
+        // Example: "0,3" means Laundry and VehicleWash.
+        public string? SelectedServiceCategories { get; set; }
     }
 }
