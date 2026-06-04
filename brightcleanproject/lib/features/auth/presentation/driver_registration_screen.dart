@@ -137,16 +137,24 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
     if (value.length != 9) {
       return 'رقم الهاتف يجب أن يتكون من 9 أرقام بالضبط';
     }
-    if (!RegExp(r'^[0-9]{9}$').hasMatch(value)) {
-      return 'الرجاء إدخال رقم هاتف يمني صالح مكون من 9 أرقام';
+    if (!RegExp(r'^(77|78|73|71|70)[0-9]{7}$').hasMatch(value)) {
+      return 'رقم الهاتف يجب أن يتكون من 9 أرقام ويبدأ بـ (77, 78, 73, 71, 70)';
     }
     return null;
   }
 
   String? _validateNationalId(String? value) {
     if (value == null || value.trim().isEmpty) return 'رقم الهوية الوطنية مطلوب';
-    if (!RegExp(r'^[0-9]{10}$').hasMatch(value.trim())) {
-      return 'يجب أن يتكون رقم الهوية من 10 أرقام';
+    if (!RegExp(r'^[0-9]{11}$').hasMatch(value.trim())) {
+      return 'يجب أن يتكون رقم الهوية من 11 رقماً';
+    }
+    return null;
+  }
+
+  String? _validatePlateNumber(String? value) {
+    if (value == null || value.trim().isEmpty) return 'يرجى إدخال رقم اللوحة';
+    if (!RegExp(r'^[0-9]{1,6}$').hasMatch(value.trim())) {
+      return 'رقم اللوحة يجب أن يتكون من 1 إلى 6 أرقام';
     }
     return null;
   }
@@ -259,7 +267,7 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
                 : (_selectedVehicleType ?? ''),
             'VehicleModel': vehicleModel,
             'PlateNumber': _plateNumberController.text.trim(),
-            'BankAcc': 'SA$phoneNo',
+            'BankAcc': phoneNo,
           },
           files: [
             await http.MultipartFile.fromPath('nationalIdImage', _idImage!.path),
@@ -464,7 +472,7 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
                   keyboardType: TextInputType.number,
                   inputFormatters: [
                     FilteringTextInputFormatter.digitsOnly,
-                    LengthLimitingTextInputFormatter(10),
+                    LengthLimitingTextInputFormatter(11),
                   ],
                   validator: _validateNationalId,
                 ),
@@ -516,7 +524,12 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
                 CustomTextField(
                   controller: _plateNumberController,
                   hintText: 'رقم اللوحة',
-                  validator: (v) => v == null || v.isEmpty ? 'يرجى إدخال رقم اللوحة' : null,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(6),
+                  ],
+                  validator: _validatePlateNumber,
                 ),
                 const SizedBox(height: AppSpacing.xl),
 

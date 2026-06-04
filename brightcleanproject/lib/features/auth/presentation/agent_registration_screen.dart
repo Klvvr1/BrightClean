@@ -239,19 +239,16 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
 
   String? _validateNationalId(String? value) {
     if (value == null || value.trim().isEmpty) return 'رقم الهوية الوطنية مطلوب';
-    if (!RegExp(r'^[0-9]{10}$').hasMatch(value.trim())) {
-      return 'يجب أن يتكون رقم الهوية من 10 أرقام';
+    if (!RegExp(r'^[0-9]{11}$').hasMatch(value.trim())) {
+      return 'يجب أن يتكون رقم الهوية من 11 رقماً';
     }
     return null;
   }
 
   String? _validateCR(String? value) {
     if (value == null || value.trim().isEmpty) return 'رقم السجل التجاري مطلوب';
-    final val = value.trim();
-    // Enforce 4-6 digits OR custom formats (e.g. CR-XXXX or alphanumeric with dashes, length 3-20)
-    final crRegex = RegExp(r'^([0-9]{4,6}|[a-zA-Z0-9\-\/]{3,20})$');
-    if (!crRegex.hasMatch(val)) {
-      return 'الرجاء إدخال رقم سجل تجاري صحيح (4-6 أرقام أو صيغة معتمدة)';
+    if (!RegExp(r'^[0-9]{10}$').hasMatch(value.trim())) {
+      return 'رقم السجل التجاري يجب أن يتكون من 10 أرقام';
     }
     return null;
   }
@@ -259,11 +256,8 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
   String? _validateBankAccount(String? value) {
     if (value == null || value.trim().isEmpty) return 'رقم الحساب البنكي مطلوب';
     final val = value.trim();
-    // Accept 9-10 digits (Kuraimi format) or 30-char Yemeni IBANs starting with YE
-    final kuraimiRegex = RegExp(r'^[0-9]{9,10}$');
-    final ibanRegex = RegExp(r'^[yY][eE][0-9a-zA-Z]{28}$');
-    if (!kuraimiRegex.hasMatch(val) && !ibanRegex.hasMatch(val)) {
-      return 'يجب إدخال حساب الكريمي (9-10 أرقام) أو آيبان يمني (30 حرفاً)';
+    if (!RegExp(r'^[0-9]{5,9}$').hasMatch(val)) {
+      return 'رقم الحساب يجب أن يتكون من 5 إلى 9 أرقام (حسب البنك)';
     }
     return null;
   }
@@ -283,8 +277,8 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
     if (value.length != 9) {
       return 'رقم الهاتف يجب أن يتكون من 9 أرقام بالضبط';
     }
-    if (!RegExp(r'^[0-9]{9}$').hasMatch(value)) {
-      return 'الرجاء إدخال رقم هاتف يمني صالح مكون من 9 أرقام';
+    if (!RegExp(r'^(77|78|73|71|70)[0-9]{7}$').hasMatch(value)) {
+      return 'رقم الهاتف يجب أن يتكون من 9 أرقام ويبدأ بـ (77, 78, 73, 71, 70)';
     }
     return null;
   }
@@ -608,19 +602,32 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
                   controller: _nationalIdController,
                   hintText: 'رقم الهوية الوطنية للمدير',
                   keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(11),
+                  ],
                   validator: _validateNationalId,
                 ),
                 const SizedBox(height: AppSpacing.md),
                 CustomTextField(
                   controller: _commercialRegisterController,
                   hintText: 'رقم السجل التجاري / الترخيص',
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(10),
+                  ],
                   validator: _validateCR,
                 ),
                 const SizedBox(height: AppSpacing.md),
                 CustomTextField(
                   controller: _bankAccountController,
                   hintText: 'رقم الحساب البنكي / الآيبان (IBAN)',
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(9),
+                  ],
                   validator: _validateBankAccount,
                 ),
                 const SizedBox(height: AppSpacing.xl),
