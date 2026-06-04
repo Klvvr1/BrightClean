@@ -106,15 +106,18 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       _isLoadingAgents = true;
     });
     try {
-      final response = await _apiClient.get('/api/users/agents');
+      final requiredServiceIds = widget.directItems
+              ?.map((item) => item.serviceId)
+              .where((id) => id > 0)
+              .toSet() ??
+          <int>{};
+      final query = requiredServiceIds.isEmpty
+          ? ''
+          : '?${requiredServiceIds.map((id) => 'serviceIds=$id').join('&')}';
+      final response = await _apiClient.get('/api/users/agents$query');
       if (response is List) {
         if (!mounted) return;
         setState(() {
-          final requiredServiceIds = widget.directItems
-                  ?.map((item) => item.serviceId)
-                  .where((id) => id > 0)
-                  .toSet() ??
-              <int>{};
           _agents = response
               .where((a) {
                 if (requiredServiceIds.isEmpty) return true;

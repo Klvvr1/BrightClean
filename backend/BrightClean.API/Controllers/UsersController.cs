@@ -262,7 +262,8 @@ namespace BrightClean.API.Controllers
                             s.ServiceCatalogItem.Price,
                             s.ServiceCatalogItem.PricingModel,
                             s.ServiceCatalogItem.DeliveryModel
-                        }),
+                        })
+                        .ToList(),
                     recentReviews = _context.BookingRatings
                         .Where(r => r.Booking.LaundryAgentID == a.UserID && r.AgentRating.HasValue)
                         .OrderByDescending(r => r.RatedAt)
@@ -274,6 +275,7 @@ namespace BrightClean.API.Controllers
                             comment = r.AgentComment,
                             ratedAt = r.RatedAt
                         })
+                        .ToList()
                 })
                 .FirstOrDefaultAsync();
 

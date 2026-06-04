@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -120,6 +121,21 @@ namespace BrightClean.API.Controllers
                 document.ReviewNotes = "Approved as part of account approval.";
             }
 
+            if (user.Role == UserRole.LaundryAgent)
+            {
+                var pendingAgentServices = await _context.AgentServices
+                    .Where(service => service.LaundryAgentID == user.UserID && !service.IsActive && service.PendingActivation)
+                    .ToListAsync();
+
+                foreach (var service in pendingAgentServices)
+                {
+                    service.IsActive = true;
+                    service.PendingActivation = false;
+                    service.ActivatedAt = DateTime.UtcNow;
+                    service.Notes = "Activated as part of account approval.";
+                }
+            }
+
             // Generate AuditLog entry
             string action = user.Role == UserRole.LaundryAgent ? "ACTIVATE_AGENT" : "ACTIVATE_DRIVER";
             var auditLog = new AuditLog
@@ -137,6 +153,86 @@ namespace BrightClean.API.Controllers
             await _context.SaveChangesAsync();
 
             return Ok(new { message = "تم تفعيل الحساب بنجاح.", userId = user.UserID, isApproved = user.IsApproved });
+        }
+
+        // POST: /api/admin/agents/{agentId}/services
+        [HttpPost("agents/{agentId}/services")]
+        public async Task<IActionResult> SetAgentServices(int agentId, [FromBody] SetAgentServicesDto dto)
+        {
+            var agent = await _context.LaundryAgents
+                .FirstOrDefaultAsync(a => a.UserID == agentId);
+
+            if (agent == null)
+            {
+                return NotFound(new { message = "Laundry agent was not found." });
+            }
+
+            if (dto.ServiceIDs == null)
+            {
+                ModelState.AddModelError("ServiceIDs", "ServiceIDs is required");
+                return BadRequest(ModelState);
+            }
+
+            var requestedServiceIds = dto.ServiceIDs
+                .Where(id => id > 0)
+                .Distinct()
+                .ToList();
+
+            if (requestedServiceIds.Count == 0)
+            {
+                return BadRequest(new { message = "At least one service ID must be selected." });
+            }
+
+            var validServiceIds = await _context.ServiceCatalogItems
+                .Where(service => requestedServiceIds.Contains(service.ServiceID) && service.IsAvailable)
+                .Select(service => service.ServiceID)
+                .ToListAsync();
+
+            var invalidServiceIds = requestedServiceIds.Except(validServiceIds).ToList();
+            if (invalidServiceIds.Count > 0)
+            {
+                return BadRequest(new
+                {
+                    message = "One or more services do not exist or are unavailable.",
+                    invalidServiceIds
+                });
+            }
+
+            var existingServices = await _context.AgentServices
+                .Where(service => service.LaundryAgentID == agentId)
+                .ToListAsync();
+
+            foreach (var existing in existingServices)
+            {
+                existing.IsActive = requestedServiceIds.Contains(existing.ServiceID);
+                existing.PendingActivation = !existing.IsActive;
+                existing.ActivatedAt = existing.IsActive ? DateTime.UtcNow : existing.ActivatedAt;
+                existing.Notes = existing.IsActive
+                    ? "Activated by admin service assignment."
+                    : "Deactivated by admin service assignment.";
+            }
+
+            var existingServiceIds = existingServices.Select(service => service.ServiceID).ToHashSet();
+            foreach (var serviceId in requestedServiceIds.Where(id => !existingServiceIds.Contains(id)))
+            {
+                _context.AgentServices.Add(new AgentService
+                {
+                    LaundryAgentID = agentId,
+                    ServiceID = serviceId,
+                    IsActive = true,
+                    PendingActivation = false,
+                    ActivatedAt = DateTime.UtcNow,
+                    Notes = "Assigned by admin."
+                });
+            }
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                agentId,
+                activeServiceIds = requestedServiceIds
+            });
         }
 
         // GET: /api/admin/payments/pending-review
@@ -432,5 +528,10 @@ namespace BrightClean.API.Controllers
         public string? Reason { get; set; }
         public string? TransactionRef { get; set; }
         public string? PaymentProofURL { get; set; }
+    }
+
+    public class SetAgentServicesDto
+    {
+        public List<int> ServiceIDs { get; set; } = new();
     }
 }
