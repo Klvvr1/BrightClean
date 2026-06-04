@@ -155,7 +155,7 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
     if (taskId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(isAr ? 'Ø±Ù‚Ù… Ø§Ù„Ù…Ù‡Ù…Ø© ØºÙŠØ± ØµØ­ÙŠØ­' : 'Invalid task number'),
+          content: Text(isAr ? 'رقم المهمة غير صحيح' : 'Invalid task number'),
           backgroundColor: AppColors.error,
         ),
       );
@@ -167,7 +167,7 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(isAr ? 'ØªÙ… Ø¥ÙƒÙ…Ø§Ù„ Ø§Ù„Ù…Ù‡Ù…Ø© Ø¨Ù†Ø¬Ø§Ø­' : 'Task completed successfully'),
+          content: Text(isAr ? 'تم إكمال المهمة بنجاح' : 'Task completed successfully'),
           backgroundColor: AppColors.success,
         ),
       );
@@ -176,7 +176,7 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(isAr ? 'ÙØ´Ù„ Ø¥ÙƒÙ…Ø§Ù„ Ø§Ù„Ù…Ù‡Ù…Ø©: $e' : 'Failed to complete task: $e'),
+          content: Text(isAr ? 'فشل إكمال المهمة: $e' : 'Failed to complete task: $e'),
           backgroundColor: AppColors.error,
         ),
       );
@@ -269,7 +269,7 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
     final activeAddress = _workflow == TrackingWorkflow.pickup ? pickupAddress : dropoffAddress;
     final isTaskUnassigned = task?.status == 0;
     final isTaskCompleted = task?.status == 3;
-    final isTaskEditable = task == null || task.status == 1 || task.status == 2;
+    final isTaskEditable = task != null && (task.status == 1 || task.status == 2);
     
     // Workflow Labels
     final List<String> pickupStatuses = isAr 
@@ -606,7 +606,7 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
                     ),
                     child: Text(
                       isAr
-                          ? 'ÙŠØ¬Ø¨ Ù‚Ø¨ÙˆÙ„ Ø§Ù„Ù…Ù‡Ù…Ø© Ù…Ù† Ø§Ù„Ù‚Ø§Ø¦Ù…Ø© Ù‚Ø¨Ù„ ØªØºÙŠÙŠØ± Ø­Ø§Ù„ØªÙ‡Ø§.'
+                          ? 'يجب قبول المهمة من القائمة قبل تغيير حالتها.'
                           : 'Claim this task from the list before changing its status.',
                       style: TextStyle(
                         color: isDark ? Colors.white : Colors.black87,
@@ -660,7 +660,7 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
                       border: Border.all(color: AppColors.success.withValues(alpha: 0.3)),
                     ),
                     child: Text(
-                      isAr ? 'ØªÙ… Ø¥ÙƒÙ…Ø§Ù„ Ù‡Ø°Ù‡ Ø§Ù„Ù…Ù‡Ù…Ø©.' : 'This task has been completed.',
+                      isAr ? 'تم إكمال هذه المهمة.' : 'This task has been completed.',
                       textAlign: TextAlign.center,
                       style: const TextStyle(
                         color: AppColors.success,

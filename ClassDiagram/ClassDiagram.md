@@ -45,7 +45,7 @@
 > - Added agent order actions `POST /api/bookings/{bookingId}/reject` and `POST /api/bookings/{bookingId}/start`; existing accept/ready actions are now called from Flutter instead of simulated delays
 > - Customer ratings are only cached locally after the backend rating API succeeds; default seeded local reviews are no longer shown for empty review history
 > - Added authenticated `POST /api/auth/change-password`; the Flutter change-password screen no longer uses simulated success
-> - `GET /api/users/agents` now accepts repeated `serviceIds` query parameters so cart/checkout can request only agents that support every selected service
+> - `GET /api/users/agents` returns all approved/open agents with their supported `serviceIds` array; service compatibility filtering is performed client-side in `checkout_screen.dart` and `agent_selection_screen.dart` by matching requested serviceIds against each agent's returned serviceIds
 > - Delivery task pool now returns the current driver's `Assigned` and `InProgress` tasks, not only newly assigned tasks
 > - Agent registration now persists selected service categories into `AgentService` rows; admin approval activates those pending service subscriptions
 > - Added admin service assignment endpoint `POST /api/admin/agents/{agentId}/services` for correcting or updating existing laundry-agent service subscriptions
@@ -1211,8 +1211,7 @@ Repositories serve as the data access layer, abstracting direct API communicatio
   * `BookingRepository.submitBooking(int bookingId, DateTime? scheduledAt, String? specialInstructions)`: Locks the draft booking total and moves it to `Pending` without modifying frontend cart state.
   * `BookingRepository.getPendingBookings()`: Parses both raw list responses and wrapped list responses defensively for backward compatibility.
 * **Agent / Service Catalog APIs**:
-  * `GET /api/users/agents`: Returns approved, active, open agents with address, rating summary, recent reviews, and supported `serviceIds`.
-  * `GET /api/users/agents?serviceIds=1&serviceIds=11`: Returns only agents whose active subscriptions include every requested service ID; cart and checkout use this to show compatible agents only.
+  * `GET /api/users/agents`: Returns approved, active, open agents with address, rating summary, recent reviews, and supported `serviceIds`. The endpoint does NOT parse or apply serviceIds query parameters for filtering; all approved/open agents are returned. Client-side filtering by service compatibility is performed in `checkout_screen.dart` and `agent_selection_screen.dart` by matching requested serviceIds against each agent's returned serviceIds array.
   * `GET /api/users/agents/{agentId}`: Returns public agent details, services, and recent reviews.
   * `GET /api/users/agents/{agentId}/ratings-summary`: Returns rating distribution and average rating for the agent.
   * `GET /api/services/agents/{agentId}`: Returns only active catalog services that the selected available agent provides.

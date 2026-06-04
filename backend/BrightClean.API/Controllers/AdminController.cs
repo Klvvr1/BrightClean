@@ -124,12 +124,13 @@ namespace BrightClean.API.Controllers
             if (user.Role == UserRole.LaundryAgent)
             {
                 var pendingAgentServices = await _context.AgentServices
-                    .Where(service => service.LaundryAgentID == user.UserID && !service.IsActive)
+                    .Where(service => service.LaundryAgentID == user.UserID && !service.IsActive && service.PendingActivation)
                     .ToListAsync();
 
                 foreach (var service in pendingAgentServices)
                 {
                     service.IsActive = true;
+                    service.PendingActivation = false;
                     service.ActivatedAt = DateTime.UtcNow;
                     service.Notes = "Activated as part of account approval.";
                 }
@@ -166,6 +167,12 @@ namespace BrightClean.API.Controllers
                 return NotFound(new { message = "Laundry agent was not found." });
             }
 
+            if (dto.ServiceIDs == null)
+            {
+                ModelState.AddModelError("ServiceIDs", "ServiceIDs is required");
+                return BadRequest(ModelState);
+            }
+
             var requestedServiceIds = dto.ServiceIDs
                 .Where(id => id > 0)
                 .Distinct()
@@ -198,6 +205,7 @@ namespace BrightClean.API.Controllers
             foreach (var existing in existingServices)
             {
                 existing.IsActive = requestedServiceIds.Contains(existing.ServiceID);
+                existing.PendingActivation = !existing.IsActive;
                 existing.ActivatedAt = existing.IsActive ? DateTime.UtcNow : existing.ActivatedAt;
                 existing.Notes = existing.IsActive
                     ? "Activated by admin service assignment."
@@ -212,6 +220,7 @@ namespace BrightClean.API.Controllers
                     LaundryAgentID = agentId,
                     ServiceID = serviceId,
                     IsActive = true,
+                    PendingActivation = false,
                     ActivatedAt = DateTime.UtcNow,
                     Notes = "Assigned by admin."
                 });

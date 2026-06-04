@@ -24,6 +24,9 @@ namespace BrightClean.Domain.Entities
         [Required]
         public bool IsActive { get; set; } = false;
 
+        [Required]
+        public bool PendingActivation { get; set; } = true;
+
         public DateTime? ActivatedAt { get; set; }
 
         public string? Notes { get; set; }
