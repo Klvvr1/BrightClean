@@ -247,11 +247,8 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
 
   String? _validateCR(String? value) {
     if (value == null || value.trim().isEmpty) return 'رقم السجل التجاري مطلوب';
-    final val = value.trim();
-    // Enforce 4-6 digits OR custom formats (e.g. CR-XXXX or alphanumeric with dashes, length 3-20)
-    final crRegex = RegExp(r'^([0-9]{4,6}|[a-zA-Z0-9\-\/]{3,20})$');
-    if (!crRegex.hasMatch(val)) {
-      return 'الرجاء إدخال رقم سجل تجاري صحيح (4-6 أرقام أو صيغة معتمدة)';
+    if (!RegExp(r'^[0-9]{10}$').hasMatch(value.trim())) {
+      return 'رقم السجل التجاري يجب أن يتكون من 10 أرقام';
     }
     return null;
   }
@@ -615,6 +612,11 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
                 CustomTextField(
                   controller: _commercialRegisterController,
                   hintText: 'رقم السجل التجاري / الترخيص',
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(10),
+                  ],
                   validator: _validateCR,
                 ),
                 const SizedBox(height: AppSpacing.md),

@@ -46,6 +46,7 @@ namespace BrightClean.API.DTOs
         public string BusinessName { get; set; } = string.Empty;
 
         [Required]
+        [RegularExpression(@"^[0-9]{10}$", ErrorMessage = "رقم السجل التجاري يجب أن يتكون من 10 أرقام.")]
         public string CommercialRegister { get; set; } = string.Empty;
 
         [Required]

@@ -151,6 +151,14 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
     return null;
   }
 
+  String? _validatePlateNumber(String? value) {
+    if (value == null || value.trim().isEmpty) return 'يرجى إدخال رقم اللوحة';
+    if (!RegExp(r'^[0-9]{1,6}$').hasMatch(value.trim())) {
+      return 'رقم اللوحة يجب أن يتكون من 1 إلى 6 أرقام';
+    }
+    return null;
+  }
+
   String? _validateEmail(String? value) {
     if (value == null || value.trim().isEmpty) {
       return 'الرجاء إدخال البريد الإلكتروني';
@@ -516,7 +524,12 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
                 CustomTextField(
                   controller: _plateNumberController,
                   hintText: 'رقم اللوحة',
-                  validator: (v) => v == null || v.isEmpty ? 'يرجى إدخال رقم اللوحة' : null,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(6),
+                  ],
+                  validator: _validatePlateNumber,
                 ),
                 const SizedBox(height: AppSpacing.xl),
 

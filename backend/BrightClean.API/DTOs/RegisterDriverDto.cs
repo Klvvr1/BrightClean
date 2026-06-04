@@ -52,6 +52,7 @@ namespace BrightClean.API.DTOs
         public string VehicleModel { get; set; } = string.Empty;
 
         [Required]
+        [RegularExpression(@"^[0-9]{1,6}$", ErrorMessage = "رقم اللوحة يجب أن يتكون من 1 إلى 6 أرقام.")]
         public string PlateNumber { get; set; } = string.Empty;
 
         [Required]
