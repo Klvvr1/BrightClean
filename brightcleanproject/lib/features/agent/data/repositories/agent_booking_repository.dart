@@ -7,13 +7,24 @@ class AgentBookingRepository {
   AgentBookingRepository({BaseApiClient? apiClient})
       : apiClient = apiClient ?? BaseApiClient();
 
+  List<Map<String, dynamic>> _readMapList(dynamic value) {
+    if (value is! List) return <Map<String, dynamic>>[];
+
+    return value
+        .whereType<Map>()
+        .map<Map<String, dynamic>>(
+          (item) => item.map(
+            (key, value) => MapEntry(key.toString(), value),
+          ),
+        )
+        .toList();
+  }
+
   Future<List<Map<String, dynamic>>> getMyBookings() async {
     final response = await apiClient.get('/api/bookings/agent/my');
-    if (response is List) {
-      return response.whereType<Map<String, dynamic>>().toList();
-    }
+    if (response is List) return _readMapList(response);
     if (response is Map<String, dynamic> && response['value'] is List) {
-      return (response['value'] as List).whereType<Map<String, dynamic>>().toList();
+      return _readMapList(response['value']);
     }
     return [];
   }
@@ -48,19 +59,14 @@ class AgentBookingRepository {
   Future<List<ServiceCatalogItemModel>> getMyServices(int agentId) async {
     final response = await apiClient.get('/api/services/agents/$agentId');
     if (response is List) {
-      return response
-          .whereType<Map<String, dynamic>>()
-          .map(ServiceCatalogItemModel.fromJson)
-          .toList();
+      return _readMapList(response).map(ServiceCatalogItemModel.fromJson).toList();
     }
     return [];
   }
 
   Future<Map<String, dynamic>?> getMyProfile() async {
     final response = await apiClient.get('/api/users/me');
-    if (response is Map<String, dynamic>) {
-      return response;
-    }
+    if (response is Map) return response.map((key, value) => MapEntry(key.toString(), value));
     return null;
   }
 }

@@ -155,8 +155,14 @@ namespace BrightClean.API.Controllers
         // can let the user choose an agent dynamically instead of using a hardcoded ID.
         [HttpGet("agents")]
         [AllowAnonymous] // Allow guests/clients to load agents before logging in or during checkout
-        public async Task<IActionResult> GetApprovedAgents()
+        public async Task<IActionResult> GetApprovedAgents([FromQuery] List<int>? serviceIds)
         {
+            // Validate that if serviceIds are provided, none are non-positive
+            if (serviceIds != null && serviceIds.Any(id => id <= 0))
+            {
+                return BadRequest(new { message = "All service IDs must be positive integers." });
+            }
+
             var agents = await _context.LaundryAgents
                 .AsNoTracking()
                 .Where(a => a.IsApproved && a.AccountStatus == AccountStatus.Active && !a.IsStoreClosed)
@@ -173,13 +179,19 @@ namespace BrightClean.API.Controllers
                     .ThenInclude(b => b.Client)
                 .ToListAsync();
 
+            var requiredServiceIds = serviceIds?
+                .Distinct()
+                .ToList() ?? new List<int>();
+
             var response = agents.Select(a =>
             {
                 var agentRatings = ratings
                     .Where(r => r.Booking.LaundryAgentID == a.UserID)
                     .ToList();
-                var serviceIds = a.SubscribedServices
+                var activeServices = a.SubscribedServices
                     .Where(s => s.IsActive && s.ServiceCatalogItem != null && s.ServiceCatalogItem.IsAvailable)
+                    .ToList();
+                var agentServiceIds = activeServices
                     .Select(s => s.ServiceID)
                     .ToList();
 
@@ -196,8 +208,20 @@ namespace BrightClean.API.Controllers
                         a.Address.Longitude
                     },
                     isStoreClosed = a.IsStoreClosed,
-                    serviceIds,
-                    serviceCount = serviceIds.Count,
+                    serviceIds = agentServiceIds,
+                    serviceCount = agentServiceIds.Count,
+                    services = activeServices
+                        .Select(s => new
+                        {
+                            s.ServiceCatalogItem.ServiceID,
+                            s.ServiceCatalogItem.ServiceName,
+                            s.ServiceCatalogItem.Category,
+                            s.ServiceCatalogItem.Type,
+                            s.ServiceCatalogItem.Price,
+                            s.ServiceCatalogItem.PricingModel,
+                            s.ServiceCatalogItem.DeliveryModel
+                        })
+                        .ToList(),
                     averageRating = agentRatings.Count == 0
                         ? 0
                         : agentRatings.Average(r => r.AgentRating!.Value),
@@ -214,7 +238,10 @@ namespace BrightClean.API.Controllers
                         })
                         .ToList()
                 };
-            }).ToList();
+            })
+            .Where(a => requiredServiceIds.Count == 0 ||
+                        requiredServiceIds.All(id => a.serviceIds.Contains(id)))
+            .ToList();
 
             return Ok(response);
         }
@@ -246,6 +273,12 @@ namespace BrightClean.API.Controllers
                         a.Address.Longitude
                     },
                     isStoreClosed = a.IsStoreClosed,
+                    serviceIds = a.SubscribedServices
+                        .Where(s => s.IsActive && s.ServiceCatalogItem.IsAvailable)
+                        .Select(s => s.ServiceID)
+                        .ToList(),
+                    serviceCount = a.SubscribedServices
+                        .Count(s => s.IsActive && s.ServiceCatalogItem.IsAvailable),
                     averageRating = _context.BookingRatings
                         .Where(r => r.Booking.LaundryAgentID == a.UserID && r.AgentRating.HasValue)
                         .Average(r => (double?)r.AgentRating) ?? 0,

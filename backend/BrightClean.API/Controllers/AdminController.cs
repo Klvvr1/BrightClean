@@ -205,7 +205,7 @@ namespace BrightClean.API.Controllers
             foreach (var existing in existingServices)
             {
                 existing.IsActive = requestedServiceIds.Contains(existing.ServiceID);
-                existing.PendingActivation = !existing.IsActive;
+                existing.PendingActivation = false;
                 existing.ActivatedAt = existing.IsActive ? DateTime.UtcNow : existing.ActivatedAt;
                 existing.Notes = existing.IsActive
                     ? "Activated by admin service assignment."

@@ -77,6 +77,9 @@ namespace BrightClean.API.Migrations
                     b.Property<string>("Notes")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<bool>("PendingActivation")
+                        .HasColumnType("bit");
+
                     b.Property<int>("ServiceID")
                         .HasColumnType("int");
 

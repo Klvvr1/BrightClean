@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
 import '../../../../core/widgets/custom_text_field.dart';
+import '../../../../core/network/api_client.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_radius.dart';
@@ -25,6 +26,7 @@ class AgentRegistrationScreen extends StatefulWidget {
 class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
   final _formKey = GlobalKey<FormState>();
   final ImagePicker _picker = ImagePicker();
+  final BaseApiClient _apiClient = BaseApiClient();
 
   final TextEditingController _firstNameController = TextEditingController();
   final TextEditingController _fatherNameController = TextEditingController();
@@ -45,16 +47,10 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
   XFile? _commercialRegImage;
   XFile? _idImage;
 
-  final Map<String, bool> _availableServices = {
-    'ملابس': false,
-    'مفارش': false,
-    'منسوجات': false,
-    'سيارات': false,
-    'دراجات نارية': false,
-    'الواح طاقة': false,
-    'مكيفات': false,
-    'خزانات': false,
-  };
+  Map<int, bool> _availableServices = {};
+  final Map<int, String> _serviceLabelsById = {};
+  bool _isLoadingServices = false;
+  String? _servicesLoadError;
 
   String? _selectedAddress;
   LatLng? _selectedCoordinates;
@@ -79,6 +75,59 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
     _commercialRegisterController.dispose();
     _bankAccountController.dispose();
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCatalogServices();
+  }
+
+  Future<void> _loadCatalogServices() async {
+    setState(() {
+      _isLoadingServices = true;
+      _servicesLoadError = null;
+    });
+
+    try {
+      final response = await _apiClient.get('/api/services');
+      if (response is! List) {
+        throw Exception('Invalid services response');
+      }
+
+      final services = <int, bool>{};
+      final labels = <int, String>{};
+      for (final item in response.whereType<Map>()) {
+        final idValue = item['serviceID'] ?? item['serviceId'] ?? item['ServiceID'];
+        final nameValue = item['serviceName'] ?? item['ServiceName'];
+        final id = idValue is int ? idValue : int.tryParse(idValue?.toString() ?? '');
+        final name = nameValue?.toString().trim() ?? '';
+        if (id == null || id <= 0 || name.isEmpty) continue;
+        services[id] = _availableServices[id] ?? false;
+        labels[id] = name;
+      }
+
+      if (services.isEmpty) {
+        throw Exception('No services in catalog');
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _availableServices = services;
+        _serviceLabelsById
+          ..clear()
+          ..addAll(labels);
+        _isLoadingServices = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _availableServices = {};
+        _serviceLabelsById.clear();
+        _isLoadingServices = false;
+        _servicesLoadError = 'تعذر تحميل خدمات الكتالوج. أعد المحاولة قبل التسجيل.';
+      });
+    }
   }
 
   Future<void> _pickImage(bool isCommercial) async {
@@ -187,13 +236,14 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
     );
   }
 
-  Widget _buildServiceItem(String service) {
-    bool isSelected = _availableServices[service] ?? false;
+  Widget _buildServiceItem(int serviceId) {
+    bool isSelected = _availableServices[serviceId] ?? false;
+    final serviceName = _serviceLabelsById[serviceId] ?? '';
     final theme = Theme.of(context);
     return GestureDetector(
       onTap: () {
         setState(() {
-          _availableServices[service] = !isSelected;
+          _availableServices[serviceId] = !isSelected;
         });
       },
       child: AnimatedContainer(
@@ -223,7 +273,7 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
             ),
             const SizedBox(width: AppSpacing.sm),
             Text(
-              service,
+              serviceName,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: isSelected
                     ? theme.colorScheme.primary
@@ -315,37 +365,15 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
     return null;
   }
 
-  int? _serviceCategoryForRegistrationLabel(String label) {
-    final normalized = label.trim();
-    final labels = _availableServices.keys.toList();
-    final index = labels.indexOf(normalized);
-    switch (index) {
-      case 0:
-        return 0; // ServiceCategory.Laundry
-      case 1:
-      case 2:
-        return 1; // ServiceCategory.HomeWovens
-      case 3:
-      case 4:
-        return 3; // ServiceCategory.VehicleWash
-      case 5:
-      case 6:
-      case 7:
-        return 2; // ServiceCategory.HomeServices
-      default:
-        return null;
-    }
-  }
-
   void _submitForm() {
     setState(() => _hasAttemptedSubmit = true);
 
-    final selectedServices = _availableServices.entries
+    final selectedServiceIds = _availableServices.entries
         .where((e) => e.value)
         .map((e) => e.key)
         .toList();
 
-    bool isServiceSelected = selectedServices.isNotEmpty;
+    bool isServiceSelected = selectedServiceIds.isNotEmpty;
 
     if (!_isTermsAccepted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -388,20 +416,15 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
         return;
       }
 
-      _performRegistration(selectedServices);
+      _performRegistration(selectedServiceIds);
     }
   }
 
-  Future<void> _performRegistration(List<String> selectedServices) async {
+  Future<void> _performRegistration(List<int> selectedServiceIds) async {
     setState(() => _isSubmitting = true);
     
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final selectedServiceCategories = selectedServices
-          .map(_serviceCategoryForRegistrationLabel)
-          .whereType<int>()
-          .toSet()
-          .toList();
       
       final agentModel = RegisterAgentModel(
         firstName: _firstNameController.text.trim(),
@@ -420,7 +443,7 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
         street: _selectedAddress ?? '',
         latitude: _selectedCoordinates?.latitude ?? 0.0,
         longitude: _selectedCoordinates?.longitude ?? 0.0,
-        selectedServiceCategories: selectedServiceCategories,
+        selectedServiceIds: selectedServiceIds,
       );
 
       final cartProvider = Provider.of<CartProvider>(context, listen: false);
@@ -534,13 +557,39 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
                   style: theme.textTheme.titleMedium,
                 ),
                 const SizedBox(height: AppSpacing.sm),
-                Wrap(
-                  spacing: 12.0,
-                  runSpacing: 12.0,
-                  children: _availableServices.keys
-                      .map((service) => _buildServiceItem(service))
-                      .toList(),
-                ),
+                if (_isLoadingServices)
+                  const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(AppSpacing.md),
+                      child: CircularProgressIndicator(),
+                    ),
+                  )
+                else if (_servicesLoadError != null)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _servicesLoadError!,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.error,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      OutlinedButton(
+                        onPressed: _loadCatalogServices,
+                        child: const Text('إعادة تحميل الخدمات'),
+                      ),
+                    ],
+                  )
+                else
+                  Wrap(
+                    spacing: 12.0,
+                    runSpacing: 12.0,
+                    children: _availableServices.keys
+                        .map((serviceId) => _buildServiceItem(serviceId))
+                        .toList(),
+                  ),
                 if (_hasAttemptedSubmit &&
                     !_availableServices.values.contains(true))
                   Padding(
