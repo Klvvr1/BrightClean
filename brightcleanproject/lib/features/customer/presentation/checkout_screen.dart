@@ -578,8 +578,24 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 child: CircularProgressIndicator(),
               ))
             else if (_agentsErrorMessage != null)
-              Text(_agentsErrorMessage!,
-                  style: TextStyle(color: theme.colorScheme.error))
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(_agentsErrorMessage!,
+                      style: TextStyle(color: theme.colorScheme.error)),
+                  const SizedBox(height: AppSpacing.xs),
+                  TextButton.icon(
+                    onPressed: _isLoadingAgents ? null : _loadAgents,
+                    icon: _isLoadingAgents
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Icon(Icons.refresh, size: 18),
+                    label: const Text('إعادة المحاولة'),
+                  ),
+                ],
+              )
             else if (_agents.isEmpty)
               const Text('لا يوجد وكلاء متوفرين حالياً',
                   style: TextStyle(color: Colors.grey))

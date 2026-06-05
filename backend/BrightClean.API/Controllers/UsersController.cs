@@ -157,6 +157,12 @@ namespace BrightClean.API.Controllers
         [AllowAnonymous] // Allow guests/clients to load agents before logging in or during checkout
         public async Task<IActionResult> GetApprovedAgents([FromQuery] List<int>? serviceIds)
         {
+            // Validate that if serviceIds are provided, none are non-positive
+            if (serviceIds != null && serviceIds.Any(id => id <= 0))
+            {
+                return BadRequest(new { message = "All service IDs must be positive integers." });
+            }
+
             var agents = await _context.LaundryAgents
                 .AsNoTracking()
                 .Where(a => a.IsApproved && a.AccountStatus == AccountStatus.Active && !a.IsStoreClosed)
@@ -174,7 +180,6 @@ namespace BrightClean.API.Controllers
                 .ToListAsync();
 
             var requiredServiceIds = serviceIds?
-                .Where(id => id > 0)
                 .Distinct()
                 .ToList() ?? new List<int>();
 

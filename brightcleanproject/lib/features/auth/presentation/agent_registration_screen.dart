@@ -47,8 +47,8 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
   XFile? _commercialRegImage;
   XFile? _idImage;
 
-  Map<String, bool> _availableServices = {};
-  final Map<String, int> _serviceIdsByLabel = {};
+  Map<int, bool> _availableServices = {};
+  final Map<int, String> _serviceLabelsById = {};
   bool _isLoadingServices = false;
   String? _servicesLoadError;
 
@@ -95,35 +95,35 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
         throw Exception('Invalid services response');
       }
 
-      final labels = <String, bool>{};
-      final ids = <String, int>{};
+      final services = <int, bool>{};
+      final labels = <int, String>{};
       for (final item in response.whereType<Map>()) {
         final idValue = item['serviceID'] ?? item['serviceId'] ?? item['ServiceID'];
         final nameValue = item['serviceName'] ?? item['ServiceName'];
         final id = idValue is int ? idValue : int.tryParse(idValue?.toString() ?? '');
         final name = nameValue?.toString().trim() ?? '';
         if (id == null || id <= 0 || name.isEmpty) continue;
-        labels[name] = _availableServices[name] ?? false;
-        ids[name] = id;
+        services[id] = _availableServices[id] ?? false;
+        labels[id] = name;
       }
 
-      if (labels.isEmpty) {
+      if (services.isEmpty) {
         throw Exception('No services in catalog');
       }
 
       if (!mounted) return;
       setState(() {
-        _availableServices = labels;
-        _serviceIdsByLabel
+        _availableServices = services;
+        _serviceLabelsById
           ..clear()
-          ..addAll(ids);
+          ..addAll(labels);
         _isLoadingServices = false;
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
         _availableServices = {};
-        _serviceIdsByLabel.clear();
+        _serviceLabelsById.clear();
         _isLoadingServices = false;
         _servicesLoadError = 'تعذر تحميل خدمات الكتالوج. أعد المحاولة قبل التسجيل.';
       });
@@ -236,13 +236,14 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
     );
   }
 
-  Widget _buildServiceItem(String service) {
-    bool isSelected = _availableServices[service] ?? false;
+  Widget _buildServiceItem(int serviceId) {
+    bool isSelected = _availableServices[serviceId] ?? false;
+    final serviceName = _serviceLabelsById[serviceId] ?? '';
     final theme = Theme.of(context);
     return GestureDetector(
       onTap: () {
         setState(() {
-          _availableServices[service] = !isSelected;
+          _availableServices[serviceId] = !isSelected;
         });
       },
       child: AnimatedContainer(
@@ -272,7 +273,7 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
             ),
             const SizedBox(width: AppSpacing.sm),
             Text(
-              service,
+              serviceName,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: isSelected
                     ? theme.colorScheme.primary
@@ -373,12 +374,12 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
   void _submitForm() {
     setState(() => _hasAttemptedSubmit = true);
 
-    final selectedServices = _availableServices.entries
+    final selectedServiceIds = _availableServices.entries
         .where((e) => e.value)
         .map((e) => e.key)
         .toList();
 
-    bool isServiceSelected = selectedServices.isNotEmpty;
+    bool isServiceSelected = selectedServiceIds.isNotEmpty;
 
     if (!_isTermsAccepted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -405,21 +406,6 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('يرجى اختيار خدمة واحدة على الأقل'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
-        return;
-      }
-
-      final selectedServiceIds = selectedServices
-          .map((label) => _serviceIdsByLabel[label])
-          .whereType<int>()
-          .toSet()
-          .toList();
-      if (selectedServiceIds.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(_servicesLoadError ?? 'تعذر تحديد الخدمات المختارة من الكتالوج'),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
@@ -607,7 +593,7 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
                     spacing: 12.0,
                     runSpacing: 12.0,
                     children: _availableServices.keys
-                        .map((service) => _buildServiceItem(service))
+                        .map((serviceId) => _buildServiceItem(serviceId))
                         .toList(),
                   ),
                 if (_hasAttemptedSubmit &&

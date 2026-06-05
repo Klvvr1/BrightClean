@@ -26,10 +26,10 @@ namespace BrightClean.API.Migrations
                 INNER JOIN Users userAccount
                     ON userAccount.UserID = agent.UserID
                 INNER JOIN ServiceCatalogItems service
-                    ON service.Category = 3
-                   AND service.Type = 11
+                    ON service.Category = 3  -- ServiceCategory.VehicleCare (or VehicleWash enum value)
+                   AND service.Type = 11     -- ServiceType.CarWash
                    AND service.IsAvailable = 1
-                WHERE agent.UserID = 1009
+                WHERE agent.UserID = 1009    -- CleanLegacyAgent: targets specific agent UserID from production data that was missing car wash service
                   AND userAccount.IsApproved = 1
                   AND userAccount.AccountStatus = 1
                   AND agent.IsStoreClosed = 0

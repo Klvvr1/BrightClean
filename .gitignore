@@ -49,3 +49,6 @@ build/
 *.ipr
 *.iws
 .idea/
+
+# ASP.NET Core build artifacts
+backend/.build-check/

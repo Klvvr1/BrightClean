@@ -687,20 +687,28 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
       final targetCategory = _targetServiceCategory();
 
       try {
+        // First, attempt strict name matching
         final matchingItem = _catalogServices.firstWhere(
           (s) =>
               (catalogName != null && s.serviceName == catalogName) ||
               s.serviceName == itemName ||
               s.serviceName.contains(itemName) ||
-              itemName.contains(s.serviceName) ||
-              (s.isAvailable && s.type == targetType),
+              itemName.contains(s.serviceName),
         );
         return matchingItem.serviceID;
       } catch (_) {
-        final fallbackByCategory =
-            _fallbackCatalogServiceIdByCategory(targetCategory);
-        if (fallbackByCategory > 0) return fallbackByCategory;
-        return 0;
+        // If no name match, fallback to type-based search
+        try {
+          final matchingItem = _catalogServices.firstWhere(
+            (s) => s.isAvailable && s.type == targetType,
+          );
+          return matchingItem.serviceID;
+        } catch (_) {
+          final fallbackByCategory =
+              _fallbackCatalogServiceIdByCategory(targetCategory);
+          if (fallbackByCategory > 0) return fallbackByCategory;
+          return 0;
+        }
       }
     }
 

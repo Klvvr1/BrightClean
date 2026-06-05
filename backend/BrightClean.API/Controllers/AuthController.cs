@@ -84,7 +84,7 @@ namespace BrightClean.API.Controllers
             if (nationalIdImage == null || nationalIdImage.Length == 0)
                 return BadRequest(new { message = "صورة الهوية الوطنية مطلوبة." });
 
-            var selectedServiceIds = ParseSelectedServiceIds(dto.SelectedServiceIds);
+            var selectedServiceIds = dto.SelectedServiceIds?.Where(id => id > 0).Distinct().ToList() ?? new List<int>();
             var selectedCategories = ParseSelectedServiceCategories(dto.SelectedServiceCategories);
 
             if (selectedServiceIds.Count == 0 && selectedCategories.Count == 0)

@@ -63,9 +63,10 @@ namespace BrightClean.API.DTOs
         [Required]
         public decimal Longitude { get; set; }
 
-        // Comma-separated ServiceCatalogItem IDs selected by the agent UI.
-        // Example: "1,2" means the agent provides service catalog items 1 and 2.
-        public string? SelectedServiceIds { get; set; }
+        // ServiceCatalogItem IDs selected by the agent UI.
+        // Example: [1,2] means the agent provides service catalog items 1 and 2.
+        // Model binding rejects non-integers automatically.
+        public IEnumerable<int>? SelectedServiceIds { get; set; }
 
         // Backward-compatible fallback for older app builds that sent categories.
         // New code must use SelectedServiceIds so per-agent availability is exact.

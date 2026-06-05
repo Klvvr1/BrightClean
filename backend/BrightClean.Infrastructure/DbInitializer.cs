@@ -132,7 +132,7 @@ namespace BrightClean.Infrastructure
                 LastName = "Al-Qahtani",
                 Email = "vehicle-agent@brightclean.com",
                 PasswordHash = seedPasswordHash,
-                PhoneNo = "96590005",
+                PhoneNo = "965900005",
                 DateOfBirth = new DateTime(1990, 7, 10),
                 ProfilePhotoURL = null,
                 TermsAccepted = true,
