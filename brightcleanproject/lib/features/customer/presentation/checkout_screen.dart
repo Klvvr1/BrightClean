@@ -92,6 +92,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   List<Map<String, dynamic>> _agents = [];
   int? _selectedAgentId;
   bool _isLoadingAgents = false;
+  String? _agentsErrorMessage;
   double _apiDiscountAmount = 0.0;
 
   Map<String, dynamic>? _appliedCoupon;
@@ -100,10 +101,59 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   bool _isCouponApplied = false;
   bool _couponEnteredButConditionNotMet = false;
 
+  int? _readInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '');
+  }
+
+  dynamic _readAny(Map<dynamic, dynamic> map, List<String> keys) {
+    for (final key in keys) {
+      if (map.containsKey(key)) return map[key];
+    }
+    return null;
+  }
+
+  Set<int> _readServiceIds(Map<dynamic, dynamic> agentJson) {
+    final rawServiceIds = _readAny(agentJson, [
+      'serviceIds',
+      'ServiceIds',
+      'serviceIDs',
+      'ServiceIDs',
+    ]);
+    if (rawServiceIds is List) {
+      return rawServiceIds.map(_readInt).whereType<int>().toSet();
+    }
+
+    final rawServices = _readAny(agentJson, [
+      'services',
+      'Services',
+      'subscribedServices',
+      'SubscribedServices',
+    ]);
+    if (rawServices is List) {
+      return rawServices
+          .whereType<Map>()
+          .map((service) => _readAny(service, [
+                'serviceID',
+                'serviceId',
+                'ServiceID',
+                'id',
+                'ID',
+              ]))
+          .map(_readInt)
+          .whereType<int>()
+          .toSet();
+    }
+
+    return {};
+  }
+
   Future<void> _loadAgents() async {
     if (!mounted) return;
     setState(() {
       _isLoadingAgents = true;
+      _agentsErrorMessage = null;
     });
     try {
       final requiredServiceIds = widget.directItems
@@ -120,34 +170,66 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         setState(() {
           _agents = response
               .where((a) {
+                if (a == null || a is! Map) return false;
+                final idValue =
+                    _readAny(a, ['id', 'ID', 'userID', 'userId', 'UserID']);
+                final nameValue =
+                    _readAny(a, ['businessName', 'BusinessName', 'name', 'Name']);
+                if (_readInt(idValue) == null || nameValue == null) return false;
                 if (requiredServiceIds.isEmpty) return true;
-                final rawServiceIds = a['serviceIds'];
-                if (rawServiceIds is! List) return false;
-                final agentServiceIds = rawServiceIds
-                    .map((id) => id is int ? id : int.tryParse(id.toString()))
-                    .whereType<int>()
-                    .toSet();
+                final agentServiceIds = _readServiceIds(a);
                 return requiredServiceIds.every(agentServiceIds.contains);
               })
-              .map((a) => {
-                    'id': a['id'] as int,
-                    'businessName': a['businessName'] as String,
-                  })
+              .map<Map<String, dynamic>>((a) {
+                final agentJson = a as Map;
+                final id = _readInt(
+                  _readAny(agentJson, ['id', 'ID', 'userID', 'userId', 'UserID']),
+                )!;
+                final businessName = (_readAny(
+                      agentJson,
+                      ['businessName', 'BusinessName', 'name', 'Name'],
+                    ) ??
+                    '').toString();
+                final rawServices =
+                    _readAny(agentJson, ['services', 'Services']);
+                final services = rawServices is List
+                    ? rawServices
+                        .whereType<Map>()
+                        .map<Map<String, dynamic>>(
+                          (service) => service.map(
+                            (key, value) =>
+                                MapEntry(key.toString(), value),
+                          ),
+                        )
+                        .toList()
+                    : <Map<String, dynamic>>[];
+                return <String, dynamic>{
+                  'id': id,
+                  'businessName': businessName,
+                  'serviceIds': _readServiceIds(agentJson).toList(),
+                  'services': services,
+                };
+              })
               .toList();
 
           // Do not pre-select an agent - let user explicitly choose
           _isLoadingAgents = false;
+          _agentsErrorMessage = null;
         });
       } else {
         if (!mounted) return;
         setState(() {
           _isLoadingAgents = false;
+          _agentsErrorMessage = 'تعذر قراءة قائمة المغاسل من الخادم.';
         });
       }
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _isLoadingAgents = false;
+        _agents.clear();
+        _agentsErrorMessage =
+            'تعذر الاتصال بالخادم لجلب المغاسل المتاحة. يرجى المحاولة مرة أخرى.';
       });
       debugPrint('Error fetching agents: $e');
     }
@@ -495,6 +577,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 padding: EdgeInsets.all(8.0),
                 child: CircularProgressIndicator(),
               ))
+            else if (_agentsErrorMessage != null)
+              Text(_agentsErrorMessage!,
+                  style: TextStyle(color: theme.colorScheme.error))
             else if (_agents.isEmpty)
               const Text('لا يوجد وكلاء متوفرين حالياً',
                   style: TextStyle(color: Colors.grey))
@@ -519,8 +604,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     ? Text(
                         _agents.firstWhere(
                           (agent) => agent['id'] == _selectedAgentId,
-                          orElse: () => {'businessName': 'مغسلة محددة'},
-                        )['businessName'] as String,
+                          orElse: () => <String, dynamic>{
+                            'businessName': 'مغسلة محددة',
+                          },
+                        )['businessName']?.toString() ??
+                            'مغسلة محددة',
                       )
                     : const Text('اختر المغسلة'),
                 decoration: InputDecoration(

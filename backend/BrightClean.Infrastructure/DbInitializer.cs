@@ -16,6 +16,7 @@ namespace BrightClean.Infrastructure
             // Check if seeding is already done
             if (context.Users.Any())
             {
+                EnsureDefaultCatalogServices(context);
                 return; // DB has been seeded
             }
 
@@ -48,7 +49,16 @@ namespace BrightClean.Infrastructure
                 IsArchived = false
             };
 
-            context.Addresses.AddRange(clientAddress, agentAddress);
+            var vehicleAgentAddress = new Address
+            {
+                Area = "Riyadh",
+                Street = "King Fahd Rd",
+                Latitude = 24.7136m,
+                Longitude = 46.6753m,
+                IsArchived = false
+            };
+
+            context.Addresses.AddRange(clientAddress, agentAddress, vehicleAgentAddress);
             context.SaveChanges(); // Persist addresses to get IDs
 
             // 2. Seed Users (TPT Inheritance)
@@ -116,6 +126,29 @@ namespace BrightClean.Infrastructure
                 IsApproved = true
             };
 
+            var vehicleAgent = new LaundryAgent
+            {
+                FirstName = "Sara",
+                LastName = "Al-Qahtani",
+                Email = "vehicle-agent@brightclean.com",
+                PasswordHash = seedPasswordHash,
+                PhoneNo = "96590005",
+                DateOfBirth = new DateTime(1990, 7, 10),
+                ProfilePhotoURL = null,
+                TermsAccepted = true,
+                AccountStatus = AccountStatus.Active,
+                VerifiedAt = DateTime.UtcNow,
+                CreatedAt = DateTime.UtcNow,
+                FatherName = "Abdullah",
+                GrandfatherName = "Nasser",
+                NationalIDNumber = "290071012345",
+                BusinessName = "Rapid Vehicle Wash",
+                CommercialRegister = "CR-654321",
+                BankAcc = "KW5555555555555555555555",
+                AddressID = vehicleAgentAddress.AddressID,
+                IsApproved = true
+            };
+
             var admin = new Admin
             {
                 FirstName = "Admin",
@@ -134,6 +167,7 @@ namespace BrightClean.Infrastructure
 
             context.Clients.Add(client);
             context.LaundryAgents.Add(agent);
+            context.LaundryAgents.Add(vehicleAgent);
             context.DeliveryStaffs.Add(driver);
             context.Admins.Add(admin);
             context.SaveChanges();
@@ -179,7 +213,101 @@ namespace BrightClean.Infrastructure
                 AdminID = admin.UserID
             };
 
-            context.ServiceCatalogItems.AddRange(service, maawazService, imamaService);
+            var carWashService = new ServiceCatalogItem
+            {
+                ServiceName = "Car Wash",
+                Category = ServiceCategory.VehicleWash,
+                Type = ServiceType.CarWash,
+                Price = 5.000m,
+                PricingModel = PricingModel.PerItem,
+                DeliveryModel = DeliveryModel.TechnicianDispatch,
+                IsAvailable = true,
+                AdminID = admin.UserID
+            };
+
+            var motorcycleWashService = new ServiceCatalogItem
+            {
+                ServiceName = "Motorcycle Wash",
+                Category = ServiceCategory.VehicleWash,
+                Type = ServiceType.MotorcycleWash,
+                Price = 3.000m,
+                PricingModel = PricingModel.PerItem,
+                DeliveryModel = DeliveryModel.TechnicianDispatch,
+                IsAvailable = true,
+                AdminID = admin.UserID
+            };
+
+            var carpetService = new ServiceCatalogItem
+            {
+                ServiceName = "Carpet Cleaning",
+                Category = ServiceCategory.HomeWovens,
+                Type = ServiceType.Carpets,
+                Price = 3.000m,
+                PricingModel = PricingModel.PerItem,
+                DeliveryModel = DeliveryModel.TwoStage,
+                IsAvailable = true,
+                AdminID = admin.UserID
+            };
+
+            var homeCleaningService = new ServiceCatalogItem
+            {
+                ServiceName = "Home Cleaning",
+                Category = ServiceCategory.HomeServices,
+                Type = ServiceType.HomeCleaning,
+                Price = 4.000m,
+                PricingModel = PricingModel.PerItem,
+                DeliveryModel = DeliveryModel.TechnicianDispatch,
+                IsAvailable = true,
+                AdminID = admin.UserID
+            };
+
+            var acCleaningService = new ServiceCatalogItem
+            {
+                ServiceName = "AC Cleaning",
+                Category = ServiceCategory.HomeServices,
+                Type = ServiceType.ACCleaning,
+                Price = 6.000m,
+                PricingModel = PricingModel.PerItem,
+                DeliveryModel = DeliveryModel.TechnicianDispatch,
+                IsAvailable = true,
+                AdminID = admin.UserID
+            };
+
+            var waterTankCleaningService = new ServiceCatalogItem
+            {
+                ServiceName = "Water Tank Cleaning",
+                Category = ServiceCategory.HomeServices,
+                Type = ServiceType.WaterTankCleaning,
+                Price = 8.000m,
+                PricingModel = PricingModel.PerItem,
+                DeliveryModel = DeliveryModel.TechnicianDispatch,
+                IsAvailable = true,
+                AdminID = admin.UserID
+            };
+
+            var solarPanelCleaningService = new ServiceCatalogItem
+            {
+                ServiceName = "Solar Panel Cleaning",
+                Category = ServiceCategory.HomeServices,
+                Type = ServiceType.SolarPanelCleaning,
+                Price = 4.000m,
+                PricingModel = PricingModel.PerItem,
+                DeliveryModel = DeliveryModel.TechnicianDispatch,
+                IsAvailable = true,
+                AdminID = admin.UserID
+            };
+
+            context.ServiceCatalogItems.AddRange(
+                service,
+                maawazService,
+                imamaService,
+                carWashService,
+                motorcycleWashService,
+                carpetService,
+                homeCleaningService,
+                acCleaningService,
+                waterTankCleaningService,
+                solarPanelCleaningService);
             context.SaveChanges();
 
             // 4. Seed AgentService Subscription
@@ -205,6 +333,30 @@ namespace BrightClean.Infrastructure
                 {
                     LaundryAgentID = agent.UserID,
                     ServiceID = imamaService.ServiceID,
+                    IsActive = true,
+                    ActivatedAt = DateTime.UtcNow,
+                    Notes = "Subscribed via DB Seeding"
+                },
+                new AgentService
+                {
+                    LaundryAgentID = agent.UserID,
+                    ServiceID = carpetService.ServiceID,
+                    IsActive = true,
+                    ActivatedAt = DateTime.UtcNow,
+                    Notes = "Subscribed via DB Seeding"
+                },
+                new AgentService
+                {
+                    LaundryAgentID = vehicleAgent.UserID,
+                    ServiceID = carWashService.ServiceID,
+                    IsActive = true,
+                    ActivatedAt = DateTime.UtcNow,
+                    Notes = "Subscribed via DB Seeding"
+                },
+                new AgentService
+                {
+                    LaundryAgentID = vehicleAgent.UserID,
+                    ServiceID = motorcycleWashService.ServiceID,
                     IsActive = true,
                     ActivatedAt = DateTime.UtcNow,
                     Notes = "Subscribed via DB Seeding"
@@ -287,5 +439,113 @@ namespace BrightClean.Infrastructure
                 throw;
             }
         }
+
+        private static void EnsureDefaultCatalogServices(AppDbContext context)
+        {
+            var adminId = context.Admins
+                .Select(a => (int?)a.UserID)
+                .FirstOrDefault();
+
+            if (adminId == null)
+            {
+                return;
+            }
+
+            var defaultServices = new[]
+            {
+                new ServiceCatalogItem
+                {
+                    ServiceName = "Car Wash",
+                    Category = ServiceCategory.VehicleWash,
+                    Type = ServiceType.CarWash,
+                    Price = 5.000m,
+                    PricingModel = PricingModel.PerItem,
+                    DeliveryModel = DeliveryModel.TechnicianDispatch,
+                    IsAvailable = true,
+                    AdminID = adminId.Value
+                },
+                new ServiceCatalogItem
+                {
+                    ServiceName = "Motorcycle Wash",
+                    Category = ServiceCategory.VehicleWash,
+                    Type = ServiceType.MotorcycleWash,
+                    Price = 3.000m,
+                    PricingModel = PricingModel.PerItem,
+                    DeliveryModel = DeliveryModel.TechnicianDispatch,
+                    IsAvailable = true,
+                    AdminID = adminId.Value
+                },
+                new ServiceCatalogItem
+                {
+                    ServiceName = "Carpet Cleaning",
+                    Category = ServiceCategory.HomeWovens,
+                    Type = ServiceType.Carpets,
+                    Price = 3.000m,
+                    PricingModel = PricingModel.PerItem,
+                    DeliveryModel = DeliveryModel.TwoStage,
+                    IsAvailable = true,
+                    AdminID = adminId.Value
+                },
+                new ServiceCatalogItem
+                {
+                    ServiceName = "Home Cleaning",
+                    Category = ServiceCategory.HomeServices,
+                    Type = ServiceType.HomeCleaning,
+                    Price = 4.000m,
+                    PricingModel = PricingModel.PerItem,
+                    DeliveryModel = DeliveryModel.TechnicianDispatch,
+                    IsAvailable = true,
+                    AdminID = adminId.Value
+                },
+                new ServiceCatalogItem
+                {
+                    ServiceName = "AC Cleaning",
+                    Category = ServiceCategory.HomeServices,
+                    Type = ServiceType.ACCleaning,
+                    Price = 6.000m,
+                    PricingModel = PricingModel.PerItem,
+                    DeliveryModel = DeliveryModel.TechnicianDispatch,
+                    IsAvailable = true,
+                    AdminID = adminId.Value
+                },
+                new ServiceCatalogItem
+                {
+                    ServiceName = "Water Tank Cleaning",
+                    Category = ServiceCategory.HomeServices,
+                    Type = ServiceType.WaterTankCleaning,
+                    Price = 8.000m,
+                    PricingModel = PricingModel.PerItem,
+                    DeliveryModel = DeliveryModel.TechnicianDispatch,
+                    IsAvailable = true,
+                    AdminID = adminId.Value
+                },
+                new ServiceCatalogItem
+                {
+                    ServiceName = "Solar Panel Cleaning",
+                    Category = ServiceCategory.HomeServices,
+                    Type = ServiceType.SolarPanelCleaning,
+                    Price = 4.000m,
+                    PricingModel = PricingModel.PerItem,
+                    DeliveryModel = DeliveryModel.TechnicianDispatch,
+                    IsAvailable = true,
+                    AdminID = adminId.Value
+                }
+            };
+
+            foreach (var defaultService in defaultServices)
+            {
+                var exists = context.ServiceCatalogItems.Any(s =>
+                    s.Category == defaultService.Category &&
+                    s.Type == defaultService.Type);
+
+                if (!exists)
+                {
+                    context.ServiceCatalogItems.Add(defaultService);
+                }
+            }
+
+            context.SaveChanges();
+        }
+
     }
 }

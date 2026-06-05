@@ -108,9 +108,9 @@ class _AgentProfileScreenState extends State<AgentProfileScreen> {
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 Text(
-                  'سيتم تفعيل الخدمات بعد موافقة المشرف.',
+                  'الخدمات ستظهر للعملاء إذا كان حساب المغسلة مفعلا.',
                   style: theme.textTheme.labelSmall?.copyWith(
-                    color: AppColors.warning,
+                    color: AppColors.success,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -174,7 +174,7 @@ class _AgentProfileScreenState extends State<AgentProfileScreen> {
                           messenger.showSnackBar(
                             const SnackBar(
                               content: Text(
-                                'تم تقديم طلب الاشتراك. سيتم التفعيل بعد موافقة المشرف.',
+                                'تم حفظ الخدمات، وستظهر للعملاء إذا كان الحساب مفعلا.',
                               ),
                               backgroundColor: AppColors.success,
                               behavior: SnackBarBehavior.floating,

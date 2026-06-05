@@ -193,7 +193,8 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
         final rawServices = agent['services'];
         if (rawServices is List) {
           _agentServices = rawServices
-              .whereType<Map<String, dynamic>>()
+              .whereType<Map>()
+              .map((service) => _toStringKeyedMap(service))
               .map(ServiceCatalogItemModel.fromJson)
               .toList();
         }
@@ -210,12 +211,24 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
     }
   }
 
+  Map<String, dynamic> _toStringKeyedMap(Map<dynamic, dynamic> value) {
+    return value.map((key, value) => MapEntry(key.toString(), value));
+  }
+
+  Map<String, dynamic>? _readMap(dynamic value) {
+    if (value is Map<String, dynamic>) return value;
+    if (value is Map) return _toStringKeyedMap(value);
+    return null;
+  }
+
   AgentOrderModel _mapBookingToAgentOrder(Map<String, dynamic> json) {
     final items = (json['bookingItems'] ?? json['BookingItems']);
-    final itemMaps = items is List ? items.whereType<Map<String, dynamic>>().toList() : <Map<String, dynamic>>[];
+    final itemMaps = items is List
+        ? items.whereType<Map>().map((item) => _toStringKeyedMap(item)).toList()
+        : <Map<String, dynamic>>[];
     final orderItems = itemMaps.map((item) {
-      final service = item['serviceCatalogItem'] ?? item['ServiceCatalogItem'];
-      final serviceName = service is Map<String, dynamic>
+      final service = _readMap(item['serviceCatalogItem'] ?? item['ServiceCatalogItem']);
+      final serviceName = service != null
           ? service['serviceName']?.toString() ?? service['ServiceName']?.toString() ?? ''
           : '';
       final serviceType = serviceName.isEmpty ? 'Service #${item['serviceID'] ?? item['ServiceID'] ?? ''}' : serviceName;
@@ -227,12 +240,12 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
       );
     }).toList();
 
-    final client = json['client'] ?? json['Client'];
-    final address = json['address'] ?? json['Address'];
-    final customerName = client is Map<String, dynamic>
+    final client = _readMap(json['client'] ?? json['Client']);
+    final address = _readMap(json['address'] ?? json['Address']);
+    final customerName = client != null
         ? '${client['firstName'] ?? client['FirstName'] ?? ''} ${client['lastName'] ?? client['LastName'] ?? ''}'.trim()
         : '';
-    final location = address is Map<String, dynamic>
+    final location = address != null
         ? '${address['area'] ?? address['Area'] ?? ''} ${address['street'] ?? address['Street'] ?? ''}'.trim()
         : '';
 
@@ -289,8 +302,8 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
 
   LaundryType _laundryTypeFromItems(List<Map<String, dynamic>> itemMaps) {
     for (final item in itemMaps) {
-      final service = item['serviceCatalogItem'] ?? item['ServiceCatalogItem'];
-      if (service is! Map<String, dynamic>) continue;
+      final service = _readMap(item['serviceCatalogItem'] ?? item['ServiceCatalogItem']);
+      if (service == null) continue;
       final category = service['category'] ?? service['Category'];
       final type = service['type'] ?? service['Type'];
       final categoryText = category?.toString().toLowerCase();
@@ -325,11 +338,19 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
     return '${diff.inDays}d ago';
   }
 
-  List<AgentOrderModel> get _currentOrders => 
-      _allOrders.where((o) => o.laundryType == widget.laundryType && o.status != OrderStatus.completed && o.status != OrderStatus.rejected).toList();
+  List<AgentOrderModel> get _currentOrders =>
+      _allOrders
+          .where((o) =>
+              o.status != OrderStatus.completed &&
+              o.status != OrderStatus.rejected)
+          .toList();
 
   List<AgentOrderModel> get _previousOrders =>
-      _allOrders.where((o) => o.laundryType == widget.laundryType && (o.status == OrderStatus.completed || o.status == OrderStatus.ready)).toList();
+      _allOrders
+          .where((o) =>
+              o.status == OrderStatus.completed ||
+              o.status == OrderStatus.rejected)
+          .toList();
 
   Widget _buildStatCard(String title, String count, Color color, IconData icon) {
     return Expanded(
@@ -361,18 +382,11 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
 
   Widget _buildServicesSection() {
     final isArabic = LanguageController().isArabic;
-    List<String> services = [];
-    switch (widget.laundryType) {
-      case LaundryType.clothes: services = isArabic ? ['غسيل', 'كوي', 'تنظيف جاف', 'غسيل مستعجل'] : ['Wash', 'Iron', 'Dry Clean', 'Express']; break;
-      case LaundryType.carsBikes: services = isArabic ? ['غسيل خارجي', 'غسيل داخلي', 'تلميع', 'غسيل مكينة'] : ['Exterior', 'Interior', 'Polishing', 'Engine']; break;
-      case LaundryType.carpets: services = isArabic ? ['غسيل عميق', 'تعطير', 'إزالة بقع صعبه'] : ['Deep Wash', 'Scenting', 'Stain Removal']; break;
-      case LaundryType.ac: services = isArabic ? ['تنظيف فلاتر', 'غسيل الوحدة الخارجية', 'تعبئة فريون'] : ['Filters', 'Outdoor Unit', 'Gas Refill']; break;
-      case LaundryType.tanks: services = isArabic ? ['تفريغ وتنظيف', 'تعقيم الأسطح', 'عزل وتسكير'] : ['Emptying', 'Sterilization', 'Insulation']; break;
-      case LaundryType.solarPanels: services = isArabic ? ['تنظيف جاف', 'غسيل بالمواصفات', 'فحص كفاءة'] : ['Dry Clean', 'Spec Wash', 'Efficiency Check']; break;
-    }
-    if (_agentServices.isNotEmpty) {
-      services = _agentServices.map((service) => service.serviceName).toSet().toList();
-    }
+    final services = _agentServices
+        .map((service) => service.serviceName)
+        .where((name) => name.trim().isNotEmpty)
+        .toSet()
+        .toList();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -384,24 +398,51 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
           ],
         ),
         const SizedBox(height: AppSpacing.sm),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: services.map((s) {
-              final isDark = Theme.of(context).brightness == Brightness.dark;
-              return Container(
-                margin: const EdgeInsets.only(right: 8),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: isDark ? Colors.white.withValues(alpha: 0.05) : AppColors.primary.withValues(alpha: 0.05),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: isDark ? Colors.white10 : AppColors.primary.withValues(alpha: 0.1)),
-                ),
-                child: Text(s, style: TextStyle(color: isDark ? Colors.white : AppColors.primary, fontWeight: FontWeight.w600, fontSize: 13)),
-              );
-            }).toList(),
+        if (services.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.white.withValues(alpha: 0.05)
+                  : Colors.grey.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white10
+                    : Colors.grey.withValues(alpha: 0.2),
+              ),
+            ),
+            child: Text(
+              isArabic ? 'لا توجد خدمات مفعلة حاليا' : 'No active services yet',
+              style: TextStyle(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white70
+                    : Colors.grey.shade700,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+          )
+        else
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: services.map((s) {
+                final isDark = Theme.of(context).brightness == Brightness.dark;
+                return Container(
+                  margin: const EdgeInsets.only(right: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white.withValues(alpha: 0.05) : AppColors.primary.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: isDark ? Colors.white10 : AppColors.primary.withValues(alpha: 0.1)),
+                  ),
+                  child: Text(s, style: TextStyle(color: isDark ? Colors.white : AppColors.primary, fontWeight: FontWeight.w600, fontSize: 13)),
+                );
+              }).toList(),
+            ),
           ),
-        ),
       ],
     );
   }
@@ -605,7 +646,7 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
               const SizedBox(width: AppSpacing.sm),
               _buildStatCard(isArabic ? 'قيد التنفيذ' : 'In Progress', orders.where((o) => o.status == OrderStatus.washing || o.status == OrderStatus.ironing).length.toString(), AppColors.tertiary, Icons.sync_rounded),
               const SizedBox(width: AppSpacing.sm),
-              _buildStatCard(isArabic ? 'مكتمل' : 'Completed', _allOrders.where((o) => o.laundryType == widget.laundryType && (o.status == OrderStatus.ready || o.status == OrderStatus.completed)).length.toString(), AppColors.success, Icons.check_circle_rounded),
+              _buildStatCard(isArabic ? 'مكتمل' : 'Completed', _allOrders.where((o) => o.status == OrderStatus.ready || o.status == OrderStatus.completed).length.toString(), AppColors.success, Icons.check_circle_rounded),
             ],
           ),
           const SizedBox(height: 32),

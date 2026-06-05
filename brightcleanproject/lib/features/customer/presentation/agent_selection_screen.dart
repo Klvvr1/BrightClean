@@ -111,7 +111,7 @@ class _AgentSelectionScreenState extends State<AgentSelectionScreen> {
               if (!requiredServiceIds.every(agentServiceIds.contains)) return false;
             }
             return true;
-          }).map((a) {
+          }).map<Map<String, dynamic>>((a) {
             // Safe extraction with type coercion
             final idValue = _readAny(a, ['id', 'ID', 'userID', 'userId', 'UserID']);
             final id = _readInt(idValue)!;
@@ -150,14 +150,31 @@ class _AgentSelectionScreenState extends State<AgentSelectionScreen> {
                         ))
                     .toList()
                 : <Review>[];
+            final rawServices = _readAny(a, ['services', 'Services']);
+            final serviceNames = rawServices is List
+                ? rawServices
+                    .whereType<Map>()
+                    .map((service) => (_readAny(service, [
+                          'serviceName',
+                          'ServiceName',
+                          'name',
+                          'Name',
+                        ]) ?? '')
+                        .toString()
+                        .trim())
+                    .where((name) => name.isNotEmpty)
+                    .toSet()
+                    .toList()
+                : <String>[];
 
-            return {
+            return <String, dynamic>{
               'id': id,
               'businessName': businessName,
               'address': address,
               'rating': rating,
               'reviewCount': reviewCount,
               'reviews': reviews,
+              'services': serviceNames,
             };
           }).toList();
           _isLoading = false;
@@ -185,6 +202,9 @@ class _AgentSelectionScreenState extends State<AgentSelectionScreen> {
     final List<Review> agentReviews = agent['reviews'] is List<Review>
         ? List<Review>.from(agent['reviews'] as List<Review>)
         : <Review>[];
+    final serviceNames = agent['services'] is List<String>
+        ? List<String>.from(agent['services'] as List<String>)
+        : <String>[];
 
     showModalBottomSheet(
       context: context,
@@ -279,6 +299,50 @@ class _AgentSelectionScreenState extends State<AgentSelectionScreen> {
                           ],
                         ),
                       ),
+                      const SizedBox(height: AppSpacing.xl),
+
+                      Text(
+                        'الخدمات المتوفرة',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white : AppColors.primary,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      if (serviceNames.isEmpty)
+                        const Text(
+                          'لا توجد خدمات مفعلة لهذه المغسلة حالياً',
+                          style: TextStyle(color: Colors.grey),
+                        )
+                      else
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: serviceNames.map((serviceName) {
+                            return Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: isDark
+                                    ? Colors.white.withValues(alpha: 0.05)
+                                    : AppColors.primary.withValues(alpha: 0.08),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: isDark
+                                      ? Colors.white10
+                                      : AppColors.primary.withValues(alpha: 0.15),
+                                ),
+                              ),
+                              child: Text(
+                                serviceName,
+                                style: TextStyle(
+                                  color: isDark ? Colors.white : AppColors.primary,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
                       const SizedBox(height: AppSpacing.xl),
 
                       // Reviews Header

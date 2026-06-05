@@ -84,19 +84,47 @@ namespace BrightClean.API.Controllers
             if (nationalIdImage == null || nationalIdImage.Length == 0)
                 return BadRequest(new { message = "صورة الهوية الوطنية مطلوبة." });
 
+            var selectedServiceIds = ParseSelectedServiceIds(dto.SelectedServiceIds);
             var selectedCategories = ParseSelectedServiceCategories(dto.SelectedServiceCategories);
-            if (selectedCategories.Count == 0)
+
+            if (selectedServiceIds.Count == 0 && selectedCategories.Count == 0)
             {
-                return BadRequest(new { message = "At least one service category must be selected." });
+                return BadRequest(new { message = "At least one service must be selected." });
             }
 
-            var selectedCatalogServices = await _context.ServiceCatalogItems
-                .Where(s => s.IsAvailable && selectedCategories.Contains(s.Category))
-                .ToListAsync();
+            var selectedCatalogQuery = _context.ServiceCatalogItems
+                .Where(s => s.IsAvailable);
+
+            if (selectedServiceIds.Count > 0)
+            {
+                selectedCatalogQuery = selectedCatalogQuery
+                    .Where(s => selectedServiceIds.Contains(s.ServiceID));
+            }
+            else
+            {
+                selectedCatalogQuery = selectedCatalogQuery
+                    .Where(s => selectedCategories.Contains(s.Category));
+            }
+
+            var selectedCatalogServices = await selectedCatalogQuery.ToListAsync();
 
             if (selectedCatalogServices.Count == 0)
             {
-                return BadRequest(new { message = "No available catalog services match the selected service categories." });
+                return BadRequest(new { message = "No available catalog services match the selected services." });
+            }
+
+            if (selectedServiceIds.Count > 0)
+            {
+                var validServiceIds = selectedCatalogServices.Select(s => s.ServiceID).ToHashSet();
+                var invalidServiceIds = selectedServiceIds.Where(id => !validServiceIds.Contains(id)).ToList();
+                if (invalidServiceIds.Count > 0)
+                {
+                    return BadRequest(new
+                    {
+                        message = "One or more selected services do not exist or are unavailable.",
+                        invalidServiceIds
+                    });
+                }
             }
 
             // Ensure directory exists
@@ -214,6 +242,7 @@ namespace BrightClean.API.Controllers
                         LaundryAgentID = agent.UserID,
                         ServiceID = service.ServiceID,
                         IsActive = false,
+                        PendingActivation = true,
                         Notes = "Selected during agent registration; pending admin activation."
                     });
                 }
@@ -465,6 +494,24 @@ namespace BrightClean.API.Controllers
                     : null)
                 .Where(category => category.HasValue)
                 .Select(category => category!.Value)
+                .Distinct()
+                .ToList();
+        }
+
+        private static List<int> ParseSelectedServiceIds(string? rawServiceIds)
+        {
+            if (string.IsNullOrWhiteSpace(rawServiceIds))
+            {
+                return new List<int>();
+            }
+
+            return rawServiceIds
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(value => int.TryParse(value, out var parsed) && parsed > 0
+                    ? (int?)parsed
+                    : null)
+                .Where(id => id.HasValue)
+                .Select(id => id!.Value)
                 .Distinct()
                 .ToList();
         }
