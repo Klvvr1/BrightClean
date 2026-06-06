@@ -8,10 +8,12 @@ import '../../domain/repositories/auth_repository.dart';
 import '../repositories/auth_repository_impl.dart';
 import '../../../customer/data/providers/cart_provider.dart';
 import '../../../customer/data/providers/order_provider.dart';
+import '../../../../core/network/api_client.dart';
 
 class AuthProvider with ChangeNotifier {
   final AuthRepository _authRepository;
   final FlutterSecureStorage _secureStorage;
+  final BaseApiClient _apiClient;
 
   String? _token;
   int? _userId;
@@ -22,8 +24,10 @@ class AuthProvider with ChangeNotifier {
   AuthProvider({
     AuthRepository? authRepository,
     FlutterSecureStorage? secureStorage,
+    BaseApiClient? apiClient,
   })  : _authRepository = authRepository ?? AuthRepositoryImpl(),
-        _secureStorage = secureStorage ?? const FlutterSecureStorage() {
+        _secureStorage = secureStorage ?? const FlutterSecureStorage(),
+        _apiClient = apiClient ?? BaseApiClient() {
     _loadSession();
   }
 
@@ -61,6 +65,21 @@ class AuthProvider with ChangeNotifier {
     try {
       final response = await _authRepository.login(email, password);
       
+      // Check System Status before persisting login (except for Admins)
+      if (response.role.toLowerCase() != 'admin') {
+        try {
+          final data = await _apiClient.get('/systemstatus/status');
+          final isLoginEnabled = data['loginEnabled'] ?? true;
+          if (!isLoginEnabled) {
+            throw ServerException(message: data['message'] ?? 'النظام تحت الصيانة. يرجى المحاولة لاحقاً.');
+          }
+        } on ServerException {
+          rethrow;
+        } catch(e) {
+          debugPrint('Error checking system status during login: $e');
+        }
+      }
+
       // Await all persistence operations before mutating memory state
       final prefs = await SharedPreferences.getInstance();
       await _secureStorage.write(key: 'auth_token', value: response.token);

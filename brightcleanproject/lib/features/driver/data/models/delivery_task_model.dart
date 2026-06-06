@@ -6,12 +6,17 @@ class DeliveryTaskModel {
   final int dropoffAddressID;
   final int stageNumber;
   final int type; // TaskType: 0 = PickupFromClient, 1 = DeliveryToClient
-  final int status; // DeliveryTaskStatus: 0 = Unassigned, 1 = Assigned, 2 = InProgress, 3 = Completed
+  final int
+      status; // DeliveryTaskStatus: 0 = Unassigned, 1 = Assigned, 2 = InProgress, 3 = Completed
   final double deliveryFee;
   final DateTime? assignedAt;
+  final int currentStep;
+  final DateTime? startedAt;
+  final DateTime? lastProgressUpdatedAt;
   final DateTime? completedAt;
   final Map<String, dynamic>? pickupAddress;
   final Map<String, dynamic>? dropoffAddress;
+  final Map<String, dynamic>? booking;
 
   DeliveryTaskModel({
     required this.taskID,
@@ -24,12 +29,31 @@ class DeliveryTaskModel {
     required this.status,
     required this.deliveryFee,
     this.assignedAt,
+    this.currentStep = 0,
+    this.startedAt,
+    this.lastProgressUpdatedAt,
     this.completedAt,
     this.pickupAddress,
     this.dropoffAddress,
+    this.booking,
   });
 
+  static Map<String, dynamic>? _readMap(dynamic value) {
+    if (value is Map<String, dynamic>) return value;
+    if (value is Map) {
+      return value.map((key, value) => MapEntry(key.toString(), value));
+    }
+    return null;
+  }
+
   factory DeliveryTaskModel.fromJson(Map<String, dynamic> json) {
+    // Helper to validate and extract required IDs
+    int? _extractId(dynamic value, String fieldName) {
+      if (value is int && value > 0) return value;
+      if (value == null) return null;
+      return null; // Invalid value
+    }
+
     // Parse type safely (TaskType enum)
     final rawType = json['type'] ?? json['Type'];
     int parsedType = 0;
@@ -65,24 +89,70 @@ class DeliveryTaskModel {
       }
     }
 
+    // Extract and validate required ID fields
+    final taskID = _extractId(json['taskID'] ?? json['taskId'] ?? json['TaskID'], 'taskID');
+    if (taskID == null) {
+      throw FormatException('DeliveryTaskModel.fromJson: required field "taskID" is missing or invalid');
+    }
+
+    final bookingID = _extractId(json['bookingID'] ?? json['bookingId'] ?? json['BookingID'], 'bookingID');
+    if (bookingID == null) {
+      throw FormatException('DeliveryTaskModel.fromJson: required field "bookingID" is missing or invalid');
+    }
+
+    final pickupAddressID = _extractId(json['pickupAddressID'] ?? json['pickupAddressId'] ?? json['PickupAddressID'], 'pickupAddressID');
+    if (pickupAddressID == null) {
+      throw FormatException('DeliveryTaskModel.fromJson: required field "pickupAddressID" is missing or invalid');
+    }
+
+    final dropoffAddressID = _extractId(json['dropoffAddressID'] ?? json['dropoffAddressId'] ?? json['DropoffAddressID'], 'dropoffAddressID');
+    if (dropoffAddressID == null) {
+      throw FormatException('DeliveryTaskModel.fromJson: required field "dropoffAddressID" is missing or invalid');
+    }
+
+    final stageNumber = _extractId(json['stageNumber'] ?? json['StageNumber'], 'stageNumber');
+    if (stageNumber == null) {
+      throw FormatException('DeliveryTaskModel.fromJson: required field "stageNumber" is missing or invalid');
+    }
+
     return DeliveryTaskModel(
-      taskID: json['taskID'] as int? ?? json['taskId'] as int? ?? json['TaskID'] as int? ?? 0,
-      bookingID: json['bookingID'] as int? ?? json['bookingId'] as int? ?? json['BookingID'] as int? ?? 0,
-      deliveryStaffID: json['deliveryStaffID'] as int? ?? json['deliveryStaffId'] as int? ?? json['DeliveryStaffID'] as int?,
-      pickupAddressID: json['pickupAddressID'] as int? ?? json['pickupAddressId'] as int? ?? json['PickupAddressID'] as int? ?? 0,
-      dropoffAddressID: json['dropoffAddressID'] as int? ?? json['dropoffAddressId'] as int? ?? json['DropoffAddressID'] as int? ?? 0,
-      stageNumber: json['stageNumber'] as int? ?? json['StageNumber'] as int? ?? 0,
+      taskID: taskID,
+      bookingID: bookingID,
+      deliveryStaffID: _extractId(
+        json['deliveryStaffID'] ?? json['deliveryStaffId'] ?? json['DeliveryStaffID'],
+        'deliveryStaffID'
+      ),
+      pickupAddressID: pickupAddressID,
+      dropoffAddressID: dropoffAddressID,
+      stageNumber: stageNumber,
       type: parsedType,
       status: parsedStatus,
-      deliveryFee: (json['deliveryFee'] ?? json['DeliveryFee'] as num?)?.toDouble() ?? 0.0,
+      deliveryFee:
+          ((json['deliveryFee'] ?? json['DeliveryFee']) as num?)?.toDouble() ??
+              0.0,
       assignedAt: json['assignedAt'] == null && json['AssignedAt'] == null
           ? null
-          : DateTime.tryParse((json['assignedAt'] ?? json['AssignedAt']) as String),
+          : DateTime.tryParse(
+              (json['assignedAt'] ?? json['AssignedAt']) as String),
+      currentStep:
+          json['currentStep'] as int? ?? json['CurrentStep'] as int? ?? 0,
+      startedAt: json['startedAt'] == null && json['StartedAt'] == null
+          ? null
+          : DateTime.tryParse(
+              (json['startedAt'] ?? json['StartedAt']) as String),
+      lastProgressUpdatedAt: json['lastProgressUpdatedAt'] == null &&
+              json['LastProgressUpdatedAt'] == null
+          ? null
+          : DateTime.tryParse((json['lastProgressUpdatedAt'] ??
+              json['LastProgressUpdatedAt']) as String),
       completedAt: json['completedAt'] == null && json['CompletedAt'] == null
           ? null
-          : DateTime.tryParse((json['completedAt'] ?? json['CompletedAt']) as String),
-      pickupAddress: (json['pickupAddress'] ?? json['PickupAddress']) as Map<String, dynamic>?,
-      dropoffAddress: (json['dropoffAddress'] ?? json['DropoffAddress']) as Map<String, dynamic>?,
+          : DateTime.tryParse(
+              (json['completedAt'] ?? json['CompletedAt']) as String),
+      pickupAddress: _readMap(json['pickupAddress'] ?? json['PickupAddress']),
+      dropoffAddress:
+          _readMap(json['dropoffAddress'] ?? json['DropoffAddress']),
+      booking: _readMap(json['booking'] ?? json['Booking']),
     );
   }
 
@@ -98,9 +168,13 @@ class DeliveryTaskModel {
       'status': status,
       'deliveryFee': deliveryFee,
       'assignedAt': assignedAt?.toIso8601String(),
+      'currentStep': currentStep,
+      'startedAt': startedAt?.toIso8601String(),
+      'lastProgressUpdatedAt': lastProgressUpdatedAt?.toIso8601String(),
       'completedAt': completedAt?.toIso8601String(),
       'pickupAddress': pickupAddress,
       'dropoffAddress': dropoffAddress,
+      'booking': booking,
     };
   }
 }

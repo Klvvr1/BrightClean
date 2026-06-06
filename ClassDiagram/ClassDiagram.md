@@ -52,6 +52,12 @@
 > - Driver task cards now open the tracking/detail workflow with the selected `DeliveryTaskModel`; task completion is sent through `DriverProvider.completeTask()` instead of local-only state
 > - Driver available tasks now use an `Manage Order` / `إدارة الطلب` flow: details first, then confirmed claim, then the task moves to the driver's current orders for staged status updates and completion
 >
+> - Local SQLite `cart_items.serviceId` is required with no `DEFAULT 1`; legacy cart rows without a real backend service ID are not migrated into the new cart schema
+> - `TechnicianDispatch` bookings are agent-managed and complete through `POST /api/bookings/{bookingId}/complete`; they do not create delivery tasks and cannot be marked ready for driver delivery
+> - Bookings cannot mix `TwoStage` and `TechnicianDispatch` service delivery models in the same booking
+> - `DeliveryTask` now persists driver progress with `CurrentStep`, `StartedAt`, and `LastProgressUpdatedAt`
+> - Driver tracking loads real task details from `GET /api/deliverytasks/{taskId}` instead of mock customer, laundry, item, and address data
+>
 > **Changelog v6.2:**
 > - `SystemStatus.Reason` removed — `Message` is the sole public-facing explanation shown on the login screen
 > - `BookingRating` confirmed: `AgentComment` and `DeliveryComment` are the free-text note fields the client writes alongside their star ratings — no structural change required
@@ -813,6 +819,9 @@ Represents one leg of the two-stage physical logistics chain. Only created for b
 | `Status` | DeliveryTaskStatus | NOT NULL, DEFAULT Unassigned | Task lifecycle state |
 | `DeliveryFee` | decimal | NOT NULL, CHECK >= 0 | Fee paid to driver for this leg |
 | `AssignedAt` | datetime? | NULLABLE | Stamped when driver claims task |
+| `CurrentStep` | int | NOT NULL, DEFAULT 0 | Persisted driver progress step for the current leg |
+| `StartedAt` | datetime? | NULLABLE | Stamped when the driver starts the task |
+| `LastProgressUpdatedAt` | datetime? | NULLABLE | Stamped whenever driver progress changes |
 | `CompletedAt` | datetime? | NULLABLE | Stamped when driver marks complete |
 
 **Address Mapping per Stage:**
@@ -825,6 +834,7 @@ Represents one leg of the two-stage physical logistics chain. Only created for b
 **Constraints:**
 - Stage 2 `Status` cannot leave `Unassigned` until Stage 1 `Status = Completed`
 - `DeliveryStaffID` is null at creation — set atomically when driver claims from pool
+- Driver progress cannot move backward or jump more than one step at a time
 - Driver task pool queries expose unassigned eligible tasks plus tasks already assigned to the authenticated driver only
 - One driver can only have one `InProgress` task at a time (application-layer enforcement)
 
@@ -1017,11 +1027,13 @@ LIMIT 1
 - No `Payment`, `Offer`, or `DeliveryTask` can be attached while `Status = Draft`
 - `ExpiresAt` is set at Draft creation — a background job hard-deletes expired Draft bookings and their items automatically
 - Transition from `Draft` → `Pending` locks `FinalTotal` and opens the order for agent acceptance
+- Local SQLite `cart_items.serviceId` is required (no DEFAULT 1); legacy cart rows without a real backend service ID are not migrated into the new cart schema
 
 ### Agent Booking Operation Rules
 - Laundry agents can reject only their own `Pending` bookings; rejected bookings move to `Cancelled`
 - Laundry agents can move only their own `Accepted` bookings to `InProgress`
 - Flutter agent dashboards must load orders through `GET /api/bookings/agent/my`; local mock order state is not authoritative
+- `TechnicianDispatch` bookings are agent-managed and complete through `POST /api/bookings/{bookingId}/complete`; they do not create delivery tasks and cannot be marked ready for driver delivery
 
 ### Payment Rules
 - One payment per booking — enforced by `UNIQUE` constraint on `Payment.BookingID`
@@ -1038,9 +1050,13 @@ LIMIT 1
 ### Delivery Rules
 - `TwoStage` bookings generate exactly 2 `DeliveryTask` records at `Booking.Status = Accepted`
 - `TechnicianDispatch` bookings generate 0 `DeliveryTask` records
+- A single booking cannot mix `TwoStage` and `TechnicianDispatch` service delivery models
 - Stage 2 remains `Unassigned` until Stage 1 is `Completed`
 - Different drivers may handle Stage 1 and Stage 2 of the same booking
 - The driver pool returns eligible unassigned tasks plus the current driver's own `Assigned` and `InProgress` tasks; tasks assigned to other drivers are hidden
+- `DeliveryTask` persists driver progress with `CurrentStep`, `StartedAt`, and `LastProgressUpdatedAt`
+- Driver progress is monotonic (cannot move backward or skip steps)
+- Driver tracking loads real task details from `GET /api/deliverytasks/{taskId}` instead of mock data
 
 ### Pricing Rules
 - All prices are set by the admin — agents have no pricing authority

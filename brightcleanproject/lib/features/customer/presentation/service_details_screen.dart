@@ -793,11 +793,12 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
     return 0.0;
   }
 
-  bool _ensureServiceAvailable(String itemName) {
+  bool _ensureServiceAvailable(
+      String itemName, ScaffoldMessengerState messenger) {
     if (_resolveServiceId(itemName) > 0) return true;
 
-    ScaffoldMessenger.of(context).clearSnackBars();
-    ScaffoldMessenger.of(context).showSnackBar(
+    messenger.clearSnackBars();
+    messenger.showSnackBar(
       SnackBar(
         content: Text(_catalogLoadError ??
             'هذه الخدمة غير متوفرة في كتالوج الخادم حاليا. يرجى اختيار خدمة أخرى.'),
@@ -1241,7 +1242,7 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
                     if (entry.value > 0) {
                       final serviceId = _resolveServiceId(entry.key);
                       if (serviceId <= 0) {
-                        _ensureServiceAvailable(entry.key);
+                        _ensureServiceAvailable(entry.key, messenger);
                         return;
                       }
                       await cart.addItem(
@@ -1310,7 +1311,7 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
                       for (int i = 0; i < entry.value; i++) {
                         final serviceId = _resolveServiceId(entry.key);
                         if (serviceId <= 0) {
-                          _ensureServiceAvailable(entry.key);
+                          _ensureServiceAvailable(entry.key, messenger);
                           return;
                         }
                         double l = double.tryParse(lengthList[i].text) ?? 1.0;
@@ -1363,8 +1364,11 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
                 }
               } else {
                 // Direct Checkout Flow
+                final messenger2 = ScaffoldMessenger.of(context);
+                final router2 = GoRouter.of(context);
                 if (_catalogServices.isEmpty) {
                   await _loadCatalogServices();
+                  if (!mounted) return;
                 }
 
                 if (widget.serviceType.contains('سيار')) {
@@ -1386,18 +1390,18 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
                     }
                   });
                   if (list.any((item) => item.serviceId <= 0)) {
-                    _ensureServiceAvailable(widget.serviceType);
+                    _ensureServiceAvailable(widget.serviceType, messenger2);
                     return;
                   }
                   if (list.isEmpty) {
-                    ScaffoldMessenger.of(context).clearSnackBars();
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    messenger2.clearSnackBars();
+                    messenger2.showSnackBar(
                       const SnackBar(
                           content: Text('يرجى تحديد مركبة واحدة على الأقل')),
                     );
                     return;
                   }
-                  context.push('/checkout', extra: list);
+                  router2.push('/checkout', extra: list);
                 } else if (widget.serviceType.contains('مكيف')) {
                   final List<CartItem> list = [];
                   _acQuantities.forEach((type, qty) {
@@ -1417,18 +1421,18 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
                     }
                   });
                   if (list.any((item) => item.serviceId <= 0)) {
-                    _ensureServiceAvailable(widget.serviceType);
+                    _ensureServiceAvailable(widget.serviceType, messenger2);
                     return;
                   }
                   if (list.isEmpty) {
-                    ScaffoldMessenger.of(context).clearSnackBars();
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    messenger2.clearSnackBars();
+                    messenger2.showSnackBar(
                       const SnackBar(
                           content: Text('يرجى تحديد مكيف واحد على الأقل')),
                     );
                     return;
                   }
-                  context.push('/checkout', extra: list);
+                  router2.push('/checkout', extra: list);
                 } else if (widget.serviceType.contains('شمس')) {
                   final List<CartItem> list = [];
                   _solarQuantities.forEach((size, qty) {
@@ -1448,18 +1452,18 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
                     }
                   });
                   if (list.any((item) => item.serviceId <= 0)) {
-                    _ensureServiceAvailable(widget.serviceType);
+                    _ensureServiceAvailable(widget.serviceType, messenger2);
                     return;
                   }
                   if (list.isEmpty) {
-                    ScaffoldMessenger.of(context).clearSnackBars();
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    messenger2.clearSnackBars();
+                    messenger2.showSnackBar(
                       const SnackBar(
                           content: Text('يرجى تحديد لوح واحد على الأقل')),
                     );
                     return;
                   }
-                  context.push('/checkout', extra: list);
+                  router2.push('/checkout', extra: list);
                 } else if (widget.serviceType.contains('خزان')) {
                   final List<CartItem> list = [];
                   _tankQuantities.forEach((type, qty) {
@@ -1490,18 +1494,18 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
                     }
                   });
                   if (list.any((item) => item.serviceId <= 0)) {
-                    _ensureServiceAvailable(widget.serviceType);
+                    _ensureServiceAvailable(widget.serviceType, messenger2);
                     return;
                   }
                   if (list.isEmpty) {
-                    ScaffoldMessenger.of(context).clearSnackBars();
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    messenger2.clearSnackBars();
+                    messenger2.showSnackBar(
                       const SnackBar(
                           content: Text('يرجى تحديد خزان واحد على الأقل')),
                     );
                     return;
                   }
-                  context.push('/checkout', extra: list);
+                  router2.push('/checkout', extra: list);
                 } else if (widget.serviceType.contains('عاملات')) {
                   final double unitPrice =
                       basePrice * selectedOption.priceMultiplier * maidHours;
@@ -1516,10 +1520,10 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
                     serviceId: _resolveServiceId(widget.serviceType),
                   );
                   if (directItem.serviceId <= 0) {
-                    _ensureServiceAvailable(widget.serviceType);
+                    _ensureServiceAvailable(widget.serviceType, messenger2);
                     return;
                   }
-                  context.push('/checkout', extra: [directItem]);
+                  router2.push('/checkout', extra: [directItem]);
                 }
               }
             },

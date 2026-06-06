@@ -48,6 +48,10 @@ class AgentBookingRepository {
     await apiClient.post('/api/bookings/$bookingId/ready');
   }
 
+  Future<void> completeBooking(int bookingId) async {
+    await apiClient.post('/api/bookings/$bookingId/complete');
+  }
+
   Future<bool> toggleStoreStatus() async {
     final response = await apiClient.post('/api/bookings/toggle-store-status');
     if (response is Map<String, dynamic>) {
@@ -59,14 +63,18 @@ class AgentBookingRepository {
   Future<List<ServiceCatalogItemModel>> getMyServices(int agentId) async {
     final response = await apiClient.get('/api/services/agents/$agentId');
     if (response is List) {
-      return _readMapList(response).map(ServiceCatalogItemModel.fromJson).toList();
+      return _readMapList(response)
+          .map(ServiceCatalogItemModel.fromJson)
+          .toList();
     }
     return [];
   }
 
   Future<Map<String, dynamic>?> getMyProfile() async {
     final response = await apiClient.get('/api/users/me');
-    if (response is Map) return response.map((key, value) => MapEntry(key.toString(), value));
+    if (response is Map) {
+      return response.map((key, value) => MapEntry(key.toString(), value));
+    }
     return null;
   }
 }

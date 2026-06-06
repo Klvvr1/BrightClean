@@ -36,6 +36,29 @@ class DriverProvider extends ChangeNotifier {
     }
   }
 
+  Future<DeliveryTaskModel> fetchTaskDetails(int taskId) async {
+    _isActionLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final task = await deliveryTaskRepository.getTaskDetails(taskId);
+      final index = _tasks.indexWhere((item) => item.taskID == task.taskID);
+      if (index >= 0) {
+        _tasks[index] = task;
+      } else {
+        _tasks.add(task);
+      }
+      return task;
+    } catch (e) {
+      _errorMessage = e.toString();
+      rethrow;
+    } finally {
+      _isActionLoading = false;
+      notifyListeners();
+    }
+  }
+
   Future<void> claimTask(int taskId, int driverId) async {
     _isActionLoading = true;
     _errorMessage = null;
@@ -43,6 +66,40 @@ class DriverProvider extends ChangeNotifier {
 
     try {
       await deliveryTaskRepository.claimTask(taskId, driverId);
+      await fetchTaskPool();
+    } catch (e) {
+      _errorMessage = e.toString();
+      rethrow;
+    } finally {
+      _isActionLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> startTask(int taskId) async {
+    _isActionLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await deliveryTaskRepository.startTask(taskId);
+      await fetchTaskPool();
+    } catch (e) {
+      _errorMessage = e.toString();
+      rethrow;
+    } finally {
+      _isActionLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> updateTaskProgress(int taskId, int currentStep) async {
+    _isActionLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await deliveryTaskRepository.updateTaskProgress(taskId, currentStep);
       await fetchTaskPool();
     } catch (e) {
       _errorMessage = e.toString();

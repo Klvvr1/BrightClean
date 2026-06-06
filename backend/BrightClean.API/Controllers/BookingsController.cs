@@ -277,6 +277,17 @@ namespace BrightClean.API.Controllers
                 });
             }
 
+            var requestedDeliveryModels = await _context.ServiceCatalogItems
+                .Where(s => requestedServiceIds.Contains(s.ServiceID))
+                .Select(s => s.DeliveryModel)
+                .Distinct()
+                .ToListAsync();
+
+            if (requestedDeliveryModels.Count > 1)
+            {
+                return BadRequest(new { message = "Services with delivery pickup and on-site technician dispatch cannot be mixed in the same booking." });
+            }
+
             int addressId = dto.AddressID ?? 0;
             if (addressId == 0)
             {
@@ -518,8 +529,19 @@ namespace BrightClean.API.Controllers
                 // Save status change first
                 await _context.SaveChangesAsync();
 
-                // Check if any items belong to a TwoStage delivery model
-                bool isTwoStage = booking.BookingItems.Any(bi => bi.ServiceCatalogItem.DeliveryModel == DeliveryModel.TwoStage);
+                var deliveryModels = booking.BookingItems
+                    .Select(bi => bi.ServiceCatalogItem.DeliveryModel)
+                    .Distinct()
+                    .ToList();
+
+                if (deliveryModels.Count > 1)
+                {
+                    await transaction.RollbackAsync();
+                    return BadRequest("Bookings cannot mix delivery pickup services with on-site technician dispatch services.");
+                }
+
+                // Check if the booking belongs to a TwoStage delivery model
+                bool isTwoStage = deliveryModels.Contains(DeliveryModel.TwoStage);
 
                 if (isTwoStage)
                 {
@@ -644,7 +666,10 @@ namespace BrightClean.API.Controllers
         [Authorize(Roles = "LaundryAgent")]
         public async Task<IActionResult> MarkBookingReady(int bookingId)
         {
-            var booking = await _context.Bookings.FindAsync(bookingId);
+            var booking = await _context.Bookings
+                .Include(b => b.BookingItems)
+                    .ThenInclude(bi => bi.ServiceCatalogItem)
+                .FirstOrDefaultAsync(b => b.BookingID == bookingId);
 
             if (booking == null)
             {
@@ -670,10 +695,58 @@ namespace BrightClean.API.Controllers
                 return BadRequest("Booking must be Accepted or InProgress to be marked as Ready.");
             }
 
+            if (!booking.BookingItems.Any(bi => bi.ServiceCatalogItem.DeliveryModel == DeliveryModel.TwoStage))
+            {
+                return BadRequest("Technician dispatch bookings should be completed by the laundry agent, not marked ready for delivery.");
+            }
+
             booking.Status = BookingStatus.Ready;
             await _context.SaveChangesAsync();
 
             return Ok(booking);
+        }
+
+        // POST: /api/bookings/{bookingId}/complete
+        [HttpPost("{bookingId}/complete")]
+        [Authorize(Roles = "LaundryAgent")]
+        public async Task<IActionResult> CompleteTechnicianDispatchBooking(int bookingId)
+        {
+            var booking = await _context.Bookings
+                .Include(b => b.BookingItems)
+                    .ThenInclude(bi => bi.ServiceCatalogItem)
+                .FirstOrDefaultAsync(b => b.BookingID == bookingId);
+
+            if (booking == null)
+            {
+                return NotFound($"Booking with ID {bookingId} not found.");
+            }
+
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out var agentId) || booking.LaundryAgentID != agentId)
+            {
+                return Forbid();
+            }
+
+            var agent = await _context.LaundryAgents.FindAsync(agentId);
+            if (agent != null && agent.IsStoreClosed)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new { message = "المغسلة مغلقة حالياً. لا يمكن معالجة الطلبات." });
+            }
+
+            if (booking.BookingItems.Any(bi => bi.ServiceCatalogItem.DeliveryModel == DeliveryModel.TwoStage))
+            {
+                return BadRequest("Two-stage bookings are completed after the delivery-to-client task is completed.");
+            }
+
+            if (booking.Status != BookingStatus.Accepted && booking.Status != BookingStatus.InProgress && booking.Status != BookingStatus.Ready)
+            {
+                return BadRequest("Only accepted, in-progress, or ready technician dispatch bookings can be completed.");
+            }
+
+            booking.Status = BookingStatus.Completed;
+            await _context.SaveChangesAsync();
+
+            return Ok(new { booking.BookingID, booking.Status });
         }
 
         // POST: /api/bookings/toggle-store-status

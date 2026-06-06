@@ -33,4 +33,15 @@ class AdminRepositoryImpl implements AdminRepository {
     }
     throw ServerException(message: 'Invalid API response format for approved staff');
   }
+
+  @override
+  Future<void> toggleSystemStatus(bool loginEnabled, String? message) async {
+    await _apiClient.post(
+      '/api/systemstatus/toggle',
+      body: {
+        'loginEnabled': loginEnabled,
+        'message': message,
+      },
+    );
+  }
 }

@@ -47,6 +47,13 @@ namespace BrightClean.Domain.Entities
 
         public DateTime? AssignedAt { get; set; }
 
+        [Required]
+        public int CurrentStep { get; set; } = 0;
+
+        public DateTime? StartedAt { get; set; }
+
+        public DateTime? LastProgressUpdatedAt { get; set; }
+
         public DateTime? CompletedAt { get; set; }
     }
 }

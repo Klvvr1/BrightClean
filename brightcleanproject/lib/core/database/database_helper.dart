@@ -2,6 +2,7 @@ import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'dart:convert';
 import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
@@ -22,7 +23,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 4,
+      version: 5,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
       onOpen: (db) async {
@@ -35,7 +36,8 @@ class DatabaseHelper {
   Future<void> _upgradeDB(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
       final columns = await db.rawQuery("PRAGMA table_info(users)");
-      final columnNames = columns.map((column) => column['name'] as String).toSet();
+      final columnNames =
+          columns.map((column) => column['name'] as String).toSet();
 
       if (columnNames.isNotEmpty) {
         if (!columnNames.contains('car_company')) {
@@ -52,20 +54,29 @@ class DatabaseHelper {
 
     if (oldVersion < 3) {
       final columns = await db.rawQuery("PRAGMA table_info(orders)");
-      final columnNames = columns.map((column) => column['name'] as String).toSet();
+      final columnNames =
+          columns.map((column) => column['name'] as String).toSet();
 
       if (columnNames.isNotEmpty && !columnNames.contains('category')) {
         await db.execute("ALTER TABLE orders ADD COLUMN category TEXT;");
       }
     }
 
-    // CRIT-008: Version 4 adds serviceId to cart_items for real backend service IDs
-    if (oldVersion < 4) {
+    // CRIT-008: Version 4 added serviceId to cart_items for real backend service IDs
+    // Single rebuild check to avoid double migration
+    if (oldVersion < 5) {
       final cartColumns = await db.rawQuery("PRAGMA table_info(cart_items)");
-      final cartColumnNames = cartColumns.map((c) => c['name'] as String).toSet();
-      
-      if (cartColumnNames.isNotEmpty && !cartColumnNames.contains('serviceId')) {
-        await db.execute("ALTER TABLE cart_items ADD COLUMN serviceId INTEGER NOT NULL DEFAULT 1;");
+      final cartColumnNames =
+          cartColumns.map((c) => c['name'] as String).toSet();
+
+      bool needsRebuild = false;
+      if (cartColumnNames.isNotEmpty) {
+        // Need rebuild if upgrading from v4 or earlier
+        needsRebuild = (oldVersion < 5) || (!cartColumnNames.contains('serviceId'));
+      }
+
+      if (needsRebuild) {
+        await _rebuildCartItemsWithoutDefault(db);
       }
     }
   }
@@ -123,17 +134,7 @@ CREATE TABLE IF NOT EXISTS orders (
 )
 ''');
 
-    await db.execute('''
-CREATE TABLE IF NOT EXISTS cart_items (
-  id TEXT PRIMARY KEY,
-  serviceName TEXT NOT NULL,
-  selectedType TEXT NOT NULL,
-  quantity INTEGER NOT NULL,
-  pricePerUnit REAL NOT NULL,
-  totalPrice REAL NOT NULL,
-  serviceId INTEGER NOT NULL DEFAULT 1
-)
-''');
+    await _createCartItemsTable(db);
 
     await db.execute('''
 CREATE TABLE IF NOT EXISTS reviews (
@@ -190,6 +191,92 @@ CREATE TABLE IF NOT EXISTS reviews (
         await db.insert('users', user);
       }
     }
+  }
+
+  Future<void> _createCartItemsTable(DatabaseExecutor db) async {
+    await db.execute('''
+CREATE TABLE IF NOT EXISTS cart_items (
+  id TEXT PRIMARY KEY,
+  serviceName TEXT NOT NULL,
+  selectedType TEXT NOT NULL,
+  quantity INTEGER NOT NULL,
+  pricePerUnit REAL NOT NULL,
+  totalPrice REAL NOT NULL,
+  serviceId INTEGER NOT NULL
+)
+''');
+  }
+
+  Future<void> _rebuildCartItemsWithoutDefault(DatabaseExecutor db) async {
+    final cartColumns = await db.rawQuery("PRAGMA table_info(cart_items)");
+    final cartColumnNames = cartColumns.map((c) => c['name'] as String).toSet();
+
+    if (cartColumnNames.isEmpty) {
+      return;
+    }
+
+    // Check for invalid serviceId rows before migration
+    if (cartColumnNames.contains('serviceId')) {
+      final invalidRows = await db.rawQuery(
+        'SELECT COUNT(*) as count FROM cart_items WHERE serviceId IS NULL OR serviceId <= 0'
+      );
+      final invalidCount = invalidRows.first['count'] as int;
+
+      if (invalidCount > 0) {
+        debugPrint('WARNING: Found $invalidCount cart items with invalid serviceId (NULL or <=0). Removing them to continue migration.');
+        try {
+          // Remove invalid cart rows to allow migration to proceed
+          await db.execute(
+            'DELETE FROM cart_items WHERE serviceId IS NULL OR serviceId <= 0'
+          );
+          debugPrint('Successfully removed $invalidCount invalid cart items.');
+        } catch (e) {
+          debugPrint('Error removing invalid cart items: $e');
+          // Do not rethrow - allow migration to continue
+        }
+      }
+    }
+
+    await db.execute('DROP TABLE IF EXISTS cart_items_new');
+    await db.execute('''
+CREATE TABLE cart_items_new (
+  id TEXT PRIMARY KEY,
+  serviceName TEXT NOT NULL,
+  selectedType TEXT NOT NULL,
+  quantity INTEGER NOT NULL,
+  pricePerUnit REAL NOT NULL,
+  totalPrice REAL NOT NULL,
+  serviceId INTEGER NOT NULL
+)
+''');
+
+    if (cartColumnNames.contains('serviceId')) {
+      // All rows are guaranteed valid by the check above
+      await db.execute('''
+INSERT OR REPLACE INTO cart_items_new (
+  id,
+  serviceName,
+  selectedType,
+  quantity,
+  pricePerUnit,
+  totalPrice,
+  serviceId
+)
+SELECT
+  id,
+  serviceName,
+  selectedType,
+  quantity,
+  pricePerUnit,
+  totalPrice,
+  serviceId
+FROM cart_items
+WHERE serviceId IS NOT NULL AND serviceId > 0
+''');
+    }
+
+    await db.execute('DROP TABLE cart_items');
+    await db.execute('ALTER TABLE cart_items_new RENAME TO cart_items');
   }
 
   String hashPassword(String password) {

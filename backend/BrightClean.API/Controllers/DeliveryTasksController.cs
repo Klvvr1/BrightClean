@@ -23,6 +23,106 @@ namespace BrightClean.API.Controllers
             _context = context;
         }
 
+        private static int MaxStepForTask(DeliveryTask task)
+        {
+            return task.Type == TaskType.PickupFromClient ? 3 : 2;
+        }
+
+        private static object ProjectTaskDetails(DeliveryTask task)
+        {
+            return new
+            {
+                task.TaskID,
+                task.BookingID,
+                task.DeliveryStaffID,
+                task.PickupAddressID,
+                task.DropoffAddressID,
+                task.StageNumber,
+                task.Type,
+                task.Status,
+                task.DeliveryFee,
+                task.AssignedAt,
+                task.CurrentStep,
+                task.StartedAt,
+                task.LastProgressUpdatedAt,
+                task.CompletedAt,
+                pickupAddress = new
+                {
+                    task.PickupAddress.AddressID,
+                    task.PickupAddress.Area,
+                    task.PickupAddress.Street,
+                    task.PickupAddress.Latitude,
+                    task.PickupAddress.Longitude
+                },
+                dropoffAddress = new
+                {
+                    task.DropoffAddress.AddressID,
+                    task.DropoffAddress.Area,
+                    task.DropoffAddress.Street,
+                    task.DropoffAddress.Latitude,
+                    task.DropoffAddress.Longitude
+                },
+                booking = new
+                {
+                    task.Booking.BookingID,
+                    task.Booking.Status,
+                    task.Booking.FinalTotal,
+                    task.Booking.CreatedAt,
+                    task.Booking.ScheduledAt,
+                    task.Booking.SpecialInstructions,
+                    client = new
+                    {
+                        task.Booking.Client.UserID,
+                        task.Booking.Client.FirstName,
+                        task.Booking.Client.LastName,
+                        task.Booking.Client.PhoneNo
+                    },
+                    laundryAgent = new
+                    {
+                        task.Booking.LaundryAgent.UserID,
+                        task.Booking.LaundryAgent.BusinessName,
+                        task.Booking.LaundryAgent.PhoneNo
+                    },
+                    bookingItems = task.Booking.BookingItems.Select(i => new
+                    {
+                        i.BookingItemID,
+                        i.ServiceID,
+                        i.Quantity,
+                        i.UnitPriceAtTimeOfBooking,
+                        serviceCatalogItem = new
+                        {
+                            i.ServiceCatalogItem.ServiceID,
+                            i.ServiceCatalogItem.ServiceName,
+                            i.ServiceCatalogItem.Category,
+                            i.ServiceCatalogItem.Type,
+                            i.ServiceCatalogItem.DeliveryModel
+                        }
+                    })
+                }
+            };
+        }
+
+        private async Task<bool> IsTaskAvailableForDriverAsync(DeliveryTask task)
+        {
+            if (task.Status != DeliveryTaskStatus.Unassigned)
+            {
+                return false;
+            }
+
+            if (task.StageNumber == 1)
+            {
+                return true;
+            }
+
+            return await _context.DeliveryTasks.AnyAsync(prev =>
+                       prev.BookingID == task.BookingID &&
+                       prev.StageNumber == 1 &&
+                       prev.Status == DeliveryTaskStatus.Completed) &&
+                   await _context.Bookings.AnyAsync(b =>
+                       b.BookingID == task.BookingID &&
+                       b.Status == BookingStatus.Ready);
+        }
+
         // GET: /api/deliverytasks/pool
         [HttpGet("pool")]
         public async Task<IActionResult> GetTaskPool()
@@ -52,6 +152,47 @@ namespace BrightClean.API.Controllers
             return Ok(pool);
         }
 
+        // GET: /api/deliverytasks/{taskId}
+        [HttpGet("{taskId}")]
+        public async Task<IActionResult> GetTaskDetails(int taskId)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out var driverId))
+            {
+                return Unauthorized();
+            }
+
+            var task = await _context.DeliveryTasks
+                .AsNoTracking()
+                .Include(t => t.PickupAddress)
+                .Include(t => t.DropoffAddress)
+                .Include(t => t.Booking)
+                    .ThenInclude(b => b.Client)
+                .Include(t => t.Booking)
+                    .ThenInclude(b => b.LaundryAgent)
+                .Include(t => t.Booking)
+                    .ThenInclude(b => b.BookingItems)
+                        .ThenInclude(i => i.ServiceCatalogItem)
+                .FirstOrDefaultAsync(t => t.TaskID == taskId);
+
+            if (task == null)
+            {
+                return NotFound($"Delivery task with ID {taskId} not found.");
+            }
+
+            if (task.DeliveryStaffID.HasValue && task.DeliveryStaffID.Value != driverId)
+            {
+                return Forbid();
+            }
+
+            if (!task.DeliveryStaffID.HasValue && !await IsTaskAvailableForDriverAsync(task))
+            {
+                return Forbid();
+            }
+
+            return Ok(ProjectTaskDetails(task));
+        }
+
         // POST: /api/deliverytasks/{taskId}/claim
         [HttpPost("{taskId}/claim")]
         public async Task<IActionResult> ClaimTask(int taskId, [FromBody] ClaimTaskDto? dto)
@@ -77,7 +218,26 @@ namespace BrightClean.API.Controllers
                        Status = {(int)DeliveryTaskStatus.Assigned},
                        AssignedAt = {assignedAt}
                    WHERE TaskID = {taskId}
-                     AND Status = {(int)DeliveryTaskStatus.Unassigned}"
+                     AND Status = {(int)DeliveryTaskStatus.Unassigned}
+                     AND (
+                        StageNumber = 1
+                        OR (
+                            StageNumber = 2
+                            AND EXISTS (
+                                SELECT 1
+                                FROM DeliveryTasks previousTask
+                                WHERE previousTask.BookingID = DeliveryTasks.BookingID
+                                  AND previousTask.StageNumber = 1
+                                  AND previousTask.Status = {(int)DeliveryTaskStatus.Completed}
+                            )
+                            AND EXISTS (
+                                SELECT 1
+                                FROM Bookings booking
+                                WHERE booking.BookingID = DeliveryTasks.BookingID
+                                  AND booking.Status = {(int)BookingStatus.Ready}
+                            )
+                        )
+                     )"
             );
 
             if (rowsAffected == 0)
@@ -87,6 +247,100 @@ namespace BrightClean.API.Controllers
 
             // Retrieve the updated task
             var task = await _context.DeliveryTasks.FindAsync(taskId);
+
+            return Ok(task);
+        }
+
+        // POST: /api/deliverytasks/{taskId}/start
+        [HttpPost("{taskId}/start")]
+        public async Task<IActionResult> StartTask(int taskId)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out var driverId))
+            {
+                return Unauthorized();
+            }
+
+            var task = await _context.DeliveryTasks.FindAsync(taskId);
+
+            if (task == null)
+            {
+                return NotFound($"Delivery task with ID {taskId} not found.");
+            }
+
+            if (task.DeliveryStaffID != driverId)
+            {
+                return Forbid();
+            }
+
+            if (task.Status != DeliveryTaskStatus.Assigned)
+            {
+                return BadRequest("Only assigned tasks can be started.");
+            }
+
+            var now = DateTime.UtcNow;
+            task.Status = DeliveryTaskStatus.InProgress;
+            task.StartedAt ??= now;
+            task.LastProgressUpdatedAt = now;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(task);
+        }
+
+        // PATCH: /api/deliverytasks/{taskId}/progress
+        [HttpPatch("{taskId}/progress")]
+        public async Task<IActionResult> UpdateTaskProgress(int taskId, [FromBody] UpdateTaskProgressDto dto)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out var driverId))
+            {
+                return Unauthorized();
+            }
+
+            var task = await _context.DeliveryTasks.FindAsync(taskId);
+
+            if (task == null)
+            {
+                return NotFound($"Delivery task with ID {taskId} not found.");
+            }
+
+            if (task.DeliveryStaffID != driverId)
+            {
+                return Forbid();
+            }
+
+            if (task.Status != DeliveryTaskStatus.Assigned && task.Status != DeliveryTaskStatus.InProgress)
+            {
+                return BadRequest("Only assigned or in-progress tasks can be updated.");
+            }
+
+            var maxStep = MaxStepForTask(task);
+            if (dto.CurrentStep < 0 || dto.CurrentStep > maxStep)
+            {
+                return BadRequest($"CurrentStep must be between 0 and {maxStep} for this task.");
+            }
+
+            if (dto.CurrentStep < task.CurrentStep)
+            {
+                return BadRequest("Task progress cannot move backward.");
+            }
+
+            if (dto.CurrentStep > task.CurrentStep + 1)
+            {
+                return BadRequest("Task progress must be updated one step at a time.");
+            }
+
+            var now = DateTime.UtcNow;
+            task.CurrentStep = dto.CurrentStep;
+            task.LastProgressUpdatedAt = now;
+            if (task.Status == DeliveryTaskStatus.Assigned && dto.CurrentStep > 0)
+            {
+                task.Status = DeliveryTaskStatus.InProgress;
+                task.StartedAt ??= now;
+            }
+
+            await _context.SaveChangesAsync();
 
             return Ok(task);
         }
@@ -123,6 +377,8 @@ namespace BrightClean.API.Controllers
 
             task.Status = DeliveryTaskStatus.Completed;
             task.CompletedAt = DateTime.UtcNow;
+            task.CurrentStep = MaxStepForTask(task);
+            task.LastProgressUpdatedAt = task.CompletedAt;
 
             // State Machine transitions based on logistics stage
             if (task.StageNumber == 1)
@@ -145,5 +401,10 @@ namespace BrightClean.API.Controllers
     public class ClaimTaskDto
     {
         public int DeliveryStaffID { get; set; }
+    }
+
+    public class UpdateTaskProgressDto
+    {
+        public int CurrentStep { get; set; }
     }
 }

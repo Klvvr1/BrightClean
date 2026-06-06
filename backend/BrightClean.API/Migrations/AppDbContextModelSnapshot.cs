@@ -268,6 +268,9 @@ namespace BrightClean.API.Migrations
                     b.Property<DateTime?>("CompletedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<int>("CurrentStep")
+                        .HasColumnType("int");
+
                     b.Property<decimal>("DeliveryFee")
                         .HasColumnType("decimal(18,3)");
 
@@ -280,8 +283,14 @@ namespace BrightClean.API.Migrations
                     b.Property<int>("PickupAddressID")
                         .HasColumnType("int");
 
+                    b.Property<DateTime?>("LastProgressUpdatedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<int>("StageNumber")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("StartedAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<int>("Status")
                         .HasColumnType("int");
