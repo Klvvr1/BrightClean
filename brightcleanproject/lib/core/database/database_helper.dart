@@ -223,11 +223,17 @@ CREATE TABLE IF NOT EXISTS cart_items (
       final invalidCount = invalidRows.first['count'] as int;
 
       if (invalidCount > 0) {
-        debugPrint('ERROR: Cart migration blocked - $invalidCount cart items have invalid serviceId (NULL or <=0)');
-        throw Exception(
-          'Cart database upgrade cannot proceed: $invalidCount cart items have invalid or missing serviceId. '
-          'Please clear your cart or contact support before upgrading.'
-        );
+        debugPrint('WARNING: Found $invalidCount cart items with invalid serviceId (NULL or <=0). Removing them to continue migration.');
+        try {
+          // Remove invalid cart rows to allow migration to proceed
+          await db.execute(
+            'DELETE FROM cart_items WHERE serviceId IS NULL OR serviceId <= 0'
+          );
+          debugPrint('Successfully removed $invalidCount invalid cart items.');
+        } catch (e) {
+          debugPrint('Error removing invalid cart items: $e');
+          // Do not rethrow - allow migration to continue
+        }
       }
     }
 
