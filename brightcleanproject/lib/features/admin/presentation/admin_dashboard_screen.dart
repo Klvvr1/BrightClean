@@ -8,35 +8,13 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_styles.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/widgets/custom_text_field.dart';
+import '../../../../core/controllers/system_status_provider.dart';
 import 'admin_profile_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
 
-  static final List<Map<String, dynamic>> couponsList = [
-    {
-      'title': 'خصم العيد',
-      'code': 'EID2026',
-      'discount': '15%',
-      'target': 'الجميع',
-      'status': 'نشط',
-      'startDate': '2026/05/01',
-      'endDate': '2026/06/30',
-      'minAmount': '150',
-      'type': 'Percentage',
-    },
-    {
-      'title': 'أول غسلة مجاناً',
-      'code': 'FIRSTFREE',
-      'discount': '100%',
-      'target': 'الجميع',
-      'status': 'نشط',
-      'startDate': '2026/01/01',
-      'endDate': '2026/12/31',
-      'minAmount': null,
-      'type': 'Percentage',
-    },
-  ];
+  static final List<Map<String, dynamic>> couponsList = [];
 
   @override
   State<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
@@ -44,51 +22,38 @@ class AdminDashboardScreen extends StatefulWidget {
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   int _selectedIndex = 0;
-  bool _systemSuspended = false;
   bool _systemNotificationsEnabled = true;
 
   // State variables for dynamic counts
-  final int _customersCount = 850;
-  final double _totalRevenue = 450000.0; // Adjusted for Yemeni Rial
-  final int _totalOrders = 1250;
+  final int _customersCount = 0;
+  final double _totalRevenue = 0.0;
+  final int _totalOrders = 0;
 
   String _searchQuery = '';
   List<Map<String, dynamic>> get _coupons => AdminDashboardScreen.couponsList;
 
+  late TextEditingController _maintenanceMessageController;
+
   @override
   void initState() {
     super.initState();
+    final currentMessage = context.read<SystemStatusProvider>().maintenanceMessage ?? 'النظام تحت الصيانة';
+    _maintenanceMessageController = TextEditingController(text: currentMessage);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<AdminProvider>().fetchPendingUsers();
       context.read<AdminProvider>().fetchApprovedStaff();
     });
   }
 
+  @override
+  void dispose() {
+    _maintenanceMessageController.dispose();
+    super.dispose();
+  }
+
 
   // Dummy data for live orders
-  final List<Map<String, dynamic>> _liveOrders = [
-    {
-      'id': '1080',
-      'status': 'استلام',
-      'type': 'غسيل وكي',
-      'driver': 'ياسين أحمد',
-      'time': '10 دقائق'
-    },
-    {
-      'id': '1081',
-      'status': 'غسيل',
-      'type': 'تنظيف جاف',
-      'laundry': 'مغسلة الفاخرة',
-      'time': '30 دقيقة'
-    },
-    {
-      'id': '1082',
-      'status': 'توصيل',
-      'type': 'كي فقط',
-      'driver': 'خالد سعيد',
-      'time': '5 دقائق'
-    },
-  ];
+  final List<Map<String, dynamic>> _liveOrders = [];
 
   List<FlSpot> _getRevenueSpots() {
     return const [
@@ -103,209 +68,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   // Dummy data for pending requests
-  final List<Map<String, dynamic>> _pendingRequests = [
-    {
-      'name': 'مغسلة النور',
-      'managerName': 'عبدالرحمن صالح',
-      'type': 'مغسلة',
-      'phone': '777123456',
-      'email': 'alnoor.laundry@gmail.com',
-      'location': 'صنعاء، التحرير',
-      'commercialRegister': 'CR-2026-99211',
-      'nationalId': 'غير متوفر',
-      'commercialRegisterImage': 'https://images.unsplash.com/photo-1586281380349-632531db7ed4?q=80&w=600',
-      'nationalIdImage': 'https://images.unsplash.com/photo-1554774853-aae0a22c8aa4?q=80&w=600',
-      'storefrontImage': 'https://images.unsplash.com/photo-1545173168-9f1947e8017e?q=80&w=600',
-    },
-    {
-      'name': 'مغسلة الصفاء',
-      'managerName': 'ماجد القاضي',
-      'type': 'مغسلة',
-      'phone': '771122334',
-      'email': 'alsafaa.laundry@gmail.com',
-      'location': 'تعز، شارع جمال',
-      'commercialRegister': 'CR-2026-88401',
-      'nationalId': 'غير متوفر',
-      'commercialRegisterImage': 'https://images.unsplash.com/photo-1450133064473-71024230f91b?q=80&w=600',
-      'nationalIdImage': 'https://images.unsplash.com/photo-1554774853-aae0a22c8aa4?q=80&w=600',
-      'storefrontImage': 'https://images.unsplash.com/photo-1528238646472-f23945aca686?q=80&w=600',
-    },
-    {
-      'name': 'سعيد عبدالله',
-      'type': 'سائق',
-      'phone': '733445566',
-      'email': 'saeed.abdullah@gmail.com',
-      'location': 'عدن، كريتر',
-      'nationalId': 'غير متوفر',
-      'licenseNumber': 'DL-9827364',
-      'vehicleType': 'غير متوفر',
-      'vehiclePlate': 'غير متوفر',
-      'licenseImage': 'https://images.unsplash.com/photo-1554774853-aae0a22c8aa4?q=80&w=600',
-      'nationalIdImage': 'https://images.unsplash.com/photo-1554774853-aae0a22c8aa4?q=80&w=600',
-      'vehicleImage': 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?q=80&w=600',
-    },
-    {
-      'name': 'محمد علي',
-      'type': 'سائق',
-      'phone': '711223344',
-      'email': 'mohamed.ali@gmail.com',
-      'location': 'حضرموت، المكلا',
-      'nationalId': 'غير متوفر',
-      'licenseNumber': 'DL-8840291',
-      'vehicleType': 'غير متوفر',
-      'vehiclePlate': 'غير متوفر',
-      'licenseImage': 'https://images.unsplash.com/photo-1554774853-aae0a22c8aa4?q=80&w=600',
-      'nationalIdImage': 'https://images.unsplash.com/photo-1554774853-aae0a22c8aa4?q=80&w=600',
-      'vehicleImage': 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?q=80&w=600',
-    },
-    {
-      'name': 'عمر سليم',
-      'type': 'سائق',
-      'phone': '775566778',
-      'email': 'omar.saleem@gmail.com',
-      'location': 'تعز، الحوبان',
-      'nationalId': 'غير متوفر',
-      'licenseNumber': 'DL-5548392',
-      'vehicleType': 'غير متوفر',
-      'vehiclePlate': 'غير متوفر',
-      'licenseImage': 'https://images.unsplash.com/photo-1554774853-aae0a22c8aa4?q=80&w=600',
-      'nationalIdImage': 'https://images.unsplash.com/photo-1554774853-aae0a22c8aa4?q=80&w=600',
-      'vehicleImage': 'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?q=80&w=600',
-    },
-  ];
+  final List<Map<String, dynamic>> _pendingRequests = [];
 
   // Dummy data for staff members
-  final List<Map<String, dynamic>> _staffMembers = [
-    {
-      'name': 'مغسلة الفاخرة',
-      'managerName': 'حسين العنسي',
-      'type': 'مغسلة',
-      'rating': 4.8,
-      'phone': '777111222',
-      'email': 'alfakhera@laundry.com',
-      'location': 'صنعاء، حدة',
-      'commercialRegister': 'CR-2025-1029',
-      'nationalId': 'غير متوفر',
-      'commercialRegisterImage': 'https://images.unsplash.com/photo-1586281380349-632531db7ed4?q=80&w=600',
-      'nationalIdImage': 'https://images.unsplash.com/photo-1554774853-aae0a22c8aa4?q=80&w=600',
-      'storefrontImage': 'https://images.unsplash.com/photo-1545173168-9f1947e8017e?q=80&w=600',
-      'orders': ['طلب #1024 - مكتمل', 'طلب #1055 - قيد التنفيذ'],
-    },
-    {
-      'name': 'مغسلة البركة',
-      'managerName': 'فؤاد المخلافي',
-      'type': 'مغسلة',
-      'rating': 4.5,
-      'phone': '770111222',
-      'email': 'albaraka@laundry.com',
-      'location': 'صنعاء، السبعين',
-      'commercialRegister': 'CR-2025-4820',
-      'nationalId': 'غير متوفر',
-      'commercialRegisterImage': 'https://images.unsplash.com/photo-1450133064473-71024230f91b?q=80&w=600',
-      'nationalIdImage': 'https://images.unsplash.com/photo-1554774853-aae0a22c8aa4?q=80&w=600',
-      'storefrontImage': 'https://images.unsplash.com/photo-1528238646472-f23945aca686?q=80&w=600',
-      'orders': ['طلب #1030 - مكتمل'],
-    },
-    {
-      'name': 'خالد سعيد',
-      'type': 'سائق',
-      'rating': 4.9,
-      'phone': '733111222',
-      'email': 'khaled.saeed@driver.com',
-      'location': 'عدن، المنصورة',
-      'nationalId': 'غير متوفر',
-      'licenseNumber': 'DL-1928302',
-      'vehicleType': 'غير متوفر',
-      'vehiclePlate': 'غير متوفر',
-      'licenseImage': 'https://images.unsplash.com/photo-1554774853-aae0a22c8aa4?q=80&w=600',
-      'nationalIdImage': 'https://images.unsplash.com/photo-1554774853-aae0a22c8aa4?q=80&w=600',
-      'vehicleImage': 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?q=80&w=600',
-      'orders': ['طلب #1060 - في الطريق', 'طلب #1061 - قيد التوصيل'],
-    },
-    {
-      'name': 'ياسين أحمد',
-      'type': 'سائق',
-      'rating': 4.2,
-      'phone': '711111222',
-      'email': 'yassin.ahmed@driver.com',
-      'location': 'إب، الظهار',
-      'nationalId': 'غير متوفر',
-      'licenseNumber': 'DL-2938401',
-      'vehicleType': 'غير متوفر',
-      'vehiclePlate': 'غير متوفر',
-      'licenseImage': 'https://images.unsplash.com/photo-1554774853-aae0a22c8aa4?q=80&w=600',
-      'nationalIdImage': 'https://images.unsplash.com/photo-1554774853-aae0a22c8aa4?q=80&w=600',
-      'vehicleImage': 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?q=80&w=600',
-      'orders': ['طلب #1070 - مكتمل'],
-    },
-    {
-      'name': 'صالح مرشد',
-      'type': 'سائق',
-      'rating': 4.7,
-      'phone': '772233445',
-      'email': 'saleh.morshed@driver.com',
-      'location': 'صنعاء، باب اليمن',
-      'nationalId': 'غير متوفر',
-      'licenseNumber': 'DL-8849201',
-      'vehicleType': 'غير متوفر',
-      'vehiclePlate': 'غير متوفر',
-      'licenseImage': 'https://images.unsplash.com/photo-1554774853-aae0a22c8aa4?q=80&w=600',
-      'nationalIdImage': 'https://images.unsplash.com/photo-1554774853-aae0a22c8aa4?q=80&w=600',
-      'vehicleImage': 'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?q=80&w=600',
-      'orders': ['طلب #1080 - مكتمل'],
-    },
-  ];
+  final List<Map<String, dynamic>> _staffMembers = [];
 
-  final List<Map<String, dynamic>> _notificationHistory = [
-    {
-      'title': 'خصم 20% بمناسبة العيد',
-      'body': 'استخدم الكود EID20 للحصول على الخصم الآن!',
-      'date': '2024-05-01'
-    },
-    {
-      'title': 'مغاسل جديدة في منطقتك',
-      'body': 'تم انضمام 5 مغاسل جديدة في منطقة حدة.',
-      'date': '2024-04-28'
-    },
-  ];
+  final List<Map<String, dynamic>> _notificationHistory = [];
 
-  final List<Map<String, dynamic>> _adminActivities = [
-    {
-      'title': 'تم قبول طلب انضمام "مغسلة الفاخرة" وتفعيل الحساب',
-      'type': 'add_laundry',
-      'time': 'منذ 10 دقائق',
-      'icon': Icons.business,
-      'color': AppColors.success,
-    },
-    {
-      'title': 'تم إضافة كوبون خصم جديد (EID20)',
-      'type': 'add_coupon',
-      'time': 'منذ ساعة',
-      'icon': Icons.local_offer,
-      'color': AppColors.primary,
-    },
-    {
-      'title': 'تم إرسال تحذير رسمي للمندوب "ياسين أحمد"',
-      'type': 'warning',
-      'time': 'منذ ساعتين',
-      'icon': Icons.warning_amber_rounded,
-      'color': AppColors.warning,
-    },
-    {
-      'title': 'تم قبول طلب انضمام المندوب "خالد سعيد"',
-      'type': 'add_driver',
-      'time': 'اليوم 09:30 ص',
-      'icon': Icons.person_add,
-      'color': AppColors.success,
-    },
-    {
-      'title': 'تم حذف كوبون الخصم المنتهي (SUMMER24)',
-      'type': 'remove_coupon',
-      'time': 'أمس 04:15 م',
-      'icon': Icons.delete_outline,
-      'color': AppColors.error,
-    },
-  ];
+  final List<Map<String, dynamic>> _adminActivities = [];
 
   void _logActivity(String title, String type, IconData icon, Color color) {
     setState(() {
@@ -720,7 +490,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ListView.separated(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: 3,
+            itemCount: 0,
             separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
             itemBuilder: (context, index) => Container(
               padding: const EdgeInsets.all(AppSpacing.md),
@@ -880,35 +650,48 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 leading: Container(
                   padding: const EdgeInsets.all(AppSpacing.xs),
                   decoration: BoxDecoration(
-                    color: (_systemSuspended ? AppColors.error : AppColors.primary).withValues(alpha: 0.1),
+                    color: (!context.watch<SystemStatusProvider>().isLoginEnabled ? AppColors.error : AppColors.primary).withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
                     Icons.settings_suggest,
-                    color: _systemSuspended ? AppColors.error : AppColors.primary,
+                    color: !context.watch<SystemStatusProvider>().isLoginEnabled ? AppColors.error : AppColors.primary,
                   ),
                 ),
                 title: const Text('وضع الصيانة للنظام',
                     style: TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: const Text('إيقاف استقبال طلبات الغسيل الجديدة مؤقتاً',
+                subtitle: const Text('إيقاف استقبال طلبات الغسيل الجديدة ومنع تسجيل الدخول',
                     style: TextStyle(fontSize: 12)),
                 trailing: Switch(
-                  value: _systemSuspended,
-                  onChanged: (v) {
-                    setState(() {
-                      _systemSuspended = v;
-                    });
-                    _logActivity(
-                      v ? 'تم تفعيل وضع صيانة النظام' : 'تم إلغاء وضع صيانة النظام',
-                      v ? 'error' : 'success',
-                      Icons.settings_suggest,
-                      v ? AppColors.error : AppColors.success,
-                    );
+                  value: !context.watch<SystemStatusProvider>().isLoginEnabled,
+                 onChanged: (v) async {
+                    try {
+                      final message = v 
+                          ? (_maintenanceMessageController.text.isNotEmpty 
+                              ? _maintenanceMessageController.text 
+                              : "النظام تحت الصيانة")
+                          : null;
+                      await context.read<AdminProvider>().toggleSystemStatus(!v, message);
+                      if (!mounted) return;
+                      context.read<SystemStatusProvider>().checkStatus();
+                      _logActivity(
+                        v ? 'تم تفعيل وضع صيانة النظام' : 'تم إلغاء وضع صيانة النظام',
+                        v ? 'error' : 'success',
+                        Icons.settings_suggest,
+                        v ? AppColors.error : AppColors.success,
+                      );
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('حدث خطأ: $e')),
+                        );
+                      }
+                    }
                   },
                   activeThumbColor: AppColors.error,
                 ),
               ),
-              if (_systemSuspended) ...[
+              if (!context.watch<SystemStatusProvider>().isLoginEnabled) ...[
                 const SizedBox(height: AppSpacing.xs),
                 Container(
                   padding: const EdgeInsets.all(AppSpacing.sm),
@@ -936,16 +719,32 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         ],
                       ),
                       const SizedBox(height: AppSpacing.sm),
-                      const CustomTextField(
-                          hintText: 'رسالة الصيانة التي ستظهر للعملاء...'),
+                      CustomTextField(
+                        controller: _maintenanceMessageController,
+                        hintText: 'رسالة الصيانة التي ستظهر للعملاء...',
+                      ),
                       const SizedBox(height: AppSpacing.xs),
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('تم حفظ رسالة الصيانة بنجاح!')),
-                            );
+                          onPressed: () async {
+                            try {
+                              await context.read<AdminProvider>().toggleSystemStatus(
+                                false,
+                                _maintenanceMessageController.text,
+                              );
+                              if (!mounted) return;
+                              context.read<SystemStatusProvider>().checkStatus();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('تم حفظ رسالة الصيانة بنجاح!')),
+                              );
+                            } catch (e) {
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('حدث خطأ: $e')),
+                                );
+                              }
+                            }
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.error,
@@ -2317,7 +2116,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     DateTime? endDate;
     bool hasCondition = false;
 
-    final laundryNames = _staffMembers
+    final adminProvider = Provider.of<AdminProvider>(context, listen: false);
+    final approvedStaff = _mapApprovedStaff(adminProvider.approvedStaff);
+    final laundryNames = approvedStaff
         .where((s) => s['type'] == 'مغسلة')
         .map((s) => s['name'].toString())
         .toList();

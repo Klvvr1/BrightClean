@@ -47,6 +47,7 @@ class AppRouter {
     initialLocation: '/',
     redirect: (context, state) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      
       final isLoggedIn = authProvider.isAuthenticated;
       final location = state.matchedLocation;
 

@@ -18,6 +18,7 @@ import 'features/driver/data/providers/driver_provider.dart';
 import 'features/auth/data/providers/auth_provider.dart';
 import 'features/admin/data/providers/admin_provider.dart';
 import 'features/customer/data/providers/notification_provider.dart';
+import 'core/controllers/system_status_provider.dart';
 
 void main() {
   // Initialize FFI database factory for desktop platforms (Windows, macOS, Linux)
@@ -44,6 +45,7 @@ void main() {
   runApp(
     MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => SystemStatusProvider()..checkStatus()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => CartProvider()),
         ChangeNotifierProxyProvider<CartProvider, OrderProvider>(

@@ -84,4 +84,27 @@ class AdminProvider with ChangeNotifier {
       notifyListeners();
     }
   }
+
+  Future<void> toggleSystemStatus(bool loginEnabled, String? message) async {
+    _isActionLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await adminRepository.toggleSystemStatus(loginEnabled, message);
+    } on ServerException catch (e) {
+      _errorMessage = e.message ?? 'حدث خطأ أثناء تغيير حالة الصيانة';
+      _isActionLoading = false;
+      notifyListeners();
+      rethrow;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _isActionLoading = false;
+      notifyListeners();
+      rethrow;
+    } finally {
+      _isActionLoading = false;
+      notifyListeners();
+    }
+  }
 }

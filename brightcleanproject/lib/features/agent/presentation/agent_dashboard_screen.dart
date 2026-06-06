@@ -24,6 +24,7 @@ class AgentOrderModel {
   final String customerName;
   final List<OrderItemMock> items;
   final String notes;
+  final bool requiresDelivery;
 
   AgentOrderModel({
     required this.id,
@@ -35,6 +36,7 @@ class AgentOrderModel {
     required this.customerName,
     required this.items,
     required this.notes,
+    required this.requiresDelivery,
   });
 }
 
@@ -52,7 +54,7 @@ class AgentDashboardScreen extends StatefulWidget {
 
   const AgentDashboardScreen({
     super.key,
-    this.laundryType = LaundryType.clothes, 
+    this.laundryType = LaundryType.clothes,
   });
 
   @override
@@ -65,17 +67,20 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
   List<ServiceCatalogItemModel> _agentServices = [];
   bool _isLoadingOrders = false;
   String? _ordersError;
-  bool _isLaundryOpen = true; 
+  bool _isLaundryOpen = true;
   int _selectedIndex = 0;
 
   // Settings State
   bool _notifyOrders = true;
   bool _notifyPromotions = false;
   bool _notifySystem = true;
-  
-  final TextEditingController _nameController = TextEditingController(text: 'مغسلة الخليج');
-  final TextEditingController _phoneController = TextEditingController(text: '+966 50 123 4567');
-  final TextEditingController _emailController = TextEditingController(text: 'laundry@example.com');
+
+  final TextEditingController _nameController =
+      TextEditingController(text: 'مغسلة الخليج');
+  final TextEditingController _phoneController =
+      TextEditingController(text: '+966 50 123 4567');
+  final TextEditingController _emailController =
+      TextEditingController(text: 'laundry@example.com');
 
   @override
   void initState() {
@@ -184,11 +189,14 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
         if (displayName.isNotEmpty) {
           _nameController.text = displayName;
         }
-        _phoneController.text = profile['phoneNo']?.toString() ?? _phoneController.text;
-        _emailController.text = profile['email']?.toString() ?? _emailController.text;
+        _phoneController.text =
+            profile['phoneNo']?.toString() ?? _phoneController.text;
+        _emailController.text =
+            profile['email']?.toString() ?? _emailController.text;
       }
       if (agent is Map<String, dynamic>) {
-        _nameController.text = agent['businessName']?.toString() ?? _nameController.text;
+        _nameController.text =
+            agent['businessName']?.toString() ?? _nameController.text;
         _isLaundryOpen = !(agent['isStoreClosed'] as bool? ?? false);
         final rawServices = agent['services'];
         if (rawServices is List) {
@@ -227,11 +235,16 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
         ? items.whereType<Map>().map((item) => _toStringKeyedMap(item)).toList()
         : <Map<String, dynamic>>[];
     final orderItems = itemMaps.map((item) {
-      final service = _readMap(item['serviceCatalogItem'] ?? item['ServiceCatalogItem']);
+      final service =
+          _readMap(item['serviceCatalogItem'] ?? item['ServiceCatalogItem']);
       final serviceName = service != null
-          ? service['serviceName']?.toString() ?? service['ServiceName']?.toString() ?? ''
+          ? service['serviceName']?.toString() ??
+              service['ServiceName']?.toString() ??
+              ''
           : '';
-      final serviceType = serviceName.isEmpty ? 'Service #${item['serviceID'] ?? item['ServiceID'] ?? ''}' : serviceName;
+      final serviceType = serviceName.isEmpty
+          ? 'Service #${item['serviceID'] ?? item['ServiceID'] ?? ''}'
+          : serviceName;
       return OrderItemMock(
         serviceType,
         serviceType,
@@ -243,24 +256,30 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
     final client = _readMap(json['client'] ?? json['Client']);
     final address = _readMap(json['address'] ?? json['Address']);
     final customerName = client != null
-        ? '${client['firstName'] ?? client['FirstName'] ?? ''} ${client['lastName'] ?? client['LastName'] ?? ''}'.trim()
+        ? '${client['firstName'] ?? client['FirstName'] ?? ''} ${client['lastName'] ?? client['LastName'] ?? ''}'
+            .trim()
         : '';
     final location = address != null
-        ? '${address['area'] ?? address['Area'] ?? ''} ${address['street'] ?? address['Street'] ?? ''}'.trim()
+        ? '${address['area'] ?? address['Area'] ?? ''} ${address['street'] ?? address['Street'] ?? ''}'
+            .trim()
         : '';
 
     return AgentOrderModel(
-      id: (json['bookingID'] ?? json['bookingId'] ?? json['BookingID'] ?? '').toString(),
+      id: (json['bookingID'] ?? json['bookingId'] ?? json['BookingID'] ?? '')
+          .toString(),
       laundryType: _laundryTypeFromItems(itemMaps),
       services: orderItems.map((item) => item.serviceType).toSet().toList(),
       status: _orderStatusFromBackend(json['status'] ?? json['Status']),
       customerLocation: location.isEmpty ? 'No address details' : location,
       time: _relativeTime(json['createdAt'] ?? json['CreatedAt']),
-      customerName: customerName.isEmpty ? 'Customer #${json['clientID'] ?? json['ClientID'] ?? ''}' : customerName,
+      customerName: customerName.isEmpty
+          ? 'Customer #${json['clientID'] ?? json['ClientID'] ?? ''}'
+          : customerName,
       items: orderItems,
       notes: json['specialInstructions']?.toString() ??
           json['SpecialInstructions']?.toString() ??
           '',
+      requiresDelivery: _hasTwoStageDelivery(itemMaps),
     );
   }
 
@@ -302,19 +321,41 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
 
   LaundryType _laundryTypeFromItems(List<Map<String, dynamic>> itemMaps) {
     for (final item in itemMaps) {
-      final service = _readMap(item['serviceCatalogItem'] ?? item['ServiceCatalogItem']);
+      final service =
+          _readMap(item['serviceCatalogItem'] ?? item['ServiceCatalogItem']);
       if (service == null) continue;
       final category = service['category'] ?? service['Category'];
       final type = service['type'] ?? service['Type'];
       final categoryText = category?.toString().toLowerCase();
       final typeText = type?.toString().toLowerCase();
-      if (category == 3 || categoryText == 'vehiclewash') return LaundryType.carsBikes;
+      if (category == 3 || categoryText == 'vehiclewash') {
+        return LaundryType.carsBikes;
+      }
       if (type == 6 || typeText == 'carpets') return LaundryType.carpets;
       if (type == 8 || typeText == 'accleaning') return LaundryType.ac;
-      if (type == 9 || typeText == 'watertankcleaning') return LaundryType.tanks;
-      if (type == 10 || typeText == 'solarpanelcleaning') return LaundryType.solarPanels;
+      if (type == 9 || typeText == 'watertankcleaning') {
+        return LaundryType.tanks;
+      }
+      if (type == 10 || typeText == 'solarpanelcleaning') {
+        return LaundryType.solarPanels;
+      }
     }
     return LaundryType.clothes;
+  }
+
+  bool _hasTwoStageDelivery(List<Map<String, dynamic>> itemMaps) {
+    for (final item in itemMaps) {
+      final service =
+          _readMap(item['serviceCatalogItem'] ?? item['ServiceCatalogItem']);
+      if (service == null) continue;
+      final deliveryModel =
+          service['deliveryModel'] ?? service['DeliveryModel'];
+      if (deliveryModel == 0 ||
+          deliveryModel?.toString().toLowerCase() == 'twostage') {
+        return true;
+      }
+    }
+    return false;
   }
 
   IconData _iconForService(String service) {
@@ -338,21 +379,18 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
     return '${diff.inDays}d ago';
   }
 
-  List<AgentOrderModel> get _currentOrders =>
-      _allOrders
-          .where((o) =>
-              o.status != OrderStatus.completed &&
-              o.status != OrderStatus.rejected)
-          .toList();
+  List<AgentOrderModel> get _currentOrders => _allOrders
+      .where((o) =>
+          o.status != OrderStatus.completed && o.status != OrderStatus.rejected)
+      .toList();
 
-  List<AgentOrderModel> get _previousOrders =>
-      _allOrders
-          .where((o) =>
-              o.status == OrderStatus.completed ||
-              o.status == OrderStatus.rejected)
-          .toList();
+  List<AgentOrderModel> get _previousOrders => _allOrders
+      .where((o) =>
+          o.status == OrderStatus.completed || o.status == OrderStatus.rejected)
+      .toList();
 
-  Widget _buildStatCard(String title, String count, Color color, IconData icon) {
+  Widget _buildStatCard(
+      String title, String count, Color color, IconData icon) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.md),
@@ -364,7 +402,10 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
           ),
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
-            BoxShadow(color: color.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 4)),
+            BoxShadow(
+                color: color.withValues(alpha: 0.3),
+                blurRadius: 10,
+                offset: const Offset(0, 4)),
           ],
         ),
         child: Column(
@@ -372,8 +413,18 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
           children: [
             Icon(icon, color: Colors.white.withValues(alpha: 0.8), size: 20),
             const SizedBox(height: AppSpacing.sm),
-            Text(count, style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
-            Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 11), maxLines: 1, overflow: TextOverflow.ellipsis),
+            Text(count,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold)),
+            Text(title,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 11),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis),
           ],
         ),
       ),
@@ -394,7 +445,9 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
           children: [
             const Icon(Icons.star_outline, size: 20, color: AppColors.tertiary),
             const SizedBox(width: AppSpacing.xs),
-            Text(isArabic ? 'الخدمات التي تقدمها' : 'Your Services', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            Text(isArabic ? 'الخدمات التي تقدمها' : 'Your Services',
+                style:
+                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           ],
         ),
         const SizedBox(height: AppSpacing.sm),
@@ -432,13 +485,23 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
                 final isDark = Theme.of(context).brightness == Brightness.dark;
                 return Container(
                   margin: const EdgeInsets.only(right: 8),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   decoration: BoxDecoration(
-                    color: isDark ? Colors.white.withValues(alpha: 0.05) : AppColors.primary.withValues(alpha: 0.05),
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.05)
+                        : AppColors.primary.withValues(alpha: 0.05),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: isDark ? Colors.white10 : AppColors.primary.withValues(alpha: 0.1)),
+                    border: Border.all(
+                        color: isDark
+                            ? Colors.white10
+                            : AppColors.primary.withValues(alpha: 0.1)),
                   ),
-                  child: Text(s, style: TextStyle(color: isDark ? Colors.white : AppColors.primary, fontWeight: FontWeight.w600, fontSize: 13)),
+                  child: Text(s,
+                      style: TextStyle(
+                          color: isDark ? Colors.white : AppColors.primary,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13)),
                 );
               }).toList(),
             ),
@@ -447,10 +510,12 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
     );
   }
 
-  Widget _buildOrderRequestCard(BuildContext context, AgentOrderModel order, bool isArabic, {bool isReadOnly = false}) {
+  Widget _buildOrderRequestCard(
+      BuildContext context, AgentOrderModel order, bool isArabic,
+      {bool isReadOnly = false}) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    
+
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(
@@ -459,18 +524,24 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: isDark ? 0.4 : 0.06),
-            blurRadius: 20, offset: const Offset(0, 10),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
           ),
         ],
-        border: Border.all(color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05)),
+        border: Border.all(
+            color:
+                isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05)),
       ),
       child: Column(
         children: [
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
             decoration: BoxDecoration(
-              color: isDark ? Colors.white.withValues(alpha: 0.03) : AppColors.primary.withValues(alpha: 0.03),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.03)
+                  : AppColors.primary.withValues(alpha: 0.03),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(24)),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -480,22 +551,37 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(colors: [AppColors.primary, AppColors.secondary]),
+                        gradient: LinearGradient(
+                            colors: [AppColors.primary, AppColors.secondary]),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(Icons.receipt_long_rounded, color: Colors.white, size: 18),
+                      child: const Icon(Icons.receipt_long_rounded,
+                          color: Colors.white, size: 18),
                     ),
                     const SizedBox(width: AppSpacing.sm),
-                    Text((isArabic ? 'طلب #' : 'Order #') + order.id, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
+                    Text((isArabic ? 'طلب #' : 'Order #') + order.id,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w800, fontSize: 17)),
                   ],
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(color: AppColors.error.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                      color: AppColors.error.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8)),
                   child: Text(
-                    isArabic ? order.time : order.time.replaceAll('الآن', 'Now').replaceAll('منذ ساعتين', '2h ago').replaceAll('أمس', 'Yesterday').replaceAll('منذ ساعة', '1h ago'), 
-                    style: const TextStyle(color: AppColors.error, fontWeight: FontWeight.w700, fontSize: 12)
-                  ),
+                      isArabic
+                          ? order.time
+                          : order.time
+                              .replaceAll('الآن', 'Now')
+                              .replaceAll('منذ ساعتين', '2h ago')
+                              .replaceAll('أمس', 'Yesterday')
+                              .replaceAll('منذ ساعة', '1h ago'),
+                      style: const TextStyle(
+                          color: AppColors.error,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12)),
                 ),
               ],
             ),
@@ -505,10 +591,18 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(isArabic ? 'الخدمات المطلوبة' : 'Requested Services', style: TextStyle(color: isDark ? Colors.white.withValues(alpha: 0.8) : Colors.grey.shade600, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                Text(isArabic ? 'الخدمات المطلوبة' : 'Requested Services',
+                    style: TextStyle(
+                        color: isDark
+                            ? Colors.white.withValues(alpha: 0.8)
+                            : Colors.grey.shade600,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5)),
                 const SizedBox(height: AppSpacing.sm),
                 Wrap(
-                  spacing: 10, runSpacing: 10,
+                  spacing: 10,
+                  runSpacing: 10,
                   children: order.services.map((service) {
                     IconData icon;
                     final s = service.toLowerCase();
@@ -516,29 +610,42 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
                       icon = Icons.iron;
                     } else if (s.contains('غسيل') || s.contains('wash')) {
                       icon = Icons.local_laundry_service;
-                    } else if (s.contains('تنظيف جاف') || s.contains('dry clean')) {
+                    } else if (s.contains('تنظيف جاف') ||
+                        s.contains('dry clean')) {
                       icon = Icons.dry_cleaning;
                     } else if (s.contains('تلميع') || s.contains('polish')) {
                       icon = Icons.auto_fix_high;
                     } else if (s.contains('تعطير') || s.contains('scent')) {
-                      icon = Icons.spa; 
+                      icon = Icons.spa;
                     } else {
                       icon = Icons.cleaning_services;
                     }
-                    
+
                     return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
-                        color: isDark ? Colors.white.withValues(alpha: 0.05) : AppColors.background,
+                        color: isDark
+                            ? Colors.white.withValues(alpha: 0.05)
+                            : AppColors.background,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05)),
+                        border: Border.all(
+                            color: isDark
+                                ? Colors.white10
+                                : Colors.black.withValues(alpha: 0.05)),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(icon, size: 16, color: isDark ? AppColors.lightBlue : AppColors.tertiary),
+                          Icon(icon,
+                              size: 16,
+                              color: isDark
+                                  ? AppColors.lightBlue
+                                  : AppColors.tertiary),
                           const SizedBox(width: AppSpacing.xs),
-                          Text(isArabic ? service : _translateService(service), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                          Text(isArabic ? service : _translateService(service),
+                              style: const TextStyle(
+                                  fontSize: 13, fontWeight: FontWeight.w600)),
                         ],
                       ),
                     );
@@ -553,18 +660,38 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.location_on_rounded, size: 18, color: isDark ? AppColors.lightBlue : AppColors.tertiary),
+                        Icon(Icons.location_on_rounded,
+                            size: 18,
+                            color: isDark
+                                ? AppColors.lightBlue
+                                : AppColors.tertiary),
                         const SizedBox(width: AppSpacing.xs),
                         Text(
-                          isArabic ? order.customerLocation : _translateLocation(order.customerLocation), 
-                          style: TextStyle(color: isDark ? Colors.white.withValues(alpha: 0.9) : Colors.grey.shade700, fontSize: 13, fontWeight: FontWeight.w500)
-                        ),
+                            isArabic
+                                ? order.customerLocation
+                                : _translateLocation(order.customerLocation),
+                            style: TextStyle(
+                                color: isDark
+                                    ? Colors.white.withValues(alpha: 0.9)
+                                    : Colors.grey.shade700,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500)),
                       ],
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(color: order.status.color.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(30)),
-                      child: Text(isArabic ? order.status.title : order.status.englishTitle, style: TextStyle(color: order.status.color, fontWeight: FontWeight.w800, fontSize: 11)),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                          color: order.status.color.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(30)),
+                      child: Text(
+                          isArabic
+                              ? order.status.title
+                              : order.status.englishTitle,
+                          style: TextStyle(
+                              color: order.status.color,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 11)),
                     ),
                   ],
                 ),
@@ -587,17 +714,23 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
                     }
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: isReadOnly ? (isDark ? Colors.white10 : Colors.grey.shade100) : AppColors.primary,
-                    foregroundColor: isReadOnly ? (isDark ? Colors.white : Colors.black87) : Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    backgroundColor: isReadOnly
+                        ? (isDark ? Colors.white10 : Colors.grey.shade100)
+                        : AppColors.primary,
+                    foregroundColor: isReadOnly
+                        ? (isDark ? Colors.white : Colors.black87)
+                        : Colors.white,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16)),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     elevation: isReadOnly ? 0 : 2,
                   ),
                   child: Center(
                     child: Text(
-                      isReadOnly ? (isArabic ? 'عرض التفاصيل' : 'View Details') : (isArabic ? 'إدارة الطلب' : 'Manage Order'), 
-                      style: const TextStyle(fontWeight: FontWeight.bold)
-                    ),
+                        isReadOnly
+                            ? (isArabic ? 'عرض التفاصيل' : 'View Details')
+                            : (isArabic ? 'إدارة الطلب' : 'Manage Order'),
+                        style: const TextStyle(fontWeight: FontWeight.bold)),
                   ),
                 ),
               ],
@@ -637,16 +770,54 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(isArabic ? 'مرحباً بك مجدداً!' : 'Welcome Back!', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, letterSpacing: -0.5, color: isDark ? Colors.white : null)),
-          Text(isArabic ? 'إليك ملخص نشاطك اليوم' : 'Here is your activity summary', style: TextStyle(fontSize: 14, color: isDark ? Colors.white.withValues(alpha: 0.7) : Colors.grey.shade600)),
+          Text(isArabic ? 'مرحباً بك مجدداً!' : 'Welcome Back!',
+              style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -0.5,
+                  color: isDark ? Colors.white : null)),
+          Text(
+              isArabic
+                  ? 'إليك ملخص نشاطك اليوم'
+                  : 'Here is your activity summary',
+              style: TextStyle(
+                  fontSize: 14,
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.7)
+                      : Colors.grey.shade600)),
           const SizedBox(height: AppSpacing.xl),
           Row(
             children: [
-              _buildStatCard(isArabic ? 'طلبات استلمت' : 'Received', orders.where((o) => o.status == OrderStatus.received).length.toString(), AppColors.primary, Icons.download_rounded),
+              _buildStatCard(
+                  isArabic ? 'طلبات استلمت' : 'Received',
+                  orders
+                      .where((o) => o.status == OrderStatus.received)
+                      .length
+                      .toString(),
+                  AppColors.primary,
+                  Icons.download_rounded),
               const SizedBox(width: AppSpacing.sm),
-              _buildStatCard(isArabic ? 'قيد التنفيذ' : 'In Progress', orders.where((o) => o.status == OrderStatus.washing || o.status == OrderStatus.ironing).length.toString(), AppColors.tertiary, Icons.sync_rounded),
+              _buildStatCard(
+                  isArabic ? 'قيد التنفيذ' : 'In Progress',
+                  orders
+                      .where((o) =>
+                          o.status == OrderStatus.washing ||
+                          o.status == OrderStatus.ironing)
+                      .length
+                      .toString(),
+                  AppColors.tertiary,
+                  Icons.sync_rounded),
               const SizedBox(width: AppSpacing.sm),
-              _buildStatCard(isArabic ? 'مكتمل' : 'Completed', _allOrders.where((o) => o.status == OrderStatus.ready || o.status == OrderStatus.completed).length.toString(), AppColors.success, Icons.check_circle_rounded),
+              _buildStatCard(
+                  isArabic ? 'مكتمل' : 'Completed',
+                  _allOrders
+                      .where((o) =>
+                          o.status == OrderStatus.ready ||
+                          o.status == OrderStatus.completed)
+                      .length
+                      .toString(),
+                  AppColors.success,
+                  Icons.check_circle_rounded),
             ],
           ),
           const SizedBox(height: 32),
@@ -655,13 +826,21 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(isArabic ? 'الطلبات الجارية' : 'Current Orders', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
-              TextButton(onPressed: () {}, child: Text(isArabic ? 'عرض الكل' : 'View All')),
+              Text(isArabic ? 'الطلبات الجارية' : 'Current Orders',
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.w800)),
+              TextButton(
+                  onPressed: () {},
+                  child: Text(isArabic ? 'عرض الكل' : 'View All')),
             ],
           ),
           const SizedBox(height: AppSpacing.sm),
-          if (orders.isEmpty) _buildEmptyState(isArabic ? 'لا توجد طلبات جارية حالياً' : 'No current orders')
-          else ...orders.map((order) => _buildOrderRequestCard(context, order, isArabic)),
+          if (orders.isEmpty)
+            _buildEmptyState(
+                isArabic ? 'لا توجد طلبات جارية حالياً' : 'No current orders')
+          else
+            ...orders.map(
+                (order) => _buildOrderRequestCard(context, order, isArabic)),
         ],
       ),
     );
@@ -697,11 +876,28 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(isArabic ? 'سجل الطلبات' : 'Order History', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: isDark ? Colors.white : null)),
-          Text(isArabic ? 'مراجعة كافة الطلبات السابقة' : 'Review all previous orders', style: TextStyle(fontSize: 14, color: isDark ? Colors.white.withValues(alpha: 0.7) : Colors.grey.shade600)),
+          Text(isArabic ? 'سجل الطلبات' : 'Order History',
+              style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                  color: isDark ? Colors.white : null)),
+          Text(
+              isArabic
+                  ? 'مراجعة كافة الطلبات السابقة'
+                  : 'Review all previous orders',
+              style: TextStyle(
+                  fontSize: 14,
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.7)
+                      : Colors.grey.shade600)),
           const SizedBox(height: AppSpacing.xl),
-          if (orders.isEmpty) _buildEmptyState(isArabic ? 'سجل الطلبات فارغ' : 'Order history is empty')
-          else ...orders.map((order) => _buildOrderRequestCard(context, order, isArabic, isReadOnly: true)),
+          if (orders.isEmpty)
+            _buildEmptyState(
+                isArabic ? 'سجل الطلبات فارغ' : 'Order history is empty')
+          else
+            ...orders.map((order) => _buildOrderRequestCard(
+                context, order, isArabic,
+                isReadOnly: true)),
         ],
       ),
     );
@@ -717,13 +913,26 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
       children: [
         // حسابي
         _buildSettingsHeader(isArabic ? 'حسابي' : 'My Account'),
-        _buildSettingsTile(Icons.person_outline, isArabic ? 'الاسم' : 'Name', _nameController.text, onTap: () => _showEditDialog(isArabic ? 'الاسم' : 'Name', _nameController)),
-        _buildSettingsTile(Icons.phone_outlined, isArabic ? 'رقم الهاتف' : 'Phone Number', _phoneController.text, onTap: () => _showEditDialog(isArabic ? 'رقم الهاتف' : 'Phone Number', _phoneController)),
-        _buildSettingsTile(Icons.email_outlined, isArabic ? 'البريد الإلكتروني' : 'Email', _emailController.text, onTap: () => _showEditDialog(isArabic ? 'البريد الإلكتروني' : 'Email', _emailController)),
+        _buildSettingsTile(Icons.person_outline, isArabic ? 'الاسم' : 'Name',
+            _nameController.text,
+            onTap: () =>
+                _showEditDialog(isArabic ? 'الاسم' : 'Name', _nameController)),
+        _buildSettingsTile(Icons.phone_outlined,
+            isArabic ? 'رقم الهاتف' : 'Phone Number', _phoneController.text,
+            onTap: () => _showEditDialog(
+                isArabic ? 'رقم الهاتف' : 'Phone Number', _phoneController)),
+        _buildSettingsTile(Icons.email_outlined,
+            isArabic ? 'البريد الإلكتروني' : 'Email', _emailController.text,
+            onTap: () => _showEditDialog(
+                isArabic ? 'البريد الإلكتروني' : 'Email', _emailController)),
         _buildSwitchTile(
           isArabic
-            ? (_isLaundryOpen ? 'حالة المغسلة (مفتوح)' : 'حالة المغسلة (مغلق)')
-            : (_isLaundryOpen ? 'Laundry Status (Open)' : 'Laundry Status (Closed)'),
+              ? (_isLaundryOpen
+                  ? 'حالة المغسلة (مفتوح)'
+                  : 'حالة المغسلة (مغلق)')
+              : (_isLaundryOpen
+                  ? 'Laundry Status (Open)'
+                  : 'Laundry Status (Closed)'),
           _isLaundryOpen,
           (v) async {
             final previous = _isLaundryOpen;
@@ -741,35 +950,44 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
           },
           icon: Icons.store_outlined,
         ),
-        
+
         const SizedBox(height: AppSpacing.xl),
-        
+
         // التنبيهات
-        _buildSettingsHeader(isArabic ? 'إعدادات التنبيهات' : 'Notification Settings'),
-        _buildSwitchTile(isArabic ? 'تنبيهات الطلبات الجديدة' : 'New Order Alerts', _notifyOrders, (v) => setState(() => _notifyOrders = v)),
-        _buildSwitchTile(isArabic ? 'العروض الترويجية' : 'Promotions', _notifyPromotions, (v) => setState(() => _notifyPromotions = v)),
-        _buildSwitchTile(isArabic ? 'تنبيهات النظام' : 'System Alerts', _notifySystem, (v) => setState(() => _notifySystem = v)),
-        
+        _buildSettingsHeader(
+            isArabic ? 'إعدادات التنبيهات' : 'Notification Settings'),
+        _buildSwitchTile(
+            isArabic ? 'تنبيهات الطلبات الجديدة' : 'New Order Alerts',
+            _notifyOrders,
+            (v) => setState(() => _notifyOrders = v)),
+        _buildSwitchTile(isArabic ? 'العروض الترويجية' : 'Promotions',
+            _notifyPromotions, (v) => setState(() => _notifyPromotions = v)),
+        _buildSwitchTile(isArabic ? 'تنبيهات النظام' : 'System Alerts',
+            _notifySystem, (v) => setState(() => _notifySystem = v)),
+
         const SizedBox(height: AppSpacing.xl),
-        
+
         // التفضيلات
         _buildSettingsHeader(isArabic ? 'التفضيلات' : 'Preferences'),
         ListTile(
-          leading: Icon(Icons.language, color: isDark ? Colors.white : AppColors.primary),
-          title: Text(isArabic ? 'لغة التطبيق' : 'App Language', style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.white : null)),
+          leading: Icon(Icons.language,
+              color: isDark ? Colors.white : AppColors.primary),
+          title: Text(isArabic ? 'لغة التطبيق' : 'App Language',
+              style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : null)),
           trailing: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             decoration: BoxDecoration(
-              color: isDark ? Colors.white10 : AppColors.primary.withValues(alpha: 0.1),
+              color: isDark
+                  ? Colors.white10
+                  : AppColors.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Text(
-              isArabic ? 'العربية' : 'English', 
-              style: TextStyle(
-                color: isDark ? Colors.white : AppColors.primary, 
-                fontWeight: FontWeight.bold
-              )
-            ),
+            child: Text(isArabic ? 'العربية' : 'English',
+                style: TextStyle(
+                    color: isDark ? Colors.white : AppColors.primary,
+                    fontWeight: FontWeight.bold)),
           ),
           onTap: () {
             setState(() {
@@ -782,7 +1000,8 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
           builder: (context, themeMode, child) {
             final isDarkTheme = themeMode == ThemeMode.dark ||
                 (themeMode == ThemeMode.system &&
-                    MediaQuery.of(context).platformBrightness == Brightness.dark);
+                    MediaQuery.of(context).platformBrightness ==
+                        Brightness.dark);
             return _buildSwitchTile(
               isArabic ? 'الوضع الليلي' : 'Night Mode',
               isDarkTheme,
@@ -791,7 +1010,7 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
             );
           },
         ),
-        
+
         const Divider(height: 40),
         _buildSettingsTile(
           Icons.logout,
@@ -811,16 +1030,24 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
       builder: (ctx) {
         final t = Theme.of(ctx);
         return AlertDialog(
-          title: Text(isArabic ? 'تسجيل الخروج' : 'Logout', style: TextStyle(color: t.colorScheme.error)),
-          content: Text(isArabic ? 'هل أنت متأكد أنك تريد تسجيل الخروج؟' : 'Are you sure you want to logout?'),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text(isArabic ? 'تسجيل الخروج' : 'Logout',
+              style: TextStyle(color: t.colorScheme.error)),
+          content: Text(isArabic
+              ? 'هل أنت متأكد أنك تريد تسجيل الخروج؟'
+              : 'Are you sure you want to logout?'),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(false),
-              child: Text(isArabic ? 'إلغاء' : 'Cancel', style: TextStyle(color: t.colorScheme.onSurface.withValues(alpha: 0.6))),
+              child: Text(isArabic ? 'إلغاء' : 'Cancel',
+                  style: TextStyle(
+                      color: t.colorScheme.onSurface.withValues(alpha: 0.6))),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: t.colorScheme.error, foregroundColor: t.colorScheme.onError),
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: t.colorScheme.error,
+                  foregroundColor: t.colorScheme.onError),
               onPressed: () => Navigator.of(ctx).pop(true),
               child: Text(isArabic ? 'تأكيد' : 'Confirm'),
             ),
@@ -830,9 +1057,8 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
     );
 
     if (confirm == true && mounted) {
-      await Provider.of<AuthProvider>(context, listen: false).logout(
-        Provider.of<CartProvider>(context, listen: false)
-      );
+      await Provider.of<AuthProvider>(context, listen: false)
+          .logout(Provider.of<CartProvider>(context, listen: false));
       if (mounted) context.go('/login');
     }
   }
@@ -841,23 +1067,35 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Text(title, style: TextStyle(fontSize: 14, color: isDark ? Colors.white.withValues(alpha: 0.7) : Colors.grey.shade600, fontWeight: FontWeight.bold)),
+      child: Text(title,
+          style: TextStyle(
+              fontSize: 14,
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.7)
+                  : Colors.grey.shade600,
+              fontWeight: FontWeight.bold)),
     );
   }
 
-  Widget _buildSwitchTile(String title, bool value, Function(bool) onChanged, {IconData? icon}) {
+  Widget _buildSwitchTile(String title, bool value, Function(bool) onChanged,
+      {IconData? icon}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return SwitchListTile(
       secondary: Icon(
-        icon ?? (value ? Icons.notifications_active : Icons.notifications_off), 
-        color: value 
-            ? (isDark ? Colors.white : AppColors.primary) 
-            : (isDark ? Colors.white38 : Colors.grey)
-      ),
-      title: Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: isDark ? Colors.white : null)),
+          icon ??
+              (value ? Icons.notifications_active : Icons.notifications_off),
+          color: value
+              ? (isDark ? Colors.white : AppColors.primary)
+              : (isDark ? Colors.white38 : Colors.grey)),
+      title: Text(title,
+          style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: isDark ? Colors.white : null)),
       value: value,
       onChanged: onChanged,
-      activeTrackColor: isDark ? Colors.white30 : AppColors.primary.withValues(alpha: 0.5),
+      activeTrackColor:
+          isDark ? Colors.white30 : AppColors.primary.withValues(alpha: 0.5),
       activeThumbColor: isDark ? Colors.white : AppColors.primary,
     );
   }
@@ -872,41 +1110,61 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
           decoration: InputDecoration(hintText: 'أدخل $title الجديد'),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
-          ElevatedButton(onPressed: () {
-            setState(() {});
-            Navigator.pop(context);
-          }, child: const Text('حفظ')),
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('إلغاء')),
+          ElevatedButton(
+              onPressed: () {
+                setState(() {});
+                Navigator.pop(context);
+              },
+              child: const Text('حفظ')),
         ],
       ),
     );
   }
 
-  Widget _buildSettingsTile(IconData icon, String title, String subtitle, {Color? color, VoidCallback? onTap}) {
+  Widget _buildSettingsTile(IconData icon, String title, String subtitle,
+      {Color? color, VoidCallback? onTap}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return ListTile(
-      leading: Icon(icon, color: color ?? (isDark ? Colors.white : AppColors.primary)),
-      title: Text(title, style: TextStyle(fontWeight: FontWeight.bold, color: color ?? (isDark ? Colors.white : null))),
-      subtitle: Text(subtitle, style: TextStyle(fontSize: 12, color: isDark ? Colors.white70 : null)),
-      trailing: Icon(Icons.arrow_forward_ios, size: 14, color: isDark ? Colors.white70 : null),
+      leading: Icon(icon,
+          color: color ?? (isDark ? Colors.white : AppColors.primary)),
+      title: Text(title,
+          style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: color ?? (isDark ? Colors.white : null))),
+      subtitle: Text(subtitle,
+          style:
+              TextStyle(fontSize: 12, color: isDark ? Colors.white70 : null)),
+      trailing: Icon(Icons.arrow_forward_ios,
+          size: 14, color: isDark ? Colors.white70 : null),
       onTap: onTap,
     );
   }
 
   Widget _buildEmptyState(String message) {
     return Container(
-      width: double.infinity, padding: const EdgeInsets.all(40),
-      decoration: BoxDecoration(color: Colors.grey.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
+      width: double.infinity,
+      padding: const EdgeInsets.all(40),
+      decoration: BoxDecoration(
+          color: Colors.grey.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(20)),
       child: Column(
         children: [
           const Icon(Icons.inbox_outlined, size: 60, color: Colors.grey),
           const SizedBox(height: AppSpacing.md),
-          Text(message, style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? Colors.white70 : Colors.grey, fontSize: 16, fontWeight: FontWeight.bold)),
+          Text(message,
+              style: TextStyle(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white70
+                      : Colors.grey,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold)),
         ],
       ),
     );
   }
-
 
   String _translateService(String service) {
     final Map<String, String> translations = {
@@ -967,53 +1225,58 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final langController = LanguageController();
-    
+
     return ValueListenableBuilder<Locale>(
-      valueListenable: langController.locale,
-      builder: (context, locale, _) {
-        final isArabic = locale.languageCode == 'ar';
-        
-        return Scaffold(
-          appBar: AppBar(
-            title: Text(_selectedIndex == 0 
-                ? _nameController.text 
-                : _selectedIndex == 1 
-                    ? (isArabic ? 'الطلبات' : 'Orders') 
-                    : (isArabic ? 'حسابي' : 'My Account')),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.notifications_outlined),
-                onPressed: () {
-                  context.push('/notifications');
-                },
-              ),
-              const SizedBox(width: 8),
-            ],
-          ),
-          body: IndexedStack(
-            index: _selectedIndex,
-            children: [
-              _buildHomeSection(_currentOrders),
-              _buildOrdersSection(),
-              _buildSettingsSection(),
-            ],
-          ),
-          bottomNavigationBar: BottomNavigationBar(
-            currentIndex: _selectedIndex,
-            onTap: (index) => setState(() => _selectedIndex = index),
-            selectedItemColor: Theme.of(context).brightness == Brightness.dark ? AppColors.lightBlue : AppColors.primary,
-            items: [
-              BottomNavigationBarItem(icon: const Icon(Icons.home_filled), label: isArabic ? 'الرئيسية' : 'Home'),
-              BottomNavigationBarItem(icon: const Icon(Icons.history), label: isArabic ? 'الطلبات' : 'Orders'),
-              BottomNavigationBarItem(
-                icon: const Icon(Icons.person_outline),
-                activeIcon: const Icon(Icons.person),
-                label: isArabic ? 'حسابي' : 'My Account',
-              ),
-            ],
-          ),
-        );
-      }
-    );
+        valueListenable: langController.locale,
+        builder: (context, locale, _) {
+          final isArabic = locale.languageCode == 'ar';
+
+          return Scaffold(
+            appBar: AppBar(
+              title: Text(_selectedIndex == 0
+                  ? _nameController.text
+                  : _selectedIndex == 1
+                      ? (isArabic ? 'الطلبات' : 'Orders')
+                      : (isArabic ? 'حسابي' : 'My Account')),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.notifications_outlined),
+                  onPressed: () {
+                    context.push('/notifications');
+                  },
+                ),
+                const SizedBox(width: 8),
+              ],
+            ),
+            body: IndexedStack(
+              index: _selectedIndex,
+              children: [
+                _buildHomeSection(_currentOrders),
+                _buildOrdersSection(),
+                _buildSettingsSection(),
+              ],
+            ),
+            bottomNavigationBar: BottomNavigationBar(
+              currentIndex: _selectedIndex,
+              onTap: (index) => setState(() => _selectedIndex = index),
+              selectedItemColor: Theme.of(context).brightness == Brightness.dark
+                  ? AppColors.lightBlue
+                  : AppColors.primary,
+              items: [
+                BottomNavigationBarItem(
+                    icon: const Icon(Icons.home_filled),
+                    label: isArabic ? 'الرئيسية' : 'Home'),
+                BottomNavigationBarItem(
+                    icon: const Icon(Icons.history),
+                    label: isArabic ? 'الطلبات' : 'Orders'),
+                BottomNavigationBarItem(
+                  icon: const Icon(Icons.person_outline),
+                  activeIcon: const Icon(Icons.person),
+                  label: isArabic ? 'حسابي' : 'My Account',
+                ),
+              ],
+            ),
+          );
+        });
   }
 }

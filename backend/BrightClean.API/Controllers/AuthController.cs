@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
 using BrightClean.Infrastructure;
 using BrightClean.Domain.Entities;
@@ -25,11 +26,13 @@ namespace BrightClean.API.Controllers
     {
         private readonly AppDbContext _context;
         private readonly IConfiguration _config;
+        private readonly IHostEnvironment _environment;
 
-        public AuthController(AppDbContext context, IConfiguration config)
+        public AuthController(AppDbContext context, IConfiguration config, IHostEnvironment environment)
         {
             _context = context;
             _config = config;
+            _environment = environment;
         }
 
         // POST: /api/auth/register/client
@@ -532,15 +535,15 @@ namespace BrightClean.API.Controllers
                 _resetTokens[dto.Email] = (otp, DateTime.UtcNow.AddMinutes(15));
 
                 // Stub email sending: log to console (without OTP value)
-                Console.WriteLine($"Password reset OTP generated for {dto.Email}");
+                Console.WriteLine("Password reset OTP generated.");
 
-                // In debug/development, include OTP in response for testing
-                #if DEBUG
-                return Ok(new {
+                if (_environment.IsDevelopment() && _config.GetValue<bool>("Auth:ExposeOtpInResponse"))
+                {
+                    return Ok(new {
                     message = "إذا كان الحساب موجوداً، سوف تستلم تعليمات إعادة تعيين كلمة المرور.",
-                    otp = otp // Only in debug builds
-                });
-                #endif
+                        otp
+                    });
+                }
             }
 
             // Return generic message (no user existence information leaked)

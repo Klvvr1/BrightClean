@@ -35,21 +35,9 @@ class DriverTrackingScreen extends StatefulWidget {
 class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
   late TrackingWorkflow _workflow;
   int _currentStep = 0;
-  
-  // Mock Locations
-  final LatLng _customerLocation = const LatLng(25.1972, 55.2744); // Downtown Dubai
-  final LatLng _laundryLocation = const LatLng(25.2285, 55.3273); // Deira
-  
-  // Mock Order Details
-  final List<Map<String, dynamic>> _items = [
-    {'nameAr': 'ثوب', 'nameEn': 'Thobe', 'count': 5, 'icon': Icons.checkroom},
-    {'nameAr': 'تيشرت', 'nameEn': 'T-Shirt', 'count': 3, 'icon': Icons.checkroom},
-    {'nameAr': 'سجادات', 'nameEn': 'Carpets', 'count': 2, 'icon': Icons.grid_view},
-  ];
 
-  final String _customerName = 'أحمد محمد';
-  final String _customerPhone = '0533333333';
-  final String _laundryName = 'المغسلة الذهبية';
+  bool _isLoadingDetails = false;
+  String? _detailsError;
 
   @override
   void initState() {
@@ -60,7 +48,39 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
     if (status == 3) {
       _currentStep = widget.workflow == TrackingWorkflow.pickup ? 3 : 2;
     } else if (status == 2) {
-      _currentStep = 1;
+      _currentStep = widget.task?.currentStep ?? 1;
+    } else {
+      _currentStep = widget.task?.currentStep ?? 0;
+    }
+    Future.microtask(_loadTaskDetails);
+  }
+
+  Future<void> _loadTaskDetails() async {
+    final taskId = int.tryParse(widget.taskId);
+    if (taskId == null) return;
+
+    setState(() {
+      _isLoadingDetails = true;
+      _detailsError = null;
+    });
+
+    try {
+      final task =
+          await context.read<DriverProvider>().fetchTaskDetails(taskId);
+      if (!mounted) return;
+      setState(() {
+        _workflow = task.type == 1
+            ? TrackingWorkflow.delivery
+            : TrackingWorkflow.pickup;
+        _currentStep = task.currentStep;
+        _isLoadingDetails = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _detailsError = e.toString();
+        _isLoadingDetails = false;
+      });
     }
   }
 
@@ -80,7 +100,6 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
     final parts = [
       address['area'],
       address['street'],
-      address['buildingNo'],
       address['city'],
     ]
         .where((part) => part != null && part.toString().trim().isNotEmpty)
@@ -89,6 +108,87 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
     return parts.isEmpty
         ? (fallbackId == null ? '-' : 'Address ID $fallbackId')
         : parts.join(' ');
+  }
+
+  Map<String, dynamic>? _readMap(dynamic value) {
+    if (value is Map<String, dynamic>) return value;
+    if (value is Map) {
+      return value.map((key, value) => MapEntry(key.toString(), value));
+    }
+    return null;
+  }
+
+  String _readText(Map<String, dynamic>? map, List<String> keys,
+      {String fallback = '-'}) {
+    if (map == null) return fallback;
+    for (final key in keys) {
+      final value = map[key];
+      if (value != null && value.toString().trim().isNotEmpty) {
+        return value.toString().trim();
+      }
+    }
+    return fallback;
+  }
+
+  String _customerName(DeliveryTaskModel? task) {
+    final booking = _readMap(task?.booking);
+    final client = _readMap(booking?['client'] ?? booking?['Client']);
+    final firstName =
+        _readText(client, ['firstName', 'FirstName'], fallback: '');
+    final lastName = _readText(client, ['lastName', 'LastName'], fallback: '');
+    final name = '$firstName $lastName'.trim();
+    return name.isEmpty ? 'Customer #${task?.bookingID ?? ''}' : name;
+  }
+
+  String _customerPhone(DeliveryTaskModel? task) {
+    final booking = _readMap(task?.booking);
+    final client = _readMap(booking?['client'] ?? booking?['Client']);
+    return _readText(client, ['phoneNo', 'PhoneNo'], fallback: '');
+  }
+
+  String _laundryName(DeliveryTaskModel? task) {
+    final booking = _readMap(task?.booking);
+    final agent =
+        _readMap(booking?['laundryAgent'] ?? booking?['LaundryAgent']);
+    return _readText(agent, ['businessName', 'BusinessName'],
+        fallback: 'Laundry');
+  }
+
+  List<Map<String, dynamic>> _orderItems(DeliveryTaskModel? task) {
+    final booking = _readMap(task?.booking);
+    final rawItems = booking?['bookingItems'] ?? booking?['BookingItems'];
+    if (rawItems is! List) return [];
+    return rawItems
+        .whereType<Map>()
+        .map(
+            (item) => item.map((key, value) => MapEntry(key.toString(), value)))
+        .toList();
+  }
+
+  String _serviceName(Map<String, dynamic> item) {
+    final service =
+        _readMap(item['serviceCatalogItem'] ?? item['ServiceCatalogItem']);
+    return _readText(service, ['serviceName', 'ServiceName'],
+        fallback: 'Service #${item['serviceID'] ?? item['ServiceID'] ?? ''}');
+  }
+
+  IconData _serviceIcon(String serviceName) {
+    final lower = serviceName.toLowerCase();
+    if (lower.contains('carpet')) return Icons.grid_view;
+    if (lower.contains('iron')) return Icons.iron;
+    if (lower.contains('dry')) return Icons.dry_cleaning;
+    return Icons.checkroom;
+  }
+
+  LatLng? _latLngFromAddress(Map<String, dynamic>? address) {
+    final lat = address?['latitude'] ?? address?['Latitude'];
+    final lng = address?['longitude'] ?? address?['Longitude'];
+    final latitude =
+        lat is num ? lat.toDouble() : double.tryParse(lat?.toString() ?? '');
+    final longitude =
+        lng is num ? lng.toDouble() : double.tryParse(lng?.toString() ?? '');
+    if (latitude == null || longitude == null) return null;
+    return LatLng(latitude, longitude);
   }
 
   Future<void> _claimTask(DriverProvider provider, bool isAr) async {
@@ -143,7 +243,8 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(isAr ? 'فشل قبول الطلب: $e' : 'Failed to claim order: $e'),
+          content:
+              Text(isAr ? 'فشل قبول الطلب: $e' : 'Failed to claim order: $e'),
           backgroundColor: AppColors.error,
         ),
       );
@@ -167,7 +268,8 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(isAr ? 'تم إكمال المهمة بنجاح' : 'Task completed successfully'),
+          content: Text(
+              isAr ? 'تم إكمال المهمة بنجاح' : 'Task completed successfully'),
           backgroundColor: AppColors.success,
         ),
       );
@@ -176,7 +278,30 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(isAr ? 'فشل إكمال المهمة: $e' : 'Failed to complete task: $e'),
+          content: Text(
+              isAr ? 'فشل إكمال المهمة: $e' : 'Failed to complete task: $e'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
+  }
+
+  Future<void> _updateProgress(
+      DriverProvider provider, int newStep, bool isAr) async {
+    final taskId = int.tryParse(widget.taskId);
+    if (taskId == null) return;
+
+    try {
+      await provider.updateTaskProgress(taskId, newStep);
+      if (!mounted) return;
+      setState(() => _currentStep = newStep);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(isAr
+              ? 'فشل تحديث حالة المهمة: $e'
+              : 'Failed to update task progress: $e'),
           backgroundColor: AppColors.error,
         ),
       );
@@ -264,27 +389,60 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
     final isDark = theme.brightness == Brightness.dark;
     final provider = context.watch<DriverProvider>();
     final task = _findCurrentTask(provider);
-    final pickupAddress = _formatAddress(task?.pickupAddress, task?.pickupAddressID);
-    final dropoffAddress = _formatAddress(task?.dropoffAddress, task?.dropoffAddressID);
-    final activeAddress = _workflow == TrackingWorkflow.pickup ? pickupAddress : dropoffAddress;
+    final pickupAddress =
+        _formatAddress(task?.pickupAddress, task?.pickupAddressID);
+    final dropoffAddress =
+        _formatAddress(task?.dropoffAddress, task?.dropoffAddressID);
+    final activeAddress =
+        _workflow == TrackingWorkflow.pickup ? pickupAddress : dropoffAddress;
+    final customerName = _customerName(task);
+    final customerPhone = _customerPhone(task);
+    final laundryName = _laundryName(task);
+    final orderItems = _orderItems(task);
+    final pickupLocation = _latLngFromAddress(task?.pickupAddress);
+    final dropoffLocation = _latLngFromAddress(task?.dropoffAddress);
+    final fallbackLocation =
+        pickupLocation ?? dropoffLocation ?? const LatLng(24.7136, 46.6753);
     final isTaskUnassigned = task?.status == 0;
     final isTaskCompleted = task?.status == 3;
-    final isTaskEditable = task != null && (task.status == 1 || task.status == 2);
-    
+    final isTaskEditable =
+        task != null && (task.status == 1 || task.status == 2);
+
     // Workflow Labels
-    final List<String> pickupStatuses = isAr 
-        ? ['في الطريق إليك', 'تم الاستلام', 'في الطريق للمغسلة', 'تم التسليم للمغسلة']
-        : ['On my way to you', 'Picked Up', 'Heading to Laundry', 'Delivered to Laundry'];
+    final List<String> pickupStatuses = isAr
+        ? [
+            'في الطريق إليك',
+            'تم الاستلام',
+            'في الطريق للمغسلة',
+            'تم التسليم للمغسلة'
+          ]
+        : [
+            'On my way to you',
+            'Picked Up',
+            'Heading to Laundry',
+            'Delivered to Laundry'
+          ];
 
-    final List<String> deliveryStatuses = isAr 
-        ? ['تم الاستلام من $_laundryName', 'في الطريق إليك', 'تم التسليم للعميل']
-        : ['Picked from $_laundryName', 'On my way to you', 'Delivered to Customer'];
+    final List<String> deliveryStatuses = isAr
+        ? ['تم الاستلام من $laundryName', 'في الطريق إليك', 'تم التسليم للعميل']
+        : [
+            'Picked from $laundryName',
+            'On my way to you',
+            'Delivered to Customer'
+          ];
 
-    final currentStatuses = _workflow == TrackingWorkflow.pickup ? pickupStatuses : deliveryStatuses;
-    final currentTarget = (_workflow == TrackingWorkflow.pickup && _currentStep < 2) || 
-                          (_workflow == TrackingWorkflow.delivery && _currentStep >= 1)
-        ? _customerLocation 
-        : _laundryLocation;
+    final currentStatuses = _workflow == TrackingWorkflow.pickup
+        ? pickupStatuses
+        : deliveryStatuses;
+    final displayStep =
+        _currentStep.clamp(0, currentStatuses.length - 1).toInt();
+    final currentTarget = _workflow == TrackingWorkflow.pickup
+        ? (displayStep < 2
+            ? (pickupLocation ?? fallbackLocation)
+            : (dropoffLocation ?? fallbackLocation))
+        : (displayStep >= 1
+            ? (dropoffLocation ?? fallbackLocation)
+            : (pickupLocation ?? fallbackLocation));
 
     return Scaffold(
       appBar: AppBar(
@@ -300,7 +458,8 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
                 bottom: 0,
                 child: Center(
                   child: IconButton(
-                    icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 20),
+                    icon: const Icon(Icons.arrow_back_ios,
+                        color: Colors.white, size: 20),
                     onPressed: () => context.pop(),
                   ),
                 ),
@@ -318,16 +477,23 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
                         valueListenable: LanguageController().locale,
                         builder: (context, locale, _) {
                           return TextButton(
-                            onPressed: () => LanguageController().toggleLanguage(),
+                            onPressed: () =>
+                                LanguageController().toggleLanguage(),
                             style: TextButton.styleFrom(
-                              minimumSize: Size.zero, 
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              backgroundColor: Colors.white.withValues(alpha: 0.15),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              minimumSize: Size.zero,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              backgroundColor:
+                                  Colors.white.withValues(alpha: 0.15),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8)),
                             ),
                             child: Text(
                               locale.languageCode == 'ar' ? 'EN' : 'عربي',
-                              style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 12),
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                  fontSize: 12),
                             ),
                           );
                         },
@@ -338,16 +504,19 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
                         builder: (context, themeMode, _) {
                           return IconButton(
                             icon: Icon(
-                              themeMode == ThemeMode.dark ? Icons.light_mode : Icons.dark_mode, 
-                              color: Colors.white, 
-                              size: 18
-                            ),
+                                themeMode == ThemeMode.dark
+                                    ? Icons.light_mode
+                                    : Icons.dark_mode,
+                                color: Colors.white,
+                                size: 18),
                             onPressed: () => ThemeController().toggleTheme(),
                             constraints: const BoxConstraints(),
                             padding: const EdgeInsets.all(AppSpacing.xs),
                             style: IconButton.styleFrom(
-                              backgroundColor: Colors.white.withValues(alpha: 0.15),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              backgroundColor:
+                                  Colors.white.withValues(alpha: 0.15),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8)),
                             ),
                           );
                         },
@@ -361,8 +530,8 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
                 child: Text(
                   '${isAr ? 'طلب' : 'Order'} #${widget.taskId}',
                   style: const TextStyle(
-                    fontWeight: FontWeight.w900, 
-                    color: Colors.white, 
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
                     fontSize: 18,
                   ),
                 ),
@@ -375,6 +544,19 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
       ),
       body: Column(
         children: [
+          if (_isLoadingDetails) const LinearProgressIndicator(),
+          if (_detailsError != null)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(AppSpacing.sm),
+              color: AppColors.error.withValues(alpha: 0.1),
+              child: Text(
+                _detailsError!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                    color: AppColors.error, fontWeight: FontWeight.w600),
+              ),
+            ),
           // Map Section
           Expanded(
             flex: 4,
@@ -394,7 +576,8 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
                       point: currentTarget,
                       width: 50,
                       height: 50,
-                      child: const Icon(Icons.location_on, color: Colors.red, size: 40),
+                      child: const Icon(Icons.location_on,
+                          color: Colors.red, size: 40),
                     ),
                   ],
                 ),
@@ -402,14 +585,15 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
                   attributions: [
                     TextSourceAttribution(
                       'OpenStreetMap contributors',
-                      onTap: () => launchUrl(Uri.parse('https://www.openstreetmap.org/copyright')),
+                      onTap: () => launchUrl(
+                          Uri.parse('https://www.openstreetmap.org/copyright')),
                     ),
                   ],
                 ),
               ],
             ),
           ),
-          
+
           // Details Panel
           Expanded(
             flex: 3,
@@ -417,7 +601,8 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
               padding: const EdgeInsets.all(AppSpacing.lg),
               decoration: BoxDecoration(
                 color: theme.cardColor,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(30)),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.1),
@@ -431,274 +616,307 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                // Header: Customer Info
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      flex: 2,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                        Text(
-                          _customerName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: isDark ? Colors.white : Colors.black87,
+                    // Header: Customer Info
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          flex: 2,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                customerName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark ? Colors.white : Colors.black87,
+                                ),
+                              ),
+                              Text(
+                                activeAddress,
+                                style: TextStyle(
+                                    color: isDark ? Colors.white : Colors.grey,
+                                    fontSize: 14),
+                              ),
+                            ],
                           ),
                         ),
-                        Text(
-                          isAr ? 'شارع الشيخ زايد، دبي' : 'Sheikh Zayed Rd, Dubai',
-                          style: TextStyle(color: isDark ? Colors.white : Colors.grey, fontSize: 14),
-                        ),
-                        ],
-                      ),
-                    ),
-                    if (task != null)
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          child: Text(
-                            activeAddress,
-                            textAlign: TextAlign.end,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: isDark ? Colors.white70 : Colors.grey.shade700,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
+                        if (task != null)
+                          Expanded(
+                            child: Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 12),
+                              child: Text(
+                                activeAddress,
+                                textAlign: TextAlign.end,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: isDark
+                                      ? Colors.white70
+                                      : Colors.grey.shade700,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                             ),
                           ),
-                        ),
-                      ),
-                    Row(
-                      children: [
-                        IconButton.filled(
-                          onPressed: () => _sendMessage(_customerPhone),
-                          icon: const Icon(Icons.message),
-                          style: IconButton.styleFrom(backgroundColor: AppColors.primary),
-                        ),
-                        const SizedBox(width: AppSpacing.xs),
-                        IconButton.filled(
-                          onPressed: () => _makePhoneCall(_customerPhone),
-                          icon: const Icon(Icons.call),
-                          style: IconButton.styleFrom(backgroundColor: AppColors.success),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                const Divider(height: 30),
-                
-                // Status Stepper
-                Text(
-                  '${isAr ? 'الحالة الحالية:' : 'Current Status:'} ${currentStatuses[_currentStep]}',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold, 
-                    color: isDark ? Colors.white : AppColors.primary,
-                    fontSize: 16,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                
-                // Order Items
-                Text(
-                  isAr ? 'تفاصيل الطلب:' : 'Order Details:',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold, 
-                    color: isDark ? Colors.white : Colors.black87,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                SizedBox(
-                  height: 60,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: _items.length,
-                    itemBuilder: (context, index) {
-                      final item = _items[index];
-                      return Container(
-                        margin: const EdgeInsets.only(right: 12),
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
-                        ),
-                        child: Row(
+                        Row(
                           children: [
-                            Icon(item['icon'] as IconData, size: 18, color: isDark ? Colors.white : AppColors.primary),
+                            IconButton.filled(
+                              onPressed: customerPhone.isEmpty
+                                  ? null
+                                  : () => _sendMessage(customerPhone),
+                              icon: const Icon(Icons.message),
+                              style: IconButton.styleFrom(
+                                  backgroundColor: AppColors.primary),
+                            ),
                             const SizedBox(width: AppSpacing.xs),
-                            Text(
-                              '${item['count']} x ${isAr ? item['nameAr'] : item['nameEn']}',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                color: isDark ? Colors.white : Colors.black87,
-                              ),
+                            IconButton.filled(
+                              onPressed: customerPhone.isEmpty
+                                  ? null
+                                  : () => _makePhoneCall(customerPhone),
+                              icon: const Icon(Icons.call),
+                              style: IconButton.styleFrom(
+                                  backgroundColor: AppColors.success),
                             ),
                           ],
                         ),
-                      );
-                    },
-                  ),
-                ),
-                
-                const SizedBox(height: AppSpacing.xl),
-                
-                // Status Selection Label
-                Text(
-                  isAr ? 'تحديث حالة الطلب:' : 'Update Order Status:',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold, 
-                    color: isDark ? Colors.white : Colors.black87,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.sm),
+                      ],
+                    ),
+                    const Divider(height: 30),
 
-                // Status Dropdown
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.05),
-                    borderRadius: BorderRadius.circular(15),
-                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<int>(
-                      value: _currentStep,
-                      isExpanded: true,
-                      icon: const Icon(Icons.arrow_drop_down_circle, color: AppColors.primary),
-                      dropdownColor: theme.cardColor,
-                      items: List.generate(currentStatuses.length, (index) {
-                        return DropdownMenuItem(
-                          value: index,
-                          child: Text(
-                            currentStatuses[index],
-                            style: TextStyle(
-                              color: isDark ? Colors.white : Colors.black87,
-                              fontWeight: _currentStep == index ? FontWeight.bold : FontWeight.normal,
+                    // Status Stepper
+                    Text(
+                      '${isAr ? 'الحالة الحالية:' : 'Current Status:'} ${currentStatuses[displayStep]}',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : AppColors.primary,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+
+                    // Order Items
+                    Text(
+                      isAr ? 'تفاصيل الطلب:' : 'Order Details:',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    SizedBox(
+                      height: 60,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: orderItems.length,
+                        itemBuilder: (context, index) {
+                          final item = orderItems[index];
+                          final serviceName = _serviceName(item);
+                          final quantity =
+                              item['quantity'] ?? item['Quantity'] ?? 0;
+                          return Container(
+                            margin: const EdgeInsets.only(right: 12),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                  color:
+                                      AppColors.primary.withValues(alpha: 0.2)),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(_serviceIcon(serviceName),
+                                    size: 18,
+                                    color: isDark
+                                        ? Colors.white
+                                        : AppColors.primary),
+                                const SizedBox(width: AppSpacing.xs),
+                                Text(
+                                  '$quantity x $serviceName',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    color:
+                                        isDark ? Colors.white : Colors.black87,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+
+                    const SizedBox(height: AppSpacing.xl),
+
+                    // Status Selection Label
+                    Text(
+                      isAr ? 'تحديث حالة الطلب:' : 'Update Order Status:',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+
+                    // Status Dropdown
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.05),
+                        borderRadius: BorderRadius.circular(15),
+                        border: Border.all(
+                            color: AppColors.primary.withValues(alpha: 0.2)),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<int>(
+                          value: displayStep,
+                          isExpanded: true,
+                          icon: const Icon(Icons.arrow_drop_down_circle,
+                              color: AppColors.primary),
+                          dropdownColor: theme.cardColor,
+                          items: List.generate(currentStatuses.length, (index) {
+                            return DropdownMenuItem(
+                              value: index,
+                              child: Text(
+                                currentStatuses[index],
+                                style: TextStyle(
+                                  color: isDark ? Colors.white : Colors.black87,
+                                  fontWeight: displayStep == index
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                ),
+                              ),
+                            );
+                          }),
+                          onChanged: (newValue) {
+                            if (newValue != null && isTaskEditable) {
+                              _updateProgress(provider, newValue, isAr);
+                            }
+                          },
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: AppSpacing.xl),
+
+                    if (isTaskUnassigned)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(AppSpacing.md),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                              color: Colors.amber.withValues(alpha: 0.3)),
+                        ),
+                        child: Text(
+                          isAr
+                              ? 'يجب قبول المهمة من القائمة قبل تغيير حالتها.'
+                              : 'Claim this task from the list before changing its status.',
+                          style: TextStyle(
+                            color: isDark ? Colors.white : Colors.black87,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    if (isTaskUnassigned) ...[
+                      const SizedBox(height: AppSpacing.md),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 55,
+                        child: ElevatedButton.icon(
+                          onPressed: provider.isActionLoading
+                              ? null
+                              : () => _claimTask(provider, isAr),
+                          icon: provider.isActionLoading
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Icon(Icons.assignment_turned_in),
+                          label: Text(
+                            isAr ? 'قبول الطلب' : 'Claim Order',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
-                        );
-                      }),
-                      onChanged: (newValue) {
-                        if (newValue != null && isTaskEditable) {
-                          setState(() => _currentStep = newValue);
-                        }
-                      },
-                    ),
-                  ),
-                ),
-                
-                const SizedBox(height: AppSpacing.xl),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(15),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                    if (isTaskCompleted)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(AppSpacing.md),
+                        decoration: BoxDecoration(
+                          color: AppColors.success.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                              color: AppColors.success.withValues(alpha: 0.3)),
+                        ),
+                        child: Text(
+                          isAr
+                              ? 'تم إكمال هذه المهمة.'
+                              : 'This task has been completed.',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: AppColors.success,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
 
-                if (isTaskUnassigned)
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(AppSpacing.md),
-                    decoration: BoxDecoration(
-                      color: Colors.amber.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
-                    ),
-                    child: Text(
-                      isAr
-                          ? 'يجب قبول المهمة من القائمة قبل تغيير حالتها.'
-                          : 'Claim this task from the list before changing its status.',
-                      style: TextStyle(
-                        color: isDark ? Colors.white : Colors.black87,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                if (isTaskUnassigned) ...[
-                  const SizedBox(height: AppSpacing.md),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 55,
-                    child: ElevatedButton.icon(
-                      onPressed: provider.isActionLoading
-                          ? null
-                          : () => _claimTask(provider, isAr),
-                      icon: provider.isActionLoading
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Icon(Icons.assignment_turned_in),
-                      label: Text(
-                        isAr ? 'قبول الطلب' : 'Claim Order',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                    // Finish Task Button (Only shows when on the last step)
+                    if (displayStep == currentStatuses.length - 1 &&
+                        isTaskEditable)
+                      SizedBox(
+                        width: double.infinity,
+                        height: 55,
+                        child: ElevatedButton(
+                          onPressed: provider.isActionLoading
+                              ? null
+                              : () => _completeTask(provider, isAr),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.success,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(15)),
+                          ),
+                          child: Text(
+                            isAr
+                                ? 'إنهاء المهمة بنجاح'
+                                : 'Task Completed Successfully',
+                            style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white),
+                          ),
                         ),
                       ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(15),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-                if (isTaskCompleted)
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(AppSpacing.md),
-                    decoration: BoxDecoration(
-                      color: AppColors.success.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.success.withValues(alpha: 0.3)),
-                    ),
-                    child: Text(
-                      isAr ? 'تم إكمال هذه المهمة.' : 'This task has been completed.',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: AppColors.success,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                
-                // Finish Task Button (Only shows when on the last step)
-                if (_currentStep == currentStatuses.length - 1 && isTaskEditable)
-                  SizedBox(
-                    width: double.infinity,
-                    height: 55,
-                    child: ElevatedButton(
-                      onPressed: provider.isActionLoading
-                          ? null
-                          : () => _completeTask(provider, isAr),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.success,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                      ),
-                      child: Text(
-                        isAr ? 'إنهاء المهمة بنجاح' : 'Task Completed Successfully',
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-                      ),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
           ),
         ],
       ),
     );
   }
 }
-
-
-
-

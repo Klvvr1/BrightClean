@@ -8,6 +8,9 @@ import '../../domain/repositories/auth_repository.dart';
 import '../repositories/auth_repository_impl.dart';
 import '../../../customer/data/providers/cart_provider.dart';
 import '../../../customer/data/providers/order_provider.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import '../../../../core/network/api_client.dart';
 
 class AuthProvider with ChangeNotifier {
   final AuthRepository _authRepository;
@@ -61,6 +64,24 @@ class AuthProvider with ChangeNotifier {
     try {
       final response = await _authRepository.login(email, password);
       
+      // Check System Status before persisting login (except for Admins)
+      if (response.role.toLowerCase() != 'admin') {
+        try {
+          final statusRes = await http.get(Uri.parse('${BaseApiClient.defaultBaseUrl}/systemstatus/status'));
+          if (statusRes.statusCode == 200) {
+            final data = json.decode(statusRes.body);
+            final isLoginEnabled = data['loginEnabled'] ?? true;
+            if (!isLoginEnabled) {
+              throw ServerException(message: data['message'] ?? 'النظام تحت الصيانة. يرجى المحاولة لاحقاً.');
+            }
+          }
+        } on ServerException {
+          rethrow;
+        } catch(e) {
+          debugPrint('Error checking system status during login: $e');
+        }
+      }
+
       // Await all persistence operations before mutating memory state
       final prefs = await SharedPreferences.getInstance();
       await _secureStorage.write(key: 'auth_token', value: response.token);

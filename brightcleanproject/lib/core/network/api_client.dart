@@ -116,7 +116,8 @@ class BaseApiClient {
         }
 
         throw ServerException(
-          message: 'الخادم حوّل الطلب إلى موقع آخر؛ تأكد من إعداد رابط الـ API وبروتوكول http/https.',
+          message:
+              'الخادم حوّل الطلب إلى موقع آخر؛ تأكد من إعداد رابط الـ API وبروتوكول http/https.',
           statusCode: response.statusCode,
         );
       }
@@ -195,6 +196,32 @@ class BaseApiClient {
       if (e is TimeoutException) {
         throw ServerException(
           message: 'انتهت مهلة الاتصال بالخادم. يرجى المحاولة مرة أخرى.',
+        );
+      }
+      throw ServerException(message: e.toString());
+    }
+  }
+
+  Future<dynamic> patch(String endpoint, {Map<String, dynamic>? body}) async {
+    final url = _buildUrl(endpoint);
+    final requestBody = body != null ? json.encode(body) : null;
+    final headers = await _getHeaders();
+    _logRequest('PATCH', url, headers, body: requestBody);
+    try {
+      final response = await _client
+          .patch(
+            url,
+            headers: headers,
+            body: requestBody,
+          )
+          .timeout(const Duration(seconds: 15));
+      return _processResponse(response);
+    } catch (e) {
+      if (e is ServerException) rethrow;
+      if (e is TimeoutException) {
+        throw ServerException(
+          message:
+              'Ø§Ù†ØªÙ‡Øª Ù…Ù‡Ù„Ø© Ø§Ù„Ø§ØªØµØ§Ù„ Ø¨Ø§Ù„Ø®Ø§Ø¯Ù…. ÙŠØ±Ø¬Ù‰ Ø§Ù„Ù…Ø­Ø§ÙˆÙ„Ø© Ù…Ø±Ø© Ø£Ø®Ø±Ù‰.',
         );
       }
       throw ServerException(message: e.toString());
