@@ -47,6 +47,13 @@ class DeliveryTaskModel {
   }
 
   factory DeliveryTaskModel.fromJson(Map<String, dynamic> json) {
+    // Helper to validate and extract required IDs
+    int? _extractId(dynamic value, String fieldName) {
+      if (value is int && value > 0) return value;
+      if (value == null) return null;
+      return null; // Invalid value
+    }
+
     // Parse type safely (TaskType enum)
     final rawType = json['type'] ?? json['Type'];
     int parsedType = 0;
@@ -82,32 +89,46 @@ class DeliveryTaskModel {
       }
     }
 
+    // Extract and validate required ID fields
+    final taskID = _extractId(json['taskID'] ?? json['taskId'] ?? json['TaskID'], 'taskID');
+    if (taskID == null) {
+      throw FormatException('DeliveryTaskModel.fromJson: required field "taskID" is missing or invalid');
+    }
+
+    final bookingID = _extractId(json['bookingID'] ?? json['bookingId'] ?? json['BookingID'], 'bookingID');
+    if (bookingID == null) {
+      throw FormatException('DeliveryTaskModel.fromJson: required field "bookingID" is missing or invalid');
+    }
+
+    final pickupAddressID = _extractId(json['pickupAddressID'] ?? json['pickupAddressId'] ?? json['PickupAddressID'], 'pickupAddressID');
+    if (pickupAddressID == null) {
+      throw FormatException('DeliveryTaskModel.fromJson: required field "pickupAddressID" is missing or invalid');
+    }
+
+    final dropoffAddressID = _extractId(json['dropoffAddressID'] ?? json['dropoffAddressId'] ?? json['DropoffAddressID'], 'dropoffAddressID');
+    if (dropoffAddressID == null) {
+      throw FormatException('DeliveryTaskModel.fromJson: required field "dropoffAddressID" is missing or invalid');
+    }
+
+    final stageNumber = _extractId(json['stageNumber'] ?? json['StageNumber'], 'stageNumber');
+    if (stageNumber == null) {
+      throw FormatException('DeliveryTaskModel.fromJson: required field "stageNumber" is missing or invalid');
+    }
+
     return DeliveryTaskModel(
-      taskID: json['taskID'] as int? ??
-          json['taskId'] as int? ??
-          json['TaskID'] as int? ??
-          0,
-      bookingID: json['bookingID'] as int? ??
-          json['bookingId'] as int? ??
-          json['BookingID'] as int? ??
-          0,
-      deliveryStaffID: json['deliveryStaffID'] as int? ??
-          json['deliveryStaffId'] as int? ??
-          json['DeliveryStaffID'] as int?,
-      pickupAddressID: json['pickupAddressID'] as int? ??
-          json['pickupAddressId'] as int? ??
-          json['PickupAddressID'] as int? ??
-          0,
-      dropoffAddressID: json['dropoffAddressID'] as int? ??
-          json['dropoffAddressId'] as int? ??
-          json['DropoffAddressID'] as int? ??
-          0,
-      stageNumber:
-          json['stageNumber'] as int? ?? json['StageNumber'] as int? ?? 0,
+      taskID: taskID,
+      bookingID: bookingID,
+      deliveryStaffID: _extractId(
+        json['deliveryStaffID'] ?? json['deliveryStaffId'] ?? json['DeliveryStaffID'],
+        'deliveryStaffID'
+      ),
+      pickupAddressID: pickupAddressID,
+      dropoffAddressID: dropoffAddressID,
+      stageNumber: stageNumber,
       type: parsedType,
       status: parsedStatus,
       deliveryFee:
-          (json['deliveryFee'] ?? json['DeliveryFee'] as num?)?.toDouble() ??
+          ((json['deliveryFee'] ?? json['DeliveryFee']) as num?)?.toDouble() ??
               0.0,
       assignedAt: json['assignedAt'] == null && json['AssignedAt'] == null
           ? null

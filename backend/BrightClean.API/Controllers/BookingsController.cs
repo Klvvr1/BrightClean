@@ -730,7 +730,7 @@ namespace BrightClean.API.Controllers
             var agent = await _context.LaundryAgents.FindAsync(agentId);
             if (agent != null && agent.IsStoreClosed)
             {
-                return StatusCode(StatusCodes.Status403Forbidden, new { message = "Ø§Ù„Ù…ØºØ³Ù„Ø© Ù…ØºÙ„Ù‚Ø© Ø­Ø§Ù„ÙŠØ§Ù‹. Ù„Ø§ ÙŠÙ…ÙƒÙ† Ù…Ø¹Ø§Ù„Ø¬Ø© Ø§Ù„Ø·Ù„Ø¨Ø§Øª." });
+                return StatusCode(StatusCodes.Status403Forbidden, new { message = "المغسلة مغلقة حالياً. لا يمكن معالجة الطلبات." });
             }
 
             if (booking.BookingItems.Any(bi => bi.ServiceCatalogItem.DeliveryModel == DeliveryModel.TwoStage))

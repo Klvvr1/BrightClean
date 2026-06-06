@@ -220,8 +220,7 @@ class BaseApiClient {
       if (e is ServerException) rethrow;
       if (e is TimeoutException) {
         throw ServerException(
-          message:
-              'Ø§Ù†ØªÙ‡Øª Ù…Ù‡Ù„Ø© Ø§Ù„Ø§ØªØµØ§Ù„ Ø¨Ø§Ù„Ø®Ø§Ø¯Ù…. ÙŠØ±Ø¬Ù‰ Ø§Ù„Ù…Ø­Ø§ÙˆÙ„Ø© Ù…Ø±Ø© Ø£Ø®Ø±Ù‰.',
+          message: 'انتهت مهلة الاتصال بالخادم. يرجى المحاولة مرة أخرى.',
         );
       }
       throw ServerException(message: e.toString());

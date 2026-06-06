@@ -37,9 +37,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   @override
   void initState() {
     super.initState();
-    final currentMessage = context.read<SystemStatusProvider>().maintenanceMessage ?? 'النظام تحت الصيانة';
-    _maintenanceMessageController = TextEditingController(text: currentMessage);
+    _maintenanceMessageController = TextEditingController(text: 'النظام تحت الصيانة');
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      final provider = Provider.of<SystemStatusProvider>(context, listen: false);
+      final currentMessage = provider.maintenanceMessage ?? 'النظام تحت الصيانة';
+      _maintenanceMessageController.text = currentMessage;
       context.read<AdminProvider>().fetchPendingUsers();
       context.read<AdminProvider>().fetchApprovedStaff();
     });

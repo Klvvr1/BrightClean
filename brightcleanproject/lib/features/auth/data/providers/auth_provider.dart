@@ -8,13 +8,12 @@ import '../../domain/repositories/auth_repository.dart';
 import '../repositories/auth_repository_impl.dart';
 import '../../../customer/data/providers/cart_provider.dart';
 import '../../../customer/data/providers/order_provider.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 import '../../../../core/network/api_client.dart';
 
 class AuthProvider with ChangeNotifier {
   final AuthRepository _authRepository;
   final FlutterSecureStorage _secureStorage;
+  final BaseApiClient _apiClient;
 
   String? _token;
   int? _userId;
@@ -25,8 +24,10 @@ class AuthProvider with ChangeNotifier {
   AuthProvider({
     AuthRepository? authRepository,
     FlutterSecureStorage? secureStorage,
+    BaseApiClient? apiClient,
   })  : _authRepository = authRepository ?? AuthRepositoryImpl(),
-        _secureStorage = secureStorage ?? const FlutterSecureStorage() {
+        _secureStorage = secureStorage ?? const FlutterSecureStorage(),
+        _apiClient = apiClient ?? BaseApiClient() {
     _loadSession();
   }
 
@@ -67,13 +68,10 @@ class AuthProvider with ChangeNotifier {
       // Check System Status before persisting login (except for Admins)
       if (response.role.toLowerCase() != 'admin') {
         try {
-          final statusRes = await http.get(Uri.parse('${BaseApiClient.defaultBaseUrl}/systemstatus/status'));
-          if (statusRes.statusCode == 200) {
-            final data = json.decode(statusRes.body);
-            final isLoginEnabled = data['loginEnabled'] ?? true;
-            if (!isLoginEnabled) {
-              throw ServerException(message: data['message'] ?? 'النظام تحت الصيانة. يرجى المحاولة لاحقاً.');
-            }
+          final data = await _apiClient.get('/systemstatus/status');
+          final isLoginEnabled = data['loginEnabled'] ?? true;
+          if (!isLoginEnabled) {
+            throw ServerException(message: data['message'] ?? 'النظام تحت الصيانة. يرجى المحاولة لاحقاً.');
           }
         } on ServerException {
           rethrow;

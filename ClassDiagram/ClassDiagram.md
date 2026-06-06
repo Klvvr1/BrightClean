@@ -1027,11 +1027,13 @@ LIMIT 1
 - No `Payment`, `Offer`, or `DeliveryTask` can be attached while `Status = Draft`
 - `ExpiresAt` is set at Draft creation — a background job hard-deletes expired Draft bookings and their items automatically
 - Transition from `Draft` → `Pending` locks `FinalTotal` and opens the order for agent acceptance
+- Local SQLite `cart_items.serviceId` is required (no DEFAULT 1); legacy cart rows without a real backend service ID are not migrated into the new cart schema
 
 ### Agent Booking Operation Rules
 - Laundry agents can reject only their own `Pending` bookings; rejected bookings move to `Cancelled`
 - Laundry agents can move only their own `Accepted` bookings to `InProgress`
 - Flutter agent dashboards must load orders through `GET /api/bookings/agent/my`; local mock order state is not authoritative
+- `TechnicianDispatch` bookings are agent-managed and complete through `POST /api/bookings/{bookingId}/complete`; they do not create delivery tasks and cannot be marked ready for driver delivery
 
 ### Payment Rules
 - One payment per booking — enforced by `UNIQUE` constraint on `Payment.BookingID`
@@ -1048,9 +1050,13 @@ LIMIT 1
 ### Delivery Rules
 - `TwoStage` bookings generate exactly 2 `DeliveryTask` records at `Booking.Status = Accepted`
 - `TechnicianDispatch` bookings generate 0 `DeliveryTask` records
+- A single booking cannot mix `TwoStage` and `TechnicianDispatch` service delivery models
 - Stage 2 remains `Unassigned` until Stage 1 is `Completed`
 - Different drivers may handle Stage 1 and Stage 2 of the same booking
 - The driver pool returns eligible unassigned tasks plus the current driver's own `Assigned` and `InProgress` tasks; tasks assigned to other drivers are hidden
+- `DeliveryTask` persists driver progress with `CurrentStep`, `StartedAt`, and `LastProgressUpdatedAt`
+- Driver progress is monotonic (cannot move backward or skip steps)
+- Driver tracking loads real task details from `GET /api/deliverytasks/{taskId}` instead of mock data
 
 ### Pricing Rules
 - All prices are set by the admin — agents have no pricing authority

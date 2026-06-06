@@ -2,6 +2,7 @@ import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'dart:convert';
 import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
@@ -62,19 +63,21 @@ class DatabaseHelper {
     }
 
     // CRIT-008: Version 4 added serviceId to cart_items for real backend service IDs
-    if (oldVersion < 4) {
+    // Single rebuild check to avoid double migration
+    if (oldVersion < 5) {
       final cartColumns = await db.rawQuery("PRAGMA table_info(cart_items)");
       final cartColumnNames =
           cartColumns.map((c) => c['name'] as String).toSet();
 
-      if (cartColumnNames.isNotEmpty &&
-          !cartColumnNames.contains('serviceId')) {
+      bool needsRebuild = false;
+      if (cartColumnNames.isNotEmpty) {
+        // Need rebuild if upgrading from v4 or earlier
+        needsRebuild = (oldVersion < 5) || (!cartColumnNames.contains('serviceId'));
+      }
+
+      if (needsRebuild) {
         await _rebuildCartItemsWithoutDefault(db);
       }
-    }
-
-    if (oldVersion < 5) {
-      await _rebuildCartItemsWithoutDefault(db);
     }
   }
 
@@ -212,6 +215,22 @@ CREATE TABLE IF NOT EXISTS cart_items (
       return;
     }
 
+    // Check for invalid serviceId rows before migration
+    if (cartColumnNames.contains('serviceId')) {
+      final invalidRows = await db.rawQuery(
+        'SELECT COUNT(*) as count FROM cart_items WHERE serviceId IS NULL OR serviceId <= 0'
+      );
+      final invalidCount = invalidRows.first['count'] as int;
+
+      if (invalidCount > 0) {
+        debugPrint('ERROR: Cart migration blocked - $invalidCount cart items have invalid serviceId (NULL or <=0)');
+        throw Exception(
+          'Cart database upgrade cannot proceed: $invalidCount cart items have invalid or missing serviceId. '
+          'Please clear your cart or contact support before upgrading.'
+        );
+      }
+    }
+
     await db.execute('DROP TABLE IF EXISTS cart_items_new');
     await db.execute('''
 CREATE TABLE cart_items_new (
@@ -226,6 +245,7 @@ CREATE TABLE cart_items_new (
 ''');
 
     if (cartColumnNames.contains('serviceId')) {
+      // All rows are guaranteed valid by the check above
       await db.execute('''
 INSERT OR REPLACE INTO cart_items_new (
   id,
