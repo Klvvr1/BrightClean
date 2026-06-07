@@ -32,13 +32,31 @@ class AdminServiceModel {
   });
 
   factory AdminServiceModel.fromJson(Map<String, dynamic> json) {
+    final serviceID = _readInt(json, ['serviceID', 'serviceId', 'ServiceID']);
+    final serviceName =
+        _readString(json, ['serviceName', 'ServiceName'], fallback: '');
+    final price = _readDouble(json, ['price', 'Price']);
+
+    // Validate parsed fields
+    if (serviceID <= 0) {
+      throw FormatException(
+          'Invalid serviceID: expected > 0, got $serviceID. JSON: $json');
+    }
+    if (serviceName.isEmpty) {
+      throw FormatException(
+          'Invalid serviceName: expected non-empty string. JSON: $json');
+    }
+    if (price < 0) {
+      throw FormatException(
+          'Invalid price: expected >= 0, got $price. JSON: $json');
+    }
+
     return AdminServiceModel(
-      serviceID: _readInt(json, ['serviceID', 'serviceId', 'ServiceID']),
-      serviceName:
-          _readString(json, ['serviceName', 'ServiceName'], fallback: ''),
+      serviceID: serviceID,
+      serviceName: serviceName,
       category: _readInt(json, ['category', 'Category']),
       type: _readInt(json, ['type', 'Type']),
-      price: _readDouble(json, ['price', 'Price']),
+      price: price,
       pricingModel: _readInt(json, ['pricingModel', 'PricingModel']),
       deliveryModel: _readInt(json, ['deliveryModel', 'DeliveryModel']),
       isAvailable: _readBool(json, ['isAvailable', 'IsAvailable']),

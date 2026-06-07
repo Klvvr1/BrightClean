@@ -1576,7 +1576,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     final visibleLaundries = laundries.where((laundry) {
       final matchesService = _selectedServiceFilterId == null ||
           _agentServiceIds(laundry).contains(_selectedServiceFilterId);
-      final businessName = _readString(
+      final businessName = AdminServiceModel._readString(
         laundry,
         ['businessName', 'BusinessName', 'name'],
         fallback: '',
@@ -1626,15 +1626,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             )
           else
             ...visibleLaundries.map((laundry) {
-              final agentId = _readInt(laundry, ['id', 'userID', 'userId', 'UserID']);
+              final agentId = AdminServiceModel._readInt(laundry, ['id', 'userID', 'userId', 'UserID']);
               final selected = agentId == _selectedLaundryAgentId;
               final serviceIds = _agentServiceIds(laundry);
-              final businessName = _readString(
+              final businessName = AdminServiceModel._readString(
                 laundry,
                 ['businessName', 'BusinessName', 'name'],
                 fallback: 'مغسلة #$agentId',
               );
-              final storeClosed = _readBool(laundry, ['isStoreClosed', 'IsStoreClosed']);
+              final storeClosed = AdminServiceModel._readBool(laundry, ['isStoreClosed', 'IsStoreClosed']);
               return Container(
                 margin: const EdgeInsets.only(bottom: AppSpacing.sm),
                 decoration: BoxDecoration(
@@ -2097,39 +2097,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return {};
   }
 
-  int _readInt(Map<dynamic, dynamic> source, List<String> keys) {
-    for (final key in keys) {
-      final value = source[key];
-      if (value is int) return value;
-      if (value is num) return value.toInt();
-      if (value is String) return int.tryParse(value) ?? 0;
-    }
-    return 0;
-  }
-
-  bool _readBool(Map<dynamic, dynamic> source, List<String> keys) {
-    for (final key in keys) {
-      final value = source[key];
-      if (value is bool) return value;
-      if (value is num) return value != 0;
-      if (value is String) return value.toLowerCase() == 'true';
-    }
-    return false;
-  }
-
-  String _readString(
-    Map<dynamic, dynamic> source,
-    List<String> keys, {
-    required String fallback,
-  }) {
-    for (final key in keys) {
-      final value = source[key];
-      if (value != null && value.toString().trim().isNotEmpty) {
-        return value.toString();
-      }
-    }
-    return fallback;
-  }
 
   void _selectLaundryAgent(int agentId, Set<int> currentServiceIds) {
     setState(() {
@@ -2345,8 +2312,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           actions: [
             TextButton(
               onPressed: () {
-                nameController.dispose();
-                priceController.dispose();
                 Navigator.pop(context);
               },
               child: const Text('إلغاء'),
@@ -2380,8 +2345,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         .updateService(service.serviceID, payload);
                   }
                   if (!mounted) return;
-                  nameController.dispose();
-                  priceController.dispose();
                   Navigator.pop(context);
                   ScaffoldMessenger.of(this.context).showSnackBar(
                     SnackBar(
@@ -2403,7 +2366,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ],
         ),
       ),
-    );
+    ).then((_) {
+      nameController.dispose();
+      priceController.dispose();
+    });
   }
 
   Widget _buildServiceDropdown({

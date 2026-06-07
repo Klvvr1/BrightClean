@@ -79,6 +79,8 @@ class AuthProvider with ChangeNotifier {
           rethrow;
         } catch (e) {
           debugPrint('Error checking system status during login: $e');
+          throw ServerException(
+              message: 'فشل التحقق من حالة النظام. يرجى المحاولة لاحقاً.');
         }
       }
 

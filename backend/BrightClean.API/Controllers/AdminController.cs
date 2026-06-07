@@ -18,6 +18,7 @@ namespace BrightClean.API.Controllers
     public class AdminController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private static readonly string UnauthorizedAdminMessage = "فشلت عملية التحقق من هوية المسؤول.";
 
         public AdminController(AppDbContext context)
         {
@@ -162,7 +163,7 @@ namespace BrightClean.API.Controllers
             var adminId = GetAdminId();
             if (adminId == null)
             {
-                return Unauthorized(new { message = "ظپط´ظ„طھ ط¹ظ…ظ„ظٹط© ط§ظ„طھط­ظ‚ظ‚ ظ…ظ† ظ‡ظˆظٹط© ط§ظ„ظ…ط³ط¤ظˆظ„." });
+                return Unauthorized(new { message = UnauthorizedAdminMessage });
             }
 
             var agent = await _context.LaundryAgents
@@ -289,7 +290,7 @@ namespace BrightClean.API.Controllers
             var adminId = GetAdminId();
             if (adminId == null)
             {
-                return Unauthorized(new { message = "ظپط´ظ„طھ ط¹ظ…ظ„ظٹط© ط§ظ„طھط­ظ‚ظ‚ ظ…ظ† ظ‡ظˆظٹط© ط§ظ„ظ…ط³ط¤ظˆظ„." });
+                return Unauthorized(new { message = UnauthorizedAdminMessage });
             }
 
             var validationResult = ValidateServiceCatalogItemDto(dto);
@@ -312,7 +313,6 @@ namespace BrightClean.API.Controllers
             };
 
             _context.ServiceCatalogItems.Add(service);
-            await _context.SaveChangesAsync();
 
             _context.AuditLogs.Add(new AuditLog
             {
@@ -348,7 +348,7 @@ namespace BrightClean.API.Controllers
             var adminId = GetAdminId();
             if (adminId == null)
             {
-                return Unauthorized(new { message = "ظپط´ظ„طھ ط¹ظ…ظ„ظٹط© ط§ظ„طھط­ظ‚ظ‚ ظ…ظ† ظ‡ظˆظٹط© ط§ظ„ظ…ط³ط¤ظˆظ„." });
+                return Unauthorized(new { message = UnauthorizedAdminMessage });
             }
 
             var validationResult = ValidateServiceCatalogItemDto(dto);
@@ -405,7 +405,7 @@ namespace BrightClean.API.Controllers
             var adminId = GetAdminId();
             if (adminId == null)
             {
-                return Unauthorized(new { message = "ظپط´ظ„طھ ط¹ظ…ظ„ظٹط© ط§ظ„طھط­ظ‚ظ‚ ظ…ظ† ظ‡ظˆظٹط© ط§ظ„ظ…ط³ط¤ظˆظ„." });
+                return Unauthorized(new { message = UnauthorizedAdminMessage });
             }
 
             var service = await _context.ServiceCatalogItems.FirstOrDefaultAsync(s => s.ServiceID == serviceId);
@@ -450,7 +450,7 @@ namespace BrightClean.API.Controllers
             var adminId = GetAdminId();
             if (adminId == null)
             {
-                return Unauthorized(new { message = "ظپط´ظ„طھ ط¹ظ…ظ„ظٹط© ط§ظ„طھط­ظ‚ظ‚ ظ…ظ† ظ‡ظˆظٹط© ط§ظ„ظ…ط³ط¤ظˆظ„." });
+                return Unauthorized(new { message = UnauthorizedAdminMessage });
             }
 
             var service = await _context.ServiceCatalogItems.FirstOrDefaultAsync(s => s.ServiceID == serviceId);
@@ -529,7 +529,7 @@ namespace BrightClean.API.Controllers
             var adminId = GetAdminId();
             if (adminId == null)
             {
-                return Unauthorized(new { message = "ظپط´ظ„طھ ط¹ظ…ظ„ظٹط© ط§ظ„طھط­ظ‚ظ‚ ظ…ظ† ظ‡ظˆظٹط© ط§ظ„ظ…ط³ط¤ظˆظ„." });
+                return Unauthorized(new { message = UnauthorizedAdminMessage });
             }
 
             var service = await _context.ServiceCatalogItems.FirstOrDefaultAsync(s => s.ServiceID == serviceId);
