@@ -29,7 +29,7 @@ namespace BrightClean.API.Controllers
         public async Task<IActionResult> GetServices()
         {
             var services = await _context.ServiceCatalogItems
-                .Where(s => s.IsAvailable)
+                .Where(s => s.IsAvailable && !s.IsDeleted)
                 .Select(s => new ServiceCatalogItemDto
                 {
                     ServiceID = s.ServiceID,
@@ -68,7 +68,8 @@ namespace BrightClean.API.Controllers
                 .AsNoTracking()
                 .Where(s => s.LaundryAgentID == agentId &&
                             s.IsActive &&
-                            s.ServiceCatalogItem.IsAvailable)
+                            s.ServiceCatalogItem.IsAvailable &&
+                            !s.ServiceCatalogItem.IsDeleted)
                 .OrderBy(s => s.ServiceCatalogItem.Category)
                 .ThenBy(s => s.ServiceCatalogItem.Type)
                 .Select(s => new ServiceCatalogItemDto

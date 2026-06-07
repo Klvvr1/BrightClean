@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:provider/provider.dart';
 import '../data/providers/admin_provider.dart';
+import '../data/models/admin_service_model.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_styles.dart';
@@ -30,7 +31,46 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   final int _totalOrders = 0;
 
   String _searchQuery = '';
+  String _serviceSearchQuery = '';
+  String _laundrySearchQuery = '';
+  int? _selectedLaundryAgentId;
+  int? _selectedServiceFilterId;
+  Set<int> _selectedLaundryServiceIds = {};
+  bool _isLoadingLaundryServices = false;
   List<Map<String, dynamic>> get _coupons => AdminDashboardScreen.couponsList;
+
+  static const List<String> _serviceCategoryLabels = [
+    'غسيل',
+    'مفروشات منزلية',
+    'خدمات منزلية',
+    'غسيل مركبات',
+  ];
+
+  static const List<String> _serviceTypeLabels = [
+    'غسيل وكي',
+    'تنظيف جاف',
+    'كي فقط',
+    'ستائر',
+    'مفارش',
+    'بطانيات',
+    'سجاد',
+    'تنظيف منزل',
+    'تنظيف مكيفات',
+    'تنظيف خزانات',
+    'تنظيف ألواح شمسية',
+    'غسيل سيارة',
+    'غسيل دراجة',
+  ];
+
+  static const List<String> _pricingModelLabels = [
+    'بالقطعة',
+    'سعر ثابت',
+  ];
+
+  static const List<String> _deliveryModelLabels = [
+    'استلام وتوصيل',
+    'زيارة فني',
+  ];
 
   late TextEditingController _maintenanceMessageController;
 
@@ -44,6 +84,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       _maintenanceMessageController.text = currentMessage;
       context.read<AdminProvider>().fetchPendingUsers();
       context.read<AdminProvider>().fetchApprovedStaff();
+      context.read<AdminProvider>().fetchServices();
     });
   }
 
@@ -97,8 +138,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     'العروض',
     'حسابي'
   ];
-
-
+  String get _currentTitle {
+    if (_selectedIndex == 2) return 'إدارة الخدمات';
+    if (_selectedIndex > 2) return _titles[_selectedIndex - 1];
+    return _titles[_selectedIndex];
+  }
 
   void _showWarningDialog(String name) {
     final reasonController = TextEditingController();
@@ -675,7 +719,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           : null;
                       await context.read<AdminProvider>().toggleSystemStatus(!v, message);
                       if (!mounted) return;
-                      context.read<SystemStatusProvider>().checkStatus();
+                      await context.read<SystemStatusProvider>().checkStatus();
                       _logActivity(
                         v ? 'تم تفعيل وضع صيانة النظام' : 'تم إلغاء وضع صيانة النظام',
                         v ? 'error' : 'success',
@@ -736,7 +780,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                 _maintenanceMessageController.text,
                               );
                               if (!mounted) return;
-                              context.read<SystemStatusProvider>().checkStatus();
+                              await context.read<SystemStatusProvider>().checkStatus();
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(content: Text('تم حفظ رسالة الصيانة بنجاح!')),
                               );
@@ -1369,6 +1413,1021 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildServicesView() {
+    return Consumer<AdminProvider>(
+      builder: (context, adminProvider, child) {
+        final services = adminProvider.services;
+        final filteredServices = services.where((service) {
+          final query = _serviceSearchQuery.toLowerCase();
+          return service.serviceName.toLowerCase().contains(query) ||
+              _serviceLabel(_serviceCategoryLabels, service.category).contains(query) ||
+              _serviceLabel(_serviceTypeLabels, service.type).contains(query);
+        }).toList();
+
+        return RefreshIndicator(
+          onRefresh: () async {
+            await context.read<AdminProvider>().fetchServices();
+            await context.read<AdminProvider>().fetchApprovedStaff();
+          },
+          child: ListView(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            children: [
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'إدارة الخدمات',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: adminProvider.isActionLoading
+                        ? null
+                        : () => _showServiceFormDialog(),
+                    icon: const Icon(Icons.add, size: 18),
+                    label: const Text('إضافة خدمة'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.md),
+              TextField(
+                onChanged: (v) => setState(() => _serviceSearchQuery = v),
+                decoration: InputDecoration(
+                  hintText: 'بحث عن خدمة...',
+                  prefixIcon: const Icon(Icons.search),
+                  filled: true,
+                  fillColor: AppColors.white,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(15),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              if (adminProvider.isLoading && services.isEmpty)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(AppSpacing.xl),
+                    child: CircularProgressIndicator(),
+                  ),
+                )
+              else if (adminProvider.errorMessage != null && services.isEmpty)
+                _buildServicesError(adminProvider.errorMessage!)
+              else ...[
+                _buildServiceCatalogTable(filteredServices),
+                const SizedBox(height: AppSpacing.lg),
+                _buildLaundryServicesManager(adminProvider),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildLaundryFirstServicesView() {
+    return Consumer<AdminProvider>(
+      builder: (context, adminProvider, child) {
+        final services = adminProvider.services;
+        final filteredServices = services.where((service) {
+          final query = _serviceSearchQuery.toLowerCase();
+          return service.serviceName.toLowerCase().contains(query) ||
+              _serviceLabel(_serviceCategoryLabels, service.category)
+                  .contains(query) ||
+              _serviceLabel(_serviceTypeLabels, service.type).contains(query);
+        }).toList();
+
+        return RefreshIndicator(
+          onRefresh: () async {
+            await context.read<AdminProvider>().fetchServices();
+            await context.read<AdminProvider>().fetchApprovedStaff();
+            if (_selectedLaundryAgentId != null) {
+              await _loadLaundryServices(_selectedLaundryAgentId);
+            }
+          },
+          child: ListView(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            children: [
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'إدارة الخدمات',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: adminProvider.isActionLoading
+                        ? null
+                        : () => _showServiceFormDialog(),
+                    icon: const Icon(Icons.add, size: 18),
+                    label: const Text('إضافة خدمة'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.md),
+              if (adminProvider.isLoading && services.isEmpty)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(AppSpacing.xl),
+                    child: CircularProgressIndicator(),
+                  ),
+                )
+              else if (adminProvider.errorMessage != null && services.isEmpty)
+                _buildServicesError(adminProvider.errorMessage!)
+              else ...[
+                _buildLaundryAgentsSection(adminProvider),
+                const SizedBox(height: AppSpacing.lg),
+                _buildSelectedLaundryServicesEditor(adminProvider),
+                const SizedBox(height: AppSpacing.lg),
+                _buildServiceFilter(adminProvider),
+                const SizedBox(height: AppSpacing.lg),
+                _buildCatalogManagementSection(filteredServices),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildLaundryAgentsSection(AdminProvider adminProvider) {
+    final laundries = _serviceAwareLaundryAgents(adminProvider);
+    final query = _laundrySearchQuery.trim().toLowerCase();
+    final visibleLaundries = laundries.where((laundry) {
+      final matchesService = _selectedServiceFilterId == null ||
+          _agentServiceIds(laundry).contains(_selectedServiceFilterId);
+      final businessName = _readString(
+        laundry,
+        ['businessName', 'BusinessName', 'name'],
+        fallback: '',
+      ).toLowerCase();
+      final matchesSearch = query.isEmpty || businessName.contains(query);
+      return matchesService && matchesSearch;
+    }).toList();
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: AppStyles.surface(context),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'المغاسل',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: AppColors.primary,
+            ),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'اختر مغسلة لتعديل خدماتها',
+            style: TextStyle(color: AppColors.textLight, fontSize: 12),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          TextField(
+            onChanged: (value) => setState(() => _laundrySearchQuery = value),
+            decoration: InputDecoration(
+              hintText: 'بحث باسم المغسلة...',
+              prefixIcon: const Icon(Icons.search),
+              filled: true,
+              fillColor: AppColors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(15),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          if (visibleLaundries.isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(AppSpacing.md),
+              child: Center(child: Text('لا توجد مغاسل مطابقة للبحث')),
+            )
+          else
+            ...visibleLaundries.map((laundry) {
+              final agentId = _readInt(laundry, ['id', 'userID', 'userId', 'UserID']);
+              final selected = agentId == _selectedLaundryAgentId;
+              final serviceIds = _agentServiceIds(laundry);
+              final businessName = _readString(
+                laundry,
+                ['businessName', 'BusinessName', 'name'],
+                fallback: 'مغسلة #$agentId',
+              );
+              final storeClosed = _readBool(laundry, ['isStoreClosed', 'IsStoreClosed']);
+              return Container(
+                margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+                decoration: BoxDecoration(
+                  color: selected
+                      ? AppColors.primary.withValues(alpha: 0.08)
+                      : AppColors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: selected
+                        ? AppColors.primary
+                        : AppColors.primary.withValues(alpha: 0.08),
+                  ),
+                ),
+                child: ListTile(
+                  onTap: agentId == 0
+                      ? null
+                      : () => _selectLaundryAgent(agentId, serviceIds),
+                  leading: CircleAvatar(
+                    backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                    child: const Icon(
+                      Icons.local_laundry_service,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  title: Text(
+                    businessName,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: Text(
+                    'ID: $agentId • الخدمات: ${serviceIds.length} • الحالة: ${storeClosed ? "مغلقة" : "متاحة"}',
+                  ),
+                  trailing: selected
+                      ? const Icon(Icons.check_circle, color: AppColors.success)
+                      : const Icon(Icons.chevron_left, color: AppColors.textLight),
+                ),
+              );
+            }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSelectedLaundryServicesEditor(AdminProvider adminProvider) {
+    final assignableServices = adminProvider.services
+        .where((service) => service.isAvailable && !service.isDeleted)
+        .toList();
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: AppStyles.surface(context),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'الخدمات التي تقدمها المغسلة',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: AppColors.primary,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          if (_selectedLaundryAgentId == null)
+            const Text('اختر مغسلة من القائمة بالأعلى لتعديل خدماتها')
+          else if (_isLoadingLaundryServices)
+            const Center(child: CircularProgressIndicator())
+          else ...[
+            if (assignableServices.isEmpty)
+              const Text('لا توجد خدمات مفعلة قابلة للربط حالياً')
+            else
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: assignableServices.map((service) {
+                  final selected =
+                      _selectedLaundryServiceIds.contains(service.serviceID);
+                  return FilterChip(
+                    label: Text(service.serviceName),
+                    selected: selected,
+                    onSelected: (_) {
+                      setState(() {
+                        if (selected) {
+                          _selectedLaundryServiceIds.remove(service.serviceID);
+                        } else {
+                          _selectedLaundryServiceIds.add(service.serviceID);
+                        }
+                      });
+                    },
+                    selectedColor: AppColors.primary.withValues(alpha: 0.18),
+                    checkmarkColor: AppColors.primary,
+                  );
+                }).toList(),
+              ),
+            const SizedBox(height: AppSpacing.md),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: adminProvider.isActionLoading
+                    ? null
+                    : () => _saveLaundryServices(),
+                icon: const Icon(Icons.save_outlined),
+                label: const Text('حفظ خدمات المغسلة'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildServiceFilter(AdminProvider adminProvider) {
+    final availableServices = adminProvider.services
+        .where((service) => service.isAvailable && !service.isDeleted)
+        .toList();
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: AppStyles.surface(context),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'تصفية حسب الخدمة',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: AppColors.primary,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          DropdownButtonFormField<int>(
+            value: _selectedServiceFilterId ?? -1,
+            decoration: const InputDecoration(
+              labelText: 'الخدمة',
+              border: OutlineInputBorder(),
+            ),
+            items: [
+              const DropdownMenuItem<int>(
+                value: -1,
+                child: Text('كل الخدمات'),
+              ),
+              ...availableServices.map(
+                (service) => DropdownMenuItem<int>(
+                  value: service.serviceID,
+                  child: Text(service.serviceName),
+                ),
+              ),
+            ],
+            onChanged: (serviceId) {
+              setState(() {
+                _selectedServiceFilterId =
+                    serviceId == null || serviceId == -1 ? null : serviceId;
+              });
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCatalogManagementSection(List<AdminServiceModel> filteredServices) {
+    return ExpansionTile(
+      tilePadding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+      title: const Text(
+        'إدارة كتالوج الخدمات',
+        style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary),
+      ),
+      subtitle: const Text('إضافة وتعديل وتعطيل وحذف خدمات الكتالوج'),
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.md),
+          child: TextField(
+            onChanged: (v) => setState(() => _serviceSearchQuery = v),
+            decoration: InputDecoration(
+              hintText: 'بحث عن خدمة...',
+              prefixIcon: const Icon(Icons.search),
+              filled: true,
+              fillColor: AppColors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(15),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+        ),
+        _buildServiceCatalogTable(filteredServices),
+      ],
+    );
+  }
+
+  Widget _buildServicesError(String message) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: AppStyles.surface(context),
+      child: Column(
+        children: [
+          const Icon(Icons.error_outline, color: AppColors.error, size: 36),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: AppColors.error, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          TextButton.icon(
+            onPressed: () => context.read<AdminProvider>().fetchServices(),
+            icon: const Icon(Icons.refresh),
+            label: const Text('إعادة المحاولة'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildServiceCatalogTable(List<AdminServiceModel> services) {
+    if (services.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        decoration: AppStyles.surface(context),
+        child: const Center(child: Text('لا توجد خدمات مطابقة')),
+      );
+    }
+
+    return Container(
+      decoration: AppStyles.surface(context),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: DataTable(
+          columns: const [
+            DataColumn(label: Text('الخدمة')),
+            DataColumn(label: Text('التصنيف')),
+            DataColumn(label: Text('النوع')),
+            DataColumn(label: Text('السعر')),
+            DataColumn(label: Text('التسعير')),
+            DataColumn(label: Text('التنفيذ')),
+            DataColumn(label: Text('الحالة')),
+            DataColumn(label: Text('المغاسل')),
+            DataColumn(label: Text('إجراءات')),
+          ],
+          rows: services.map((service) {
+            return DataRow(
+              cells: [
+                DataCell(Text(service.serviceName)),
+                DataCell(Text(_serviceLabel(_serviceCategoryLabels, service.category))),
+                DataCell(Text(_serviceLabel(_serviceTypeLabels, service.type))),
+                DataCell(Text(service.price.toStringAsFixed(2))),
+                DataCell(Text(_serviceLabel(_pricingModelLabels, service.pricingModel))),
+                DataCell(Text(_serviceLabel(_deliveryModelLabels, service.deliveryModel))),
+                DataCell(_buildServiceStatusBadge(service)),
+                DataCell(Text('${service.activeAgentCount}/${service.linkedAgentCount}')),
+                DataCell(_buildServiceActions(service)),
+              ],
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildServiceStatusBadge(AdminServiceModel service) {
+    final text = service.isDeleted
+        ? 'محذوفة'
+        : service.isAvailable
+            ? 'مفعلة'
+            : 'معطلة';
+    final color = service.isDeleted
+        ? AppColors.textLight
+        : service.isAvailable
+            ? AppColors.success
+            : AppColors.warning;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+
+  Widget _buildServiceActions(AdminServiceModel service) {
+    final isBusy = context.watch<AdminProvider>().isActionLoading;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          tooltip: 'تعديل',
+          onPressed: isBusy ? null : () => _showServiceFormDialog(service: service),
+          icon: const Icon(Icons.edit_outlined, color: AppColors.primary),
+        ),
+        IconButton(
+          tooltip: service.isAvailable ? 'تعطيل' : 'تفعيل',
+          onPressed: isBusy || service.isDeleted
+              ? null
+              : () => _setServiceAvailability(service, !service.isAvailable),
+          icon: Icon(
+            service.isAvailable ? Icons.toggle_on : Icons.toggle_off,
+            color: service.isAvailable ? AppColors.success : AppColors.textLight,
+          ),
+        ),
+        IconButton(
+          tooltip: service.isDeleted ? 'استرجاع' : 'حذف',
+          onPressed: isBusy
+              ? null
+              : service.isDeleted
+                  ? () => _restoreService(service)
+                  : () => _confirmDeleteService(service),
+          icon: Icon(
+            service.isDeleted ? Icons.restore : Icons.delete_outline,
+            color: service.isDeleted ? AppColors.secondary : AppColors.error,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLaundryServicesManager(AdminProvider adminProvider) {
+    final laundries = _mapApprovedStaff(adminProvider.approvedStaff)
+        .where((staff) => staff['type'] == 'مغسلة' || staff['type'] == 'ظ…ط؛ط³ظ„ط©')
+        .toList();
+    final assignableServices = adminProvider.services
+        .where((service) => service.isAvailable && !service.isDeleted)
+        .toList();
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: AppStyles.surface(context),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'خدمات كل مغسلة',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primary),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          if (laundries.isEmpty)
+            const Text('لا توجد مغاسل معتمدة حالياً')
+          else
+            DropdownButtonFormField<int>(
+              value: _selectedLaundryAgentId,
+              decoration: const InputDecoration(
+                labelText: 'اختر مغسلة',
+                border: OutlineInputBorder(),
+              ),
+              items: laundries
+                  .map((laundry) => DropdownMenuItem<int>(
+                        value: laundry['id'] is int
+                            ? laundry['id'] as int
+                            : int.tryParse(laundry['id'].toString()),
+                        child: Text(laundry['name'].toString()),
+                      ))
+                  .where((item) => item.value != null)
+                  .toList(),
+              onChanged: (agentId) => _loadLaundryServices(agentId),
+            ),
+          const SizedBox(height: AppSpacing.md),
+          if (_isLoadingLaundryServices)
+            const Center(child: CircularProgressIndicator())
+          else if (_selectedLaundryAgentId != null) ...[
+            if (assignableServices.isEmpty)
+              const Text('لا توجد خدمات مفعلة قابلة للربط حالياً')
+            else
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: assignableServices.map((service) {
+                  final selected = _selectedLaundryServiceIds.contains(service.serviceID);
+                  return FilterChip(
+                    label: Text(service.serviceName),
+                    selected: selected,
+                    onSelected: (_) {
+                      setState(() {
+                        if (selected) {
+                          _selectedLaundryServiceIds.remove(service.serviceID);
+                        } else {
+                          _selectedLaundryServiceIds.add(service.serviceID);
+                        }
+                      });
+                    },
+                    selectedColor: AppColors.primary.withValues(alpha: 0.18),
+                    checkmarkColor: AppColors.primary,
+                  );
+                }).toList(),
+              ),
+            const SizedBox(height: AppSpacing.md),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: adminProvider.isActionLoading
+                    ? null
+                    : () => _saveLaundryServices(),
+                icon: const Icon(Icons.save_outlined),
+                label: const Text('حفظ خدمات المغسلة'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  String _serviceLabel(List<String> labels, int index) {
+    if (index >= 0 && index < labels.length) {
+      return labels[index];
+    }
+    return 'غير معروف';
+  }
+
+  List<Map<dynamic, dynamic>> _serviceAwareLaundryAgents(
+      AdminProvider adminProvider) {
+    final serviceAwareAgents = adminProvider.laundryAgentsWithServices
+        .whereType<Map>()
+        .map((agent) => Map<dynamic, dynamic>.from(agent))
+        .toList();
+    if (serviceAwareAgents.isNotEmpty) {
+      return serviceAwareAgents;
+    }
+
+    return _mapApprovedStaff(adminProvider.approvedStaff)
+        .where((staff) =>
+            staff['type'] == 'مغسلة' || staff['type'] == 'ظ…ط؛ط³ظ„ط©')
+        .map((staff) => Map<dynamic, dynamic>.from(staff))
+        .toList();
+  }
+
+  Set<int> _agentServiceIds(Map<dynamic, dynamic> agent) {
+    final rawServiceIds = agent['serviceIds'] ??
+        agent['serviceIDs'] ??
+        agent['ServiceIds'] ??
+        agent['ServiceIDs'];
+    if (rawServiceIds is List) {
+      return rawServiceIds
+          .map((id) => id is int ? id : int.tryParse(id.toString()))
+          .whereType<int>()
+          .toSet();
+    }
+
+    final rawServices = agent['services'] ?? agent['Services'];
+    if (rawServices is List) {
+      return rawServices
+          .whereType<Map>()
+          .map((service) =>
+              service['serviceID'] ?? service['serviceId'] ?? service['ServiceID'])
+          .map((id) => id is int ? id : int.tryParse(id.toString()))
+          .whereType<int>()
+          .toSet();
+    }
+
+    return {};
+  }
+
+  int _readInt(Map<dynamic, dynamic> source, List<String> keys) {
+    for (final key in keys) {
+      final value = source[key];
+      if (value is int) return value;
+      if (value is num) return value.toInt();
+      if (value is String) return int.tryParse(value) ?? 0;
+    }
+    return 0;
+  }
+
+  bool _readBool(Map<dynamic, dynamic> source, List<String> keys) {
+    for (final key in keys) {
+      final value = source[key];
+      if (value is bool) return value;
+      if (value is num) return value != 0;
+      if (value is String) return value.toLowerCase() == 'true';
+    }
+    return false;
+  }
+
+  String _readString(
+    Map<dynamic, dynamic> source,
+    List<String> keys, {
+    required String fallback,
+  }) {
+    for (final key in keys) {
+      final value = source[key];
+      if (value != null && value.toString().trim().isNotEmpty) {
+        return value.toString();
+      }
+    }
+    return fallback;
+  }
+
+  void _selectLaundryAgent(int agentId, Set<int> currentServiceIds) {
+    setState(() {
+      _selectedLaundryAgentId = agentId;
+      _selectedLaundryServiceIds = currentServiceIds;
+    });
+    _loadLaundryServices(agentId);
+  }
+
+  Future<void> _loadLaundryServices(int? agentId) async {
+    setState(() {
+      _selectedLaundryAgentId = agentId;
+      _selectedLaundryServiceIds = {};
+      _isLoadingLaundryServices = agentId != null;
+    });
+
+    if (agentId == null) return;
+
+    try {
+      final serviceIds = await context.read<AdminProvider>().getAgentServiceIds(agentId);
+      if (!mounted) return;
+      setState(() {
+        _selectedLaundryServiceIds = serviceIds.toSet();
+        _isLoadingLaundryServices = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoadingLaundryServices = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('تعذر تحميل خدمات المغسلة: $e')),
+      );
+    }
+  }
+
+  Future<void> _saveLaundryServices() async {
+    final agentId = _selectedLaundryAgentId;
+    if (agentId == null) return;
+    if (_selectedLaundryServiceIds.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('يجب اختيار خدمة واحدة على الأقل')),
+      );
+      return;
+    }
+
+    try {
+      await context
+          .read<AdminProvider>()
+          .setAgentServices(agentId, _selectedLaundryServiceIds.toList()..sort());
+      if (!mounted) return;
+      await _loadLaundryServices(agentId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تم حفظ خدمات المغسلة بنجاح')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('تعذر حفظ خدمات المغسلة: $e')),
+      );
+    }
+  }
+
+  Future<void> _setServiceAvailability(
+      AdminServiceModel service, bool isAvailable) async {
+    try {
+      await context
+          .read<AdminProvider>()
+          .setServiceAvailability(service.serviceID, isAvailable);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(isAvailable ? 'تم تفعيل الخدمة' : 'تم تعطيل الخدمة')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('تعذر تغيير حالة الخدمة: $e')),
+      );
+    }
+  }
+
+  Future<void> _restoreService(AdminServiceModel service) async {
+    try {
+      await context.read<AdminProvider>().restoreService(service.serviceID);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تم استرجاع الخدمة. التفعيل يحتاج إجراء منفصل.')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('تعذر استرجاع الخدمة: $e')),
+      );
+    }
+  }
+
+  void _confirmDeleteService(AdminServiceModel service) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('حذف الخدمة'),
+        content: Text(
+          service.hasHistoricalUsage || service.linkedAgentCount > 0
+              ? 'هذه الخدمة مرتبطة ببيانات سابقة، سيطبق النظام الحذف الآمن إن لزم. هل تريد المتابعة؟'
+              : 'هل تريد حذف هذه الخدمة؟',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('إلغاء'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              try {
+                await this.context
+                    .read<AdminProvider>()
+                    .deleteService(service.serviceID);
+                if (!mounted) return;
+                ScaffoldMessenger.of(this.context).showSnackBar(
+                  const SnackBar(content: Text('تم حذف الخدمة بنجاح')),
+                );
+              } catch (e) {
+                if (!mounted) return;
+                ScaffoldMessenger.of(this.context).showSnackBar(
+                  SnackBar(content: Text('تعذر حذف الخدمة: $e')),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            child: const Text('حذف', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showServiceFormDialog({AdminServiceModel? service}) {
+    final nameController =
+        TextEditingController(text: service?.serviceName ?? '');
+    final priceController = TextEditingController(
+      text: service == null ? '' : service.price.toStringAsFixed(2),
+    );
+    int category = service?.category ?? 0;
+    int type = service?.type ?? 0;
+    int pricingModel = service?.pricingModel ?? 0;
+    int deliveryModel = service?.deliveryModel ?? 0;
+    bool isAvailable = service?.isAvailable ?? true;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(service == null ? 'إضافة خدمة' : 'تعديل خدمة'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(
+                    labelText: 'اسم الخدمة',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                TextField(
+                  controller: priceController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'السعر',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                _buildServiceDropdown(
+                  value: category,
+                  label: 'التصنيف',
+                  labels: _serviceCategoryLabels,
+                  onChanged: (value) => setDialogState(() => category = value),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                _buildServiceDropdown(
+                  value: type,
+                  label: 'النوع',
+                  labels: _serviceTypeLabels,
+                  onChanged: (value) => setDialogState(() => type = value),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                _buildServiceDropdown(
+                  value: pricingModel,
+                  label: 'طريقة التسعير',
+                  labels: _pricingModelLabels,
+                  onChanged: (value) => setDialogState(() => pricingModel = value),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                _buildServiceDropdown(
+                  value: deliveryModel,
+                  label: 'طريقة التنفيذ',
+                  labels: _deliveryModelLabels,
+                  onChanged: (value) => setDialogState(() => deliveryModel = value),
+                ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('الخدمة متاحة للعملاء'),
+                  value: isAvailable,
+                  onChanged: service?.isDeleted == true
+                      ? null
+                      : (value) => setDialogState(() => isAvailable = value),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                nameController.dispose();
+                priceController.dispose();
+                Navigator.pop(context);
+              },
+              child: const Text('إلغاء'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final price = double.tryParse(priceController.text.trim());
+                if (nameController.text.trim().isEmpty || price == null || price < 0) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('تأكد من اسم الخدمة والسعر')),
+                  );
+                  return;
+                }
+
+                final payload = {
+                  'serviceName': nameController.text.trim(),
+                  'category': category,
+                  'type': type,
+                  'price': price,
+                  'pricingModel': pricingModel,
+                  'deliveryModel': deliveryModel,
+                  'isAvailable': isAvailable,
+                };
+
+                try {
+                  if (service == null) {
+                    await this.context.read<AdminProvider>().createService(payload);
+                  } else {
+                    await this.context
+                        .read<AdminProvider>()
+                        .updateService(service.serviceID, payload);
+                  }
+                  if (!mounted) return;
+                  nameController.dispose();
+                  priceController.dispose();
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(this.context).showSnackBar(
+                    SnackBar(
+                      content: Text(service == null
+                          ? 'تمت إضافة الخدمة بنجاح'
+                          : 'تم تعديل الخدمة بنجاح'),
+                    ),
+                  );
+                } catch (e) {
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(this.context).showSnackBar(
+                    SnackBar(content: Text('تعذر حفظ الخدمة: $e')),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+              child: const Text('حفظ', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildServiceDropdown({
+    required int value,
+    required String label,
+    required List<String> labels,
+    required ValueChanged<int> onChanged,
+  }) {
+    return DropdownButtonFormField<int>(
+      value: value >= 0 && value < labels.length ? value : 0,
+      decoration: InputDecoration(
+        labelText: label,
+        border: const OutlineInputBorder(),
+      ),
+      items: List.generate(
+        labels.length,
+        (index) => DropdownMenuItem<int>(
+          value: index,
+          child: Text(labels[index]),
+        ),
+      ),
+      onChanged: (value) {
+        if (value != null) onChanged(value);
+      },
     );
   }
 
@@ -2507,12 +3566,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_selectedIndex >= 4) {
+    if (_selectedIndex >= 5) {
       _selectedIndex = 0;
     }
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: _selectedIndex == 3
+      appBar: _selectedIndex == 4
           ? null
           : AppBar(
               elevation: 0,
@@ -2520,7 +3579,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               automaticallyImplyLeading: false,
               centerTitle: true,
               title: Text(
-                _titles[_selectedIndex],
+                _currentTitle,
                 style: const TextStyle(
                     color: AppColors.primary, fontWeight: FontWeight.bold),
               ),
@@ -2530,11 +3589,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         children: [
           _buildHomeView(),
           _buildRegistrationsView(),
+          _buildLaundryFirstServicesView(),
           _buildOffersView(),
           AdminProfileScreen(
             onTabChange: (index) {
               setState(() {
-                _selectedIndex = index;
+                _selectedIndex = index >= 2 ? index + 1 : index;
               });
             },
           ),
@@ -2571,6 +3631,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               icon: Icon(Icons.people_outline),
               activeIcon: Icon(Icons.people),
               label: 'التسجيلات',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.cleaning_services_outlined),
+              activeIcon: Icon(Icons.cleaning_services),
+              label: 'الخدمات',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.local_offer_outlined),

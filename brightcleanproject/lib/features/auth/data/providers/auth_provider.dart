@@ -42,14 +42,14 @@ class AuthProvider with ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       _token = await _secureStorage.read(key: 'auth_token');
-      
+
       final rawUserId = prefs.get('user_id');
       if (rawUserId is int) {
         _userId = rawUserId;
       } else if (rawUserId is String) {
         _userId = int.tryParse(rawUserId);
       }
-      
+
       _role = prefs.getString('user_role');
       notifyListeners();
     } catch (e) {
@@ -64,18 +64,20 @@ class AuthProvider with ChangeNotifier {
 
     try {
       final response = await _authRepository.login(email, password);
-      
+
       // Check System Status before persisting login (except for Admins)
       if (response.role.toLowerCase() != 'admin') {
         try {
-          final data = await _apiClient.get('/systemstatus/status');
+          final data = await _apiClient.get('/api/systemstatus/status');
           final isLoginEnabled = data['loginEnabled'] ?? true;
           if (!isLoginEnabled) {
-            throw ServerException(message: data['message'] ?? 'النظام تحت الصيانة. يرجى المحاولة لاحقاً.');
+            throw ServerException(
+                message: data['message'] ??
+                    'النظام تحت الصيانة. يرجى المحاولة لاحقاً.');
           }
         } on ServerException {
           rethrow;
-        } catch(e) {
+        } catch (e) {
           debugPrint('Error checking system status during login: $e');
         }
       }
@@ -86,14 +88,16 @@ class AuthProvider with ChangeNotifier {
       await prefs.setInt('user_id', response.userId);
       await prefs.setString('user_role', response.role);
       await prefs.setString('user_email', response.email);
-      await prefs.setString('user_name', '${response.firstName} ${response.lastName}'.trim());
+      await prefs.setString(
+          'user_name', '${response.firstName} ${response.lastName}'.trim());
       await prefs.setString('user_phone', response.phoneNo);
 
       // Migrate registration address if it exists
       final emailKey = response.email.trim().toLowerCase();
       final regAddr = prefs.getString('registration_address_$emailKey');
       if (regAddr != null && regAddr.isNotEmpty) {
-        await prefs.setString('user_registration_address_${response.userId}', regAddr);
+        await prefs.setString(
+            'user_registration_address_${response.userId}', regAddr);
         final savedKey = 'user_saved_addresses_${response.userId}';
         List<String> saved = prefs.getStringList(savedKey) ?? [];
         if (!saved.contains(regAddr)) {
@@ -174,7 +178,8 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  Future<void> logout([CartProvider? cartProvider, OrderProvider? orderProvider]) async {
+  Future<void> logout(
+      [CartProvider? cartProvider, OrderProvider? orderProvider]) async {
     try {
       // Delete token from secure storage first
       await _secureStorage.delete(key: 'auth_token');
@@ -236,7 +241,8 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  Future<void> resetPassword(String email, String token, String newPassword) async {
+  Future<void> resetPassword(
+      String email, String token, String newPassword) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();

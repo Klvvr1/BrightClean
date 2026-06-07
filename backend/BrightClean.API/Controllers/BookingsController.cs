@@ -260,7 +260,10 @@ namespace BrightClean.API.Controllers
                 .ToList();
 
             var activeAgentServiceIds = await _context.AgentServices
-                .Where(s => s.LaundryAgentID == agent.UserID && s.IsActive)
+                .Where(s => s.LaundryAgentID == agent.UserID &&
+                            s.IsActive &&
+                            s.ServiceCatalogItem.IsAvailable &&
+                            !s.ServiceCatalogItem.IsDeleted)
                 .Select(s => s.ServiceID)
                 .ToListAsync();
 
@@ -278,7 +281,9 @@ namespace BrightClean.API.Controllers
             }
 
             var requestedDeliveryModels = await _context.ServiceCatalogItems
-                .Where(s => requestedServiceIds.Contains(s.ServiceID))
+                .Where(s => requestedServiceIds.Contains(s.ServiceID) &&
+                            s.IsAvailable &&
+                            !s.IsDeleted)
                 .Select(s => s.DeliveryModel)
                 .Distinct()
                 .ToListAsync();
@@ -340,6 +345,11 @@ namespace BrightClean.API.Controllers
                 if (service == null)
                 {
                     return BadRequest(new { message = "الخدمة المطلوبة غير موجودة في النظام." });
+                }
+
+                if (!service.IsAvailable || service.IsDeleted)
+                {
+                    return BadRequest(new { message = "Selected service is not available for booking." });
                 }
 
                 var bookingItem = new BookingItem

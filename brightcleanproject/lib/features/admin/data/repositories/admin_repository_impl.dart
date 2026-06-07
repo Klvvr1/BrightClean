@@ -2,6 +2,7 @@ import '../../../../core/network/api_client.dart';
 import '../../../../core/error/exceptions.dart';
 import '../../domain/repositories/admin_repository.dart';
 import '../models/pending_user_model.dart';
+import '../models/admin_service_model.dart';
 
 class AdminRepositoryImpl implements AdminRepository {
   final BaseApiClient _apiClient;
@@ -42,6 +43,86 @@ class AdminRepositoryImpl implements AdminRepository {
         'loginEnabled': loginEnabled,
         'message': message,
       },
+    );
+  }
+
+  @override
+  Future<List<AdminServiceModel>> getServices() async {
+    final response = await _apiClient.get('/api/admin/services');
+    if (response is List) {
+      return response
+          .map((json) => AdminServiceModel.fromJson(json as Map<String, dynamic>))
+          .toList();
+    }
+    throw ServerException(message: 'Invalid API response format for services');
+  }
+
+  @override
+  Future<void> createService(Map<String, dynamic> service) async {
+    await _apiClient.post('/api/admin/services', body: service);
+  }
+
+  @override
+  Future<void> updateService(int serviceId, Map<String, dynamic> service) async {
+    await _apiClient.put('/api/admin/services/$serviceId', body: service);
+  }
+
+  @override
+  Future<void> setServiceAvailability(int serviceId, bool isAvailable) async {
+    await _apiClient.patch(
+      '/api/admin/services/$serviceId/availability',
+      body: {'isAvailable': isAvailable},
+    );
+  }
+
+  @override
+  Future<void> deleteService(int serviceId) async {
+    await _apiClient.delete('/api/admin/services/$serviceId');
+  }
+
+  @override
+  Future<void> restoreService(int serviceId) async {
+    await _apiClient.patch('/api/admin/services/$serviceId/restore');
+  }
+
+  @override
+  Future<List<dynamic>> getLaundryAgentsWithServices() async {
+    final response = await _apiClient.get('/api/users/agents');
+    if (response is List) {
+      return response;
+    }
+    throw ServerException(message: 'Invalid API response format for laundry agents');
+  }
+
+  @override
+  Future<List<int>> getAgentServiceIds(int agentId) async {
+    final response = await _apiClient.get('/api/users/agents/$agentId');
+    if (response is Map<String, dynamic>) {
+      final rawServiceIds = response['serviceIds'] ?? response['serviceIDs'];
+      if (rawServiceIds is List) {
+        return rawServiceIds
+            .map((id) => id is int ? id : int.tryParse(id.toString()))
+            .whereType<int>()
+            .toList();
+      }
+      final rawServices = response['services'];
+      if (rawServices is List) {
+        return rawServices
+            .whereType<Map>()
+            .map((service) => service['serviceID'] ?? service['serviceId'] ?? service['ServiceID'])
+            .map((id) => id is int ? id : int.tryParse(id.toString()))
+            .whereType<int>()
+            .toList();
+      }
+    }
+    throw ServerException(message: 'Invalid API response format for agent services');
+  }
+
+  @override
+  Future<void> setAgentServices(int agentId, List<int> serviceIds) async {
+    await _apiClient.post(
+      '/api/admin/agents/$agentId/services',
+      body: {'serviceIDs': serviceIds},
     );
   }
 }
