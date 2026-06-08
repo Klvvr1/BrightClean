@@ -285,6 +285,159 @@ namespace BrightClean.API.Controllers
             });
         }
 
+        // GET: /api/admin/service-activation-requests
+        [HttpGet("service-activation-requests")]
+        public async Task<IActionResult> GetServiceActivationRequests()
+        {
+            var requests = await _context.AgentServices
+                .AsNoTracking()
+                .Include(service => service.LaundryAgent)
+                .Include(service => service.ServiceCatalogItem)
+                .Where(service => service.PendingActivation)
+                .OrderBy(service => service.LaundryAgent.BusinessName)
+                .ThenBy(service => service.ServiceCatalogItem.ServiceName)
+                .ToListAsync();
+
+            _logger.LogInformation("Loaded {RequestCount} service activation requests for admin.", requests.Count);
+
+            return Ok(requests.Select(service => new
+            {
+                service.AgentServiceID,
+                AgentID = service.LaundryAgentID,
+                BusinessName = service.LaundryAgent.BusinessName,
+                service.ServiceID,
+                ServiceName = service.ServiceCatalogItem.ServiceName,
+                RequestedAction = GetServiceActivationRequestAction(service),
+                service.IsActive,
+                service.PendingActivation,
+                service.Notes
+            }));
+        }
+
+        // POST: /api/admin/agents/{agentId}/services/{serviceId}/approve
+        [HttpPost("agents/{agentId}/services/{serviceId}/approve")]
+        public async Task<IActionResult> ApproveAgentServiceRequest(int agentId, int serviceId)
+        {
+            var adminId = GetAdminId();
+            if (adminId == null)
+            {
+                return Unauthorized(new { message = UnauthorizedAdminMessage });
+            }
+
+            var agentService = await _context.AgentServices
+                .Include(service => service.ServiceCatalogItem)
+                .FirstOrDefaultAsync(service => service.LaundryAgentID == agentId && service.ServiceID == serviceId);
+
+            if (agentService == null)
+            {
+                return NotFound(new { message = "Agent service request was not found." });
+            }
+
+            if (!agentService.PendingActivation)
+            {
+                return BadRequest(new { message = "There is no pending request for this agent service." });
+            }
+
+            var requestedAction = GetServiceActivationRequestAction(agentService);
+
+            if (requestedAction == "Activate")
+            {
+                if (agentService.ServiceCatalogItem == null ||
+                    !agentService.ServiceCatalogItem.IsAvailable ||
+                    agentService.ServiceCatalogItem.IsDeleted)
+                {
+                    return BadRequest(new { message = "This service is not available for activation." });
+                }
+
+                agentService.IsActive = true;
+                agentService.ActivatedAt = DateTime.UtcNow;
+                agentService.Notes = "Activation approved by admin.";
+            }
+            else
+            {
+                agentService.IsActive = false;
+                agentService.Notes = "Deactivation approved by admin.";
+            }
+
+            agentService.PendingActivation = false;
+
+            _context.AuditLogs.Add(new AuditLog
+            {
+                AdminID = adminId.Value,
+                Action = requestedAction == "Activate" ? "APPROVE_AGENT_SERVICE_ACTIVATION" : "APPROVE_AGENT_SERVICE_DEACTIVATION",
+                TargetEntity = "AgentService",
+                TargetID = agentService.AgentServiceID,
+                Details = $"Approved {requestedAction.ToLower()} request for agent {agentId} and service {serviceId}.",
+                IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                PerformedAt = DateTime.UtcNow
+            });
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                agentId,
+                serviceId,
+                requestedAction,
+                agentService.IsActive,
+                agentService.PendingActivation,
+                message = "Service request was approved."
+            });
+        }
+
+        // POST: /api/admin/agents/{agentId}/services/{serviceId}/reject
+        [HttpPost("agents/{agentId}/services/{serviceId}/reject")]
+        public async Task<IActionResult> RejectAgentServiceRequest(int agentId, int serviceId)
+        {
+            var adminId = GetAdminId();
+            if (adminId == null)
+            {
+                return Unauthorized(new { message = UnauthorizedAdminMessage });
+            }
+
+            var agentService = await _context.AgentServices
+                .FirstOrDefaultAsync(service => service.LaundryAgentID == agentId && service.ServiceID == serviceId);
+
+            if (agentService == null)
+            {
+                return NotFound(new { message = "Agent service request was not found." });
+            }
+
+            if (!agentService.PendingActivation)
+            {
+                return BadRequest(new { message = "There is no pending request for this agent service." });
+            }
+
+            var requestedAction = GetServiceActivationRequestAction(agentService);
+            agentService.PendingActivation = false;
+            agentService.Notes = requestedAction == "Activate"
+                ? "Activation request rejected by admin."
+                : "Deactivation request rejected by admin.";
+
+            _context.AuditLogs.Add(new AuditLog
+            {
+                AdminID = adminId.Value,
+                Action = requestedAction == "Activate" ? "REJECT_AGENT_SERVICE_ACTIVATION" : "REJECT_AGENT_SERVICE_DEACTIVATION",
+                TargetEntity = "AgentService",
+                TargetID = agentService.AgentServiceID,
+                Details = $"Rejected {requestedAction.ToLower()} request for agent {agentId} and service {serviceId}.",
+                IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                PerformedAt = DateTime.UtcNow
+            });
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                agentId,
+                serviceId,
+                requestedAction,
+                agentService.IsActive,
+                agentService.PendingActivation,
+                message = "Service request was rejected."
+            });
+        }
+
         // GET: /api/admin/services
         [HttpGet("services")]
         public async Task<IActionResult> GetServices()
@@ -879,6 +1032,14 @@ namespace BrightClean.API.Controllers
             return adminIdClaim != null && int.TryParse(adminIdClaim.Value, out var adminId)
                 ? adminId
                 : null;
+        }
+
+        private static string GetServiceActivationRequestAction(AgentService service)
+        {
+            return service.Notes != null &&
+                service.Notes.IndexOf("deactivation", StringComparison.OrdinalIgnoreCase) >= 0
+                    ? "Deactivate"
+                    : "Activate";
         }
 
         private IActionResult? ValidateServiceCatalogItemDto(ServiceCatalogItemUpsertDto? dto)
