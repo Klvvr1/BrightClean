@@ -32,10 +32,10 @@ class AdminServiceModel {
   });
 
   factory AdminServiceModel.fromJson(Map<String, dynamic> json) {
-    final serviceID = _readInt(json, ['serviceID', 'serviceId', 'ServiceID']);
+    final serviceID = readInt(json, ['serviceID', 'serviceId', 'ServiceID']);
     final serviceName =
-        _readString(json, ['serviceName', 'ServiceName'], fallback: '');
-    final price = _readDouble(json, ['price', 'Price']);
+        readString(json, ['serviceName', 'ServiceName'], fallback: '');
+    final price = readDouble(json, ['price', 'Price']);
 
     // Validate parsed fields
     if (serviceID <= 0) {
@@ -54,25 +54,25 @@ class AdminServiceModel {
     return AdminServiceModel(
       serviceID: serviceID,
       serviceName: serviceName,
-      category: _readInt(json, ['category', 'Category']),
-      type: _readInt(json, ['type', 'Type']),
+      category: readInt(json, ['category', 'Category']),
+      type: readInt(json, ['type', 'Type']),
       price: price,
-      pricingModel: _readInt(json, ['pricingModel', 'PricingModel']),
-      deliveryModel: _readInt(json, ['deliveryModel', 'DeliveryModel']),
-      isAvailable: _readBool(json, ['isAvailable', 'IsAvailable']),
-      isDeleted: _readBool(json, ['isDeleted', 'IsDeleted']),
+      pricingModel: readInt(json, ['pricingModel', 'PricingModel']),
+      deliveryModel: readInt(json, ['deliveryModel', 'DeliveryModel']),
+      isAvailable: readBool(json, ['isAvailable', 'IsAvailable']),
+      isDeleted: readBool(json, ['isDeleted', 'IsDeleted']),
       linkedAgentCount:
-          _readInt(json, ['linkedAgentCount', 'LinkedAgentCount']),
+          readInt(json, ['linkedAgentCount', 'LinkedAgentCount']),
       activeAgentCount:
-          _readInt(json, ['activeAgentCount', 'ActiveAgentCount']),
+          readInt(json, ['activeAgentCount', 'ActiveAgentCount']),
       hasHistoricalUsage:
-          _readBool(json, ['hasHistoricalUsage', 'HasHistoricalUsage']),
-      canDelete: _readBool(json, ['canDelete', 'CanDelete']),
-      canDisable: _readBool(json, ['canDisable', 'CanDisable']),
+          readBool(json, ['hasHistoricalUsage', 'HasHistoricalUsage']),
+      canDelete: readBool(json, ['canDelete', 'CanDelete']),
+      canDisable: readBool(json, ['canDisable', 'CanDisable']),
     );
   }
 
-  static int _readInt(Map<String, dynamic> json, List<String> keys) {
+  static int readInt(Map json, List<String> keys) {
     for (final key in keys) {
       final value = json[key];
       if (value is int) return value;
@@ -82,7 +82,7 @@ class AdminServiceModel {
     return 0;
   }
 
-  static double _readDouble(Map<String, dynamic> json, List<String> keys) {
+  static double readDouble(Map json, List<String> keys) {
     for (final key in keys) {
       final value = json[key];
       if (value is double) return value;
@@ -92,7 +92,7 @@ class AdminServiceModel {
     return 0;
   }
 
-  static bool _readBool(Map<String, dynamic> json, List<String> keys) {
+  static bool readBool(Map json, List<String> keys) {
     for (final key in keys) {
       final value = json[key];
       if (value is bool) return value;
@@ -102,8 +102,8 @@ class AdminServiceModel {
     return false;
   }
 
-  static String _readString(
-    Map<String, dynamic> json,
+  static String readString(
+    Map json,
     List<String> keys, {
     required String fallback,
   }) {

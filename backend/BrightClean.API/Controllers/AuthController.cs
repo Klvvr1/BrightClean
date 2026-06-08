@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using BrightClean.Infrastructure;
 using BrightClean.Domain.Entities;
@@ -27,12 +28,14 @@ namespace BrightClean.API.Controllers
         private readonly AppDbContext _context;
         private readonly IConfiguration _config;
         private readonly IHostEnvironment _environment;
+        private readonly ILogger<AuthController> _logger;
 
-        public AuthController(AppDbContext context, IConfiguration config, IHostEnvironment environment)
+        public AuthController(AppDbContext context, IConfiguration config, IHostEnvironment environment, ILogger<AuthController> logger)
         {
             _context = context;
             _config = config;
             _environment = environment;
+            _logger = logger;
         }
 
         // POST: /api/auth/register/client
@@ -87,7 +90,7 @@ namespace BrightClean.API.Controllers
             if (nationalIdImage == null || nationalIdImage.Length == 0)
                 return BadRequest(new { message = "صورة الهوية الوطنية مطلوبة." });
 
-            var selectedServiceIds = dto.SelectedServiceIds?.Where(id => id > 0).Distinct().ToList() ?? new List<int>();
+            var selectedServiceIds = ParseSelectedServiceIds(dto.SelectedServiceIds);
             var selectedCategories = ParseSelectedServiceCategories(dto.SelectedServiceCategories);
 
             if (selectedServiceIds.Count == 0 && selectedCategories.Count == 0)
@@ -129,6 +132,8 @@ namespace BrightClean.API.Controllers
                     });
                 }
             }
+
+            _logger.LogInformation("Agent registration selected {ServiceCount} services.", selectedCatalogServices.Count);
 
             // Ensure directory exists
             var uploadDir = System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), "wwwroot", "uploads");

@@ -65,6 +65,9 @@
 > **Changelog v6.3:**
 > - `Draft` added to `BookingStatus` — enables cart functionality without any new entities
 > - `ExpiresAt` added to `Booking` — auto-cleanup of abandoned carts via background job
+>
+> **Changelog v6.4:**
+> - `DeliveryStaff.IsAvailable` added — stores driver work mode in SQL Server and is exposed through delivery task availability endpoints
 > - `FinalTotal` default changed to `NULL` in Draft state — locked only on submit
 > - Cart business rules documented in Business Rules section
 > - Booking Status State Machine updated to include Draft stage
@@ -535,6 +538,7 @@ The logistics executor. Claims and completes delivery tasks from an open pool.
 | `VehicleModel` | string | NOT NULL | Vehicle model (e.g. Corolla) |
 | `PlateNumber` | string | NOT NULL, UNIQUE | Vehicle registration plate |
 | `BankAcc` | string | NOT NULL | Bank account for delivery fee payouts |
+| `IsAvailable` | boolean | NOT NULL, DEFAULT false | Driver work mode / availability toggle persisted by backend |
 | `/averageRating()` | decimal | Derived | Computed from `BookingRating.DeliveryRating` |
 | `/totalRatings()` | int | Derived | Count of non-null `DeliveryRating` records |
 

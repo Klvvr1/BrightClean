@@ -679,6 +679,11 @@ namespace BrightClean.API.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<bool>("IsAvailable")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
                     b.Property<string>("FatherName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");

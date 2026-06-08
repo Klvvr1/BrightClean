@@ -5,6 +5,7 @@ abstract class AdminRepository {
   Future<List<PendingUserModel>> getPendingApprovals();
   Future<void> approveUser(int userId);
   Future<List<dynamic>> getApprovedStaff();
+  Future<List<dynamic>> getRecentOrders();
   Future<void> toggleSystemStatus(bool loginEnabled, String? message);
   Future<List<AdminServiceModel>> getServices();
   Future<void> createService(Map<String, dynamic> service);

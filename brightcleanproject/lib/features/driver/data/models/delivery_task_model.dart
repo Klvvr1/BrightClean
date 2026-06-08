@@ -48,7 +48,7 @@ class DeliveryTaskModel {
 
   factory DeliveryTaskModel.fromJson(Map<String, dynamic> json) {
     // Helper to validate and extract required IDs
-    int? _extractId(dynamic value, String fieldName) {
+    int? extractId(dynamic value, String fieldName) {
       if (value is int && value > 0) return value;
       if (value == null) return null;
       return null; // Invalid value
@@ -90,38 +90,56 @@ class DeliveryTaskModel {
     }
 
     // Extract and validate required ID fields
-    final taskID = _extractId(json['taskID'] ?? json['taskId'] ?? json['TaskID'], 'taskID');
+    final taskID =
+        extractId(json['taskID'] ?? json['taskId'] ?? json['TaskID'], 'taskID');
     if (taskID == null) {
-      throw FormatException('DeliveryTaskModel.fromJson: required field "taskID" is missing or invalid');
+      throw FormatException(
+          'DeliveryTaskModel.fromJson: required field "taskID" is missing or invalid');
     }
 
-    final bookingID = _extractId(json['bookingID'] ?? json['bookingId'] ?? json['BookingID'], 'bookingID');
+    final bookingID = extractId(
+        json['bookingID'] ?? json['bookingId'] ?? json['BookingID'],
+        'bookingID');
     if (bookingID == null) {
-      throw FormatException('DeliveryTaskModel.fromJson: required field "bookingID" is missing or invalid');
+      throw FormatException(
+          'DeliveryTaskModel.fromJson: required field "bookingID" is missing or invalid');
     }
 
-    final pickupAddressID = _extractId(json['pickupAddressID'] ?? json['pickupAddressId'] ?? json['PickupAddressID'], 'pickupAddressID');
+    final pickupAddressID = extractId(
+        json['pickupAddressID'] ??
+            json['pickupAddressId'] ??
+            json['PickupAddressID'],
+        'pickupAddressID');
     if (pickupAddressID == null) {
-      throw FormatException('DeliveryTaskModel.fromJson: required field "pickupAddressID" is missing or invalid');
+      throw FormatException(
+          'DeliveryTaskModel.fromJson: required field "pickupAddressID" is missing or invalid');
     }
 
-    final dropoffAddressID = _extractId(json['dropoffAddressID'] ?? json['dropoffAddressId'] ?? json['DropoffAddressID'], 'dropoffAddressID');
+    final dropoffAddressID = extractId(
+        json['dropoffAddressID'] ??
+            json['dropoffAddressId'] ??
+            json['DropoffAddressID'],
+        'dropoffAddressID');
     if (dropoffAddressID == null) {
-      throw FormatException('DeliveryTaskModel.fromJson: required field "dropoffAddressID" is missing or invalid');
+      throw FormatException(
+          'DeliveryTaskModel.fromJson: required field "dropoffAddressID" is missing or invalid');
     }
 
-    final stageNumber = _extractId(json['stageNumber'] ?? json['StageNumber'], 'stageNumber');
+    final stageNumber =
+        extractId(json['stageNumber'] ?? json['StageNumber'], 'stageNumber');
     if (stageNumber == null) {
-      throw FormatException('DeliveryTaskModel.fromJson: required field "stageNumber" is missing or invalid');
+      throw FormatException(
+          'DeliveryTaskModel.fromJson: required field "stageNumber" is missing or invalid');
     }
 
     return DeliveryTaskModel(
       taskID: taskID,
       bookingID: bookingID,
-      deliveryStaffID: _extractId(
-        json['deliveryStaffID'] ?? json['deliveryStaffId'] ?? json['DeliveryStaffID'],
-        'deliveryStaffID'
-      ),
+      deliveryStaffID: extractId(
+          json['deliveryStaffID'] ??
+              json['deliveryStaffId'] ??
+              json['DeliveryStaffID'],
+          'deliveryStaffID'),
       pickupAddressID: pickupAddressID,
       dropoffAddressID: dropoffAddressID,
       stageNumber: stageNumber,

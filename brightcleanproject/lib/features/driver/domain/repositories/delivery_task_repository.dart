@@ -2,6 +2,9 @@ import '../../data/models/delivery_task_model.dart';
 
 abstract class DeliveryTaskRepository {
   Future<List<DeliveryTaskModel>> getTaskPool();
+  Future<List<DeliveryTaskModel>> getMyTasks();
+  Future<bool> getAvailability();
+  Future<bool> setAvailability(bool isAvailable);
   Future<DeliveryTaskModel> getTaskDetails(int taskId);
   Future<void> claimTask(int taskId, int driverId);
   Future<void> startTask(int taskId);

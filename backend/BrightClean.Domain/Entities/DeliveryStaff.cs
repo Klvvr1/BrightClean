@@ -33,6 +33,8 @@ namespace BrightClean.Domain.Entities
         [Required]
         public string BankAcc { get; set; } = string.Empty;
 
+        public bool IsAvailable { get; set; } = false;
+
         [NotMapped]
         public decimal AverageRating
         {

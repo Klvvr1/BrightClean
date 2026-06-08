@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using BrightClean.Infrastructure;
 using BrightClean.Domain.Entities;
 using BrightClean.Domain.Enums;
@@ -18,11 +19,42 @@ namespace BrightClean.API.Controllers
     public class AdminController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly ILogger<AdminController> _logger;
         private static readonly string UnauthorizedAdminMessage = "فشلت عملية التحقق من هوية المسؤول.";
 
-        public AdminController(AppDbContext context)
+        public AdminController(AppDbContext context, ILogger<AdminController> logger)
         {
             _context = context;
+            _logger = logger;
+        }
+
+        // GET: /api/admin/recent-orders
+        [HttpGet("recent-orders")]
+        public async Task<IActionResult> GetRecentOrders()
+        {
+            var orders = await _context.Bookings
+                .AsNoTracking()
+                .Include(b => b.Client)
+                .Include(b => b.LaundryAgent)
+                .Include(b => b.BookingItems)
+                .Where(b => b.Status != BookingStatus.Draft)
+                .OrderByDescending(b => b.CreatedAt)
+                .Take(5)
+                .Select(b => new
+                {
+                    b.BookingID,
+                    b.Status,
+                    b.FinalTotal,
+                    b.CreatedAt,
+                    ClientName = (b.Client.FirstName + " " + b.Client.LastName).Trim(),
+                    LaundryName = b.LaundryAgent.BusinessName,
+                    ItemCount = b.BookingItems.Count
+                })
+                .ToListAsync();
+
+            _logger.LogInformation("Loaded {OrderCount} recent orders for admin dashboard.", orders.Count);
+
+            return Ok(orders);
         }
 
         // GET: /api/admin/pending-approvals

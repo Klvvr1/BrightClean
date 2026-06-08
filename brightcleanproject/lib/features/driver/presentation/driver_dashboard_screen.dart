@@ -35,9 +35,14 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
   void initState() {
     super.initState();
     _loadUserData();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (mounted) {
-        context.read<DriverProvider>().fetchTaskPool();
+        final driverProvider = context.read<DriverProvider>();
+        await driverProvider.refreshAvailability();
+        if (mounted) {
+          setState(() => _isOnline = driverProvider.isAvailable);
+        }
+        await driverProvider.fetchTaskPool();
       }
     });
   }
@@ -60,12 +65,15 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
     setState(() {
       final profile = profileResponse?['profile'];
       final driver = profileResponse?['driver'];
-      final serverFirstName =
-          profile is Map<String, dynamic> ? profile['firstName']?.toString() ?? '' : '';
-      final serverLastName =
-          profile is Map<String, dynamic> ? profile['lastName']?.toString() ?? '' : '';
+      final serverFirstName = profile is Map<String, dynamic>
+          ? profile['firstName']?.toString() ?? ''
+          : '';
+      final serverLastName = profile is Map<String, dynamic>
+          ? profile['lastName']?.toString() ?? ''
+          : '';
       final serverName = '$serverFirstName $serverLastName'.trim();
-      final savedName = serverName.isNotEmpty ? serverName : prefs.getString('user_name');
+      final savedName =
+          serverName.isNotEmpty ? serverName : prefs.getString('user_name');
       final isDefaultName = prefs.getBool('user_name_is_default') ?? true;
 
       // Only localize if explicitly marked as default
@@ -80,13 +88,19 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
         _userName = savedName;
       }
       _userPhone = profile is Map<String, dynamic>
-          ? profile['phoneNo']?.toString() ?? prefs.getString('user_phone') ?? '0533333333'
+          ? profile['phoneNo']?.toString() ??
+              prefs.getString('user_phone') ??
+              '0533333333'
           : prefs.getString('user_phone') ?? '0533333333';
       _userEmail = profile is Map<String, dynamic>
           ? profile['email']?.toString() ?? ''
           : '';
-      final make = driver is Map<String, dynamic> ? driver['vehicleMake']?.toString() ?? '' : '';
-      final model = driver is Map<String, dynamic> ? driver['vehicleModel']?.toString() ?? '' : '';
+      final make = driver is Map<String, dynamic>
+          ? driver['vehicleMake']?.toString() ?? ''
+          : '';
+      final model = driver is Map<String, dynamic>
+          ? driver['vehicleModel']?.toString() ?? ''
+          : '';
       _vehicleType = '$make $model'.trim();
       if (_vehicleType.isEmpty && driver is Map<String, dynamic>) {
         _vehicleType = driver['vehicleType']?.toString() ?? '';
@@ -94,7 +108,34 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
       _plateNumber = driver is Map<String, dynamic>
           ? driver['plateNumber']?.toString() ?? ''
           : '';
+      if (driver is Map<String, dynamic> && driver['isAvailable'] is bool) {
+        _isOnline = driver['isAvailable'] as bool;
+      }
     });
+  }
+
+  Future<void> _setWorkMode(bool value) async {
+    final previousValue = _isOnline;
+    final provider = context.read<DriverProvider>();
+    setState(() => _isOnline = value);
+    try {
+      await provider.setAvailability(value);
+      if (mounted) {
+        setState(() => _isOnline = provider.isAvailable);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isOnline = previousValue);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            LanguageController().isArabic
+                ? 'تعذر تحديث حالة العمل'
+                : 'Could not update work mode',
+          ),
+        ),
+      );
+    }
   }
 
   void _onItemTapped(int index) {
@@ -287,7 +328,9 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                 Switch.adaptive(
                   value: _isOnline,
                   activeTrackColor: AppColors.success,
-                  onChanged: (v) => setState(() => _isOnline = v),
+                  onChanged: context.watch<DriverProvider>().isActionLoading
+                      ? null
+                      : _setWorkMode,
                 ),
               ],
             ),
@@ -377,249 +420,256 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: (workflow == 1
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: (workflow == 1
+                                  ? AppColors.primary
+                                  : AppColors.secondary)
+                              .withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          workflow == 1
+                              ? (isAr ? 'استلام' : 'Pickup')
+                              : (isAr ? 'توصيل' : 'Delivery'),
+                          style: TextStyle(
+                            color: workflow == 1
                                 ? AppColors.primary
-                                : AppColors.secondary)
-                            .withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        workflow == 1
-                            ? (isAr ? 'استلام' : 'Pickup')
-                            : (isAr ? 'توصيل' : 'Delivery'),
-                        style: TextStyle(
-                          color: workflow == 1
-                              ? AppColors.primary
-                              : AppColors.secondary,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.xs),
-                    // Order Type Badge
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AppColors.tertiary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        isAr ? 'مهمة' : 'Task',
-                        style: const TextStyle(
-                          color: AppColors.tertiary,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.xs),
-                    Text('${isAr ? 'مهمة' : 'Task'} #${task.taskID}',
-                        style: TextStyle(
+                                : AppColors.secondary,
+                            fontSize: 10,
                             fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                            color: isDark ? Colors.white : Colors.black87)),
-                  ],
-                ),
-                Text(
-                  isAr ? '${task.deliveryFee} ريال' : '${task.deliveryFee} YER',
-                  style: TextStyle(
-                      color: isDark ? Colors.white : Colors.grey,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12),
-                ),
-              ],
-            ),
-            const Divider(height: 24),
-            Row(
-              children: [
-                Icon(Icons.trip_origin,
-                    size: 16,
-                    color: isDark ? Colors.white : theme.colorScheme.primary),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                    child: Text('${isAr ? 'من:' : 'From:'} $fromAddress',
-                        style: TextStyle(
-                            fontSize: 14,
-                            color: isDark ? Colors.white : Colors.black87))),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Row(
-              children: [
-                Icon(Icons.location_on,
-                    size: 16,
-                    color: isDark ? Colors.white : AppColors.secondary),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                    child: Text('${isAr ? 'إلى:' : 'To:'} $toAddress',
-                        style: TextStyle(
-                            fontSize: 14,
-                            color: isDark ? Colors.white : Colors.black87))),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Row(
-              children: [
-                Icon(Icons.receipt_long,
-                    size: 16,
-                    color: Colors.amber.shade700),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                    child: Text('${isAr ? 'رقم الحجز:' : 'Booking ID:'} #${task.bookingID}',
-                        style: TextStyle(
-                            fontSize: 14,
-                            color: isDark ? Colors.white : Colors.black87))),
-              ],
-            ),
-            if (isUnassigned || isAssigned) ...[
-              const SizedBox(height: AppSpacing.md),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () => _openTaskDetails(task),
-                  icon: const Icon(Icons.manage_search),
-                  label: Text(isAr ? 'إدارة الطلب' : 'Manage Order'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                        isUnassigned ? AppColors.primary : AppColors.success,
-                    foregroundColor: Colors.white,
-                  ),
-                ),
-              ),
-            ],
-            if (isUnassigned && provider.errorMessage == '__legacy_claim_action__') ...[
-              const SizedBox(height: AppSpacing.md),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: provider.isActionLoading
-                      ? null
-                      : () async {
-                          final driverId = Provider.of<AuthProvider>(context, listen: false).userId;
-                          if (driverId == null) {
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('خطأ: لم يتم العثور على معرف السائق'),
-                                  backgroundColor: AppColors.error,
-                                ),
-                              );
-                            }
-                            return;
-                          }
-                          try {
-                            await provider.claimTask(task.taskID, driverId);
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('تم قبول المهمة بنجاح!'),
-                                  backgroundColor: AppColors.success,
-                                ),
-                              );
-                            }
-                          } catch (e) {
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('فشل قبول المهمة: $e'),
-                                  backgroundColor: AppColors.error,
-                                ),
-                              );
-                            }
-                          }
-                        },
-                  icon: provider.isActionLoading
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
                           ),
-                        )
-                      : const Icon(Icons.hail),
-                  label: Text(isAr ? 'قبول المهمة' : 'Claim Task'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                  ),
-                ),
-              ),
-            ],
-            if (isAssigned && provider.errorMessage == '__legacy_complete_action__') ...[
-              const SizedBox(height: AppSpacing.md),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: provider.isActionLoading
-                      ? null
-                      : () async {
-                          try {
-                            await provider.completeTask(task.taskID);
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('تم إكمال المهمة بنجاح!'),
-                                  backgroundColor: AppColors.success,
-                                ),
-                              );
-                            }
-                          } catch (e) {
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('فشل إكمال المهمة: $e'),
-                                  backgroundColor: AppColors.error,
-                                ),
-                              );
-                            }
-                          }
-                        },
-                  icon: provider.isActionLoading
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.xs),
+                      // Order Type Badge
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.tertiary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          isAr ? 'مهمة' : 'Task',
+                          style: const TextStyle(
+                            color: AppColors.tertiary,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
                           ),
-                        )
-                      : const Icon(Icons.check_circle_outline),
-                  label: Text(isAr ? 'إكمال المهمة' : 'Complete Task'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.success,
-                    foregroundColor: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.xs),
+                      Text('${isAr ? 'مهمة' : 'Task'} #${task.taskID}',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              color: isDark ? Colors.white : Colors.black87)),
+                    ],
+                  ),
+                  Text(
+                    isAr
+                        ? '${task.deliveryFee} ريال'
+                        : '${task.deliveryFee} YER',
+                    style: TextStyle(
+                        color: isDark ? Colors.white : Colors.grey,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12),
+                  ),
+                ],
+              ),
+              const Divider(height: 24),
+              Row(
+                children: [
+                  Icon(Icons.trip_origin,
+                      size: 16,
+                      color: isDark ? Colors.white : theme.colorScheme.primary),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                      child: Text('${isAr ? 'من:' : 'From:'} $fromAddress',
+                          style: TextStyle(
+                              fontSize: 14,
+                              color: isDark ? Colors.white : Colors.black87))),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Row(
+                children: [
+                  Icon(Icons.location_on,
+                      size: 16,
+                      color: isDark ? Colors.white : AppColors.secondary),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                      child: Text('${isAr ? 'إلى:' : 'To:'} $toAddress',
+                          style: TextStyle(
+                              fontSize: 14,
+                              color: isDark ? Colors.white : Colors.black87))),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Row(
+                children: [
+                  Icon(Icons.receipt_long,
+                      size: 16, color: Colors.amber.shade700),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                      child: Text(
+                          '${isAr ? 'رقم الحجز:' : 'Booking ID:'} #${task.bookingID}',
+                          style: TextStyle(
+                              fontSize: 14,
+                              color: isDark ? Colors.white : Colors.black87))),
+                ],
+              ),
+              if (isUnassigned || isAssigned) ...[
+                const SizedBox(height: AppSpacing.md),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () => _openTaskDetails(task),
+                    icon: const Icon(Icons.manage_search),
+                    label: Text(isAr ? 'إدارة الطلب' : 'Manage Order'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                          isUnassigned ? AppColors.primary : AppColors.success,
+                      foregroundColor: Colors.white,
+                    ),
                   ),
                 ),
-              ),
-            ],
-            if (isCompleted) ...[
-              const SizedBox(height: AppSpacing.md),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                decoration: BoxDecoration(
-                  color: AppColors.success.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
+              ],
+              if (isUnassigned &&
+                  provider.errorMessage == '__legacy_claim_action__') ...[
+                const SizedBox(height: AppSpacing.md),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: provider.isActionLoading
+                        ? null
+                        : () async {
+                            final driverId = Provider.of<AuthProvider>(context,
+                                    listen: false)
+                                .userId;
+                            if (driverId == null) {
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                        'خطأ: لم يتم العثور على معرف السائق'),
+                                    backgroundColor: AppColors.error,
+                                  ),
+                                );
+                              }
+                              return;
+                            }
+                            try {
+                              await provider.claimTask(task.taskID, driverId);
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('تم قبول المهمة بنجاح!'),
+                                    backgroundColor: AppColors.success,
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('فشل قبول المهمة: $e'),
+                                    backgroundColor: AppColors.error,
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                    icon: provider.isActionLoading
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(Icons.hail),
+                    label: Text(isAr ? 'قبول المهمة' : 'Claim Task'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
                 ),
-                child: Text(
-                  isAr ? 'تم بنجاح' : 'Completed Successfully',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                      color: AppColors.success, fontWeight: FontWeight.bold),
+              ],
+              if (isAssigned &&
+                  provider.errorMessage == '__legacy_complete_action__') ...[
+                const SizedBox(height: AppSpacing.md),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: provider.isActionLoading
+                        ? null
+                        : () async {
+                            try {
+                              await provider.completeTask(task.taskID);
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('تم إكمال المهمة بنجاح!'),
+                                    backgroundColor: AppColors.success,
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('فشل إكمال المهمة: $e'),
+                                    backgroundColor: AppColors.error,
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                    icon: provider.isActionLoading
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(Icons.check_circle_outline),
+                    label: Text(isAr ? 'إكمال المهمة' : 'Complete Task'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.success,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
                 ),
-              ),
-            ],
+              ],
+              if (isCompleted) ...[
+                const SizedBox(height: AppSpacing.md),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.success.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    isAr ? 'تم بنجاح' : 'Completed Successfully',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                        color: AppColors.success, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -641,11 +691,15 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.error_outline, color: AppColors.error, size: 60),
+                  const Icon(Icons.error_outline,
+                      color: AppColors.error, size: 60),
                   const SizedBox(height: AppSpacing.md),
                   Text(
-                    isAr ? 'حدث خطأ أثناء تحميل الطلبات' : 'Error loading requests',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                    isAr
+                        ? 'حدث خطأ أثناء تحميل الطلبات'
+                        : 'Error loading requests',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 18),
                   ),
                   const SizedBox(height: AppSpacing.xs),
                   Text(
@@ -664,7 +718,8 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
           );
         }
 
-        final availableTasks = provider.tasks.where((t) => t.status == 0).toList();
+        final availableTasks =
+            provider.tasks.where((t) => t.status == 0).toList();
 
         if (availableTasks.isEmpty) {
           return RefreshIndicator(
@@ -673,7 +728,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               children: [
-                _buildEarningsCard(),
+                _buildEarningsCard(provider),
                 const SizedBox(height: 40),
                 Center(
                   child: Column(
@@ -717,7 +772,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
             children: [
-              _buildEarningsCard(),
+              _buildEarningsCard(provider),
               const SizedBox(height: AppSpacing.xl),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -743,8 +798,15 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
     );
   }
 
-  Widget _buildEarningsCard() {
+  Widget _buildEarningsCard(DriverProvider provider) {
     final isAr = LanguageController().isArabic;
+    final availableCount =
+        provider.tasks.where((task) => task.status == 0).length;
+    final activeCount = provider.tasks
+        .where((task) => task.status == 1 || task.status == 2)
+        .length;
+    final completedCount =
+        provider.tasks.where((task) => task.status == 3).length;
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -770,7 +832,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  isAr ? 'أرباحك اليوم' : 'Today\'s Earnings',
+                  isAr ? 'إحصائيات المهام' : 'Task Stats',
                   style: const TextStyle(
                       color: Colors.white,
                       fontSize: 16,
@@ -778,11 +840,21 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
-                  isAr ? '120.50 ر.ي' : '120.50 YER',
+                  isAr ? '$completedCount مكتملة' : '$completedCount completed',
                   style: const TextStyle(
                       color: Colors.white,
                       fontSize: 28,
                       fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  isAr
+                      ? '$activeCount حالية • $availableCount متاحة'
+                      : '$activeCount active • $availableCount available',
+                  style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500),
                 ),
               ],
             ),
@@ -792,7 +864,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                 color: Colors.white.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(15),
               ),
-              child: const Icon(Icons.payments_outlined,
+              child: const Icon(Icons.assignment_turned_in_outlined,
                   color: Colors.white, size: 35),
             ),
           ],
@@ -800,8 +872,6 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
       ),
     );
   }
-
-
 
   // --- My Orders Tab (Current/Previous Toggle) ---
   Widget _buildMyOrdersTab() {
@@ -812,12 +882,18 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
     return Consumer2<DriverProvider, AuthProvider>(
       builder: (context, provider, authProvider, child) {
         final driverId = authProvider.userId;
-        final currentTasks = driverId == null ? <dynamic>[] : provider.tasks
-            .where((t) => t.deliveryStaffID == driverId && (t.status == 1 || t.status == 2))
-            .toList();
-        final previousTasks = driverId == null ? <dynamic>[] : provider.tasks
-            .where((t) => t.deliveryStaffID == driverId && t.status == 3)
-            .toList();
+        final currentTasks = driverId == null
+            ? <dynamic>[]
+            : provider.tasks
+                .where((t) =>
+                    t.deliveryStaffID == driverId &&
+                    (t.status == 1 || t.status == 2))
+                .toList();
+        final previousTasks = driverId == null
+            ? <dynamic>[]
+            : provider.tasks
+                .where((t) => t.deliveryStaffID == driverId && t.status == 3)
+                .toList();
 
         List<Widget> currentWidgets = [];
         if (currentTasks.isEmpty) {
@@ -962,29 +1038,32 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
             Icons.drive_eta_outlined,
             isAr ? 'نوع المركبة' : 'Vehicle Type',
             _vehicleType.isEmpty ? '-' : _vehicleType),
-        _buildProfileItem(Icons.confirmation_number_outlined,
-            isAr ? 'رقم اللوحة' : 'Plate Number', _plateNumber.isEmpty ? '-' : _plateNumber),
+        _buildProfileItem(
+            Icons.confirmation_number_outlined,
+            isAr ? 'رقم اللوحة' : 'Plate Number',
+            _plateNumber.isEmpty ? '-' : _plateNumber),
 
         const SizedBox(height: AppSpacing.lg),
 
         // التفضيلات
         _buildSettingsHeader(isAr ? 'التفضيلات' : 'Preferences'),
         ListTile(
-          leading: Icon(Icons.language, color: isDark ? Colors.white : AppColors.primary),
-          title: Text(isAr ? 'لغة التطبيق' : 'App Language', style: const TextStyle(fontWeight: FontWeight.bold)),
+          leading: Icon(Icons.language,
+              color: isDark ? Colors.white : AppColors.primary),
+          title: Text(isAr ? 'لغة التطبيق' : 'App Language',
+              style: const TextStyle(fontWeight: FontWeight.bold)),
           trailing: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             decoration: BoxDecoration(
-              color: isDark ? Colors.white10 : AppColors.primary.withValues(alpha: 0.1),
+              color: isDark
+                  ? Colors.white10
+                  : AppColors.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Text(
-              isAr ? 'العربية' : 'English', 
-              style: TextStyle(
-                color: isDark ? Colors.white : AppColors.primary, 
-                fontWeight: FontWeight.bold
-              )
-            ),
+            child: Text(isAr ? 'العربية' : 'English',
+                style: TextStyle(
+                    color: isDark ? Colors.white : AppColors.primary,
+                    fontWeight: FontWeight.bold)),
           ),
           onTap: () {
             setState(() {
@@ -998,7 +1077,8 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
           builder: (context, themeMode, child) {
             final isDarkTheme = themeMode == ThemeMode.dark ||
                 (themeMode == ThemeMode.system &&
-                    MediaQuery.of(context).platformBrightness == Brightness.dark);
+                    MediaQuery.of(context).platformBrightness ==
+                        Brightness.dark);
             return _buildSwitchTile(
               isAr ? 'الوضع الليلي' : 'Night Mode',
               isDarkTheme,
@@ -1034,23 +1114,33 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Text(title, style: TextStyle(fontSize: 14, color: isDark ? Colors.white.withValues(alpha: 0.7) : Colors.grey.shade600, fontWeight: FontWeight.bold)),
+      child: Text(title,
+          style: TextStyle(
+              fontSize: 14,
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.7)
+                  : Colors.grey.shade600,
+              fontWeight: FontWeight.bold)),
     );
   }
 
-  Widget _buildSwitchTile(String title, bool value, Function(bool) onChanged, {IconData? icon}) {
+  Widget _buildSwitchTile(String title, bool value, Function(bool) onChanged,
+      {IconData? icon}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return SwitchListTile(
-      secondary: Icon(
-        icon ?? (value ? Icons.dark_mode : Icons.light_mode), 
-        color: value 
-            ? (isDark ? Colors.white : AppColors.primary) 
-            : (isDark ? Colors.white38 : Colors.grey)
-      ),
-      title: Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: isDark ? Colors.white : null)),
+      secondary: Icon(icon ?? (value ? Icons.dark_mode : Icons.light_mode),
+          color: value
+              ? (isDark ? Colors.white : AppColors.primary)
+              : (isDark ? Colors.white38 : Colors.grey)),
+      title: Text(title,
+          style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: isDark ? Colors.white : null)),
       value: value,
       onChanged: onChanged,
-      activeTrackColor: isDark ? Colors.white30 : AppColors.primary.withValues(alpha: 0.5),
+      activeTrackColor:
+          isDark ? Colors.white30 : AppColors.primary.withValues(alpha: 0.5),
       activeThumbColor: isDark ? Colors.white : AppColors.primary,
     );
   }
@@ -1114,9 +1204,8 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () async {
               Navigator.pop(context); // Close the dialog first
-              await Provider.of<AuthProvider>(context, listen: false).logout(
-                Provider.of<CartProvider>(context, listen: false)
-              );
+              await Provider.of<AuthProvider>(context, listen: false)
+                  .logout(Provider.of<CartProvider>(context, listen: false));
               if (context.mounted) {
                 context.go('/login');
               }

@@ -106,7 +106,8 @@ namespace BrightClean.API.Controllers
                         d.VehicleType,
                         d.VehicleMake,
                         d.VehicleModel,
-                        d.PlateNumber
+                        d.PlateNumber,
+                        d.IsAvailable
                     })
                     .FirstOrDefaultAsync();
 

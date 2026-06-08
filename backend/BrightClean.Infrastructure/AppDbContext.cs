@@ -41,6 +41,10 @@ namespace BrightClean.Infrastructure
             modelBuilder.Entity<LaundryAgent>().ToTable("LaundryAgents");
             modelBuilder.Entity<Admin>().ToTable("Admins");
 
+            modelBuilder.Entity<DeliveryStaff>()
+                .Property(d => d.IsAvailable)
+                .HasDefaultValue(false);
+
             // --- 2. Unique Constraints & Indexes ---
             
             // User unique fields
