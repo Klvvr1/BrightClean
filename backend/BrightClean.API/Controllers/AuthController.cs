@@ -96,7 +96,7 @@ namespace BrightClean.API.Controllers
             }
 
             var selectedCatalogQuery = _context.ServiceCatalogItems
-                .Where(s => s.IsAvailable);
+                .Where(s => s.IsAvailable && !s.IsDeleted);
 
             if (selectedServiceIds.Count > 0)
             {

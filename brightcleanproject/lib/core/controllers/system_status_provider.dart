@@ -1,6 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'dart:convert';
-
 import '../network/api_client.dart';
 import '../error/exceptions.dart';
 
@@ -19,7 +17,7 @@ class SystemStatusProvider with ChangeNotifier {
     // Don't notify listeners here to avoid unnecessary rebuilds during startup
 
     try {
-      final data = await _apiClient.get('/systemstatus/status');
+      final data = await _apiClient.get('/api/systemstatus/status');
 
       if (data != null) {
         _isLoginEnabled = data['loginEnabled'] ?? false;

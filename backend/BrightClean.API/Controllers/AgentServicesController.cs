@@ -60,6 +60,11 @@ namespace BrightClean.API.Controllers
                     return BadRequest(new { message = $"Service {serviceId} was not found in the catalog." });
                 }
 
+                if (!service.IsAvailable || service.IsDeleted)
+                {
+                    return BadRequest(new { message = $"Service {serviceId} is not available for assignment." });
+                }
+
                 var existingService = await _context.AgentServices
                     .FirstOrDefaultAsync(asvc => asvc.LaundryAgentID == agentId && asvc.ServiceID == serviceId);
 

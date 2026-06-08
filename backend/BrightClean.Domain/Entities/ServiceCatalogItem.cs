@@ -32,6 +32,9 @@ namespace BrightClean.Domain.Entities
         public bool IsAvailable { get; set; } = true;
 
         [Required]
+        public bool IsDeleted { get; set; } = false;
+
+        [Required]
         public int AdminID { get; set; }
 
         [ForeignKey(nameof(AdminID))]

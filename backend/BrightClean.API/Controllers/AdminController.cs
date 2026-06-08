@@ -18,6 +18,7 @@ namespace BrightClean.API.Controllers
     public class AdminController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private static readonly string UnauthorizedAdminMessage = "فشلت عملية التحقق من هوية المسؤول.";
 
         public AdminController(AppDbContext context)
         {
@@ -159,6 +160,12 @@ namespace BrightClean.API.Controllers
         [HttpPost("agents/{agentId}/services")]
         public async Task<IActionResult> SetAgentServices(int agentId, [FromBody] SetAgentServicesDto dto)
         {
+            var adminId = GetAdminId();
+            if (adminId == null)
+            {
+                return Unauthorized(new { message = UnauthorizedAdminMessage });
+            }
+
             var agent = await _context.LaundryAgents
                 .FirstOrDefaultAsync(a => a.UserID == agentId);
 
@@ -184,7 +191,7 @@ namespace BrightClean.API.Controllers
             }
 
             var validServiceIds = await _context.ServiceCatalogItems
-                .Where(service => requestedServiceIds.Contains(service.ServiceID) && service.IsAvailable)
+                .Where(service => requestedServiceIds.Contains(service.ServiceID) && service.IsAvailable && !service.IsDeleted)
                 .Select(service => service.ServiceID)
                 .ToListAsync();
 
@@ -226,12 +233,332 @@ namespace BrightClean.API.Controllers
                 });
             }
 
+            _context.AuditLogs.Add(new AuditLog
+            {
+                AdminID = adminId.Value,
+                Action = "UPDATE_AGENT_SERVICES",
+                TargetEntity = "LaundryAgent",
+                TargetID = agentId,
+                Details = $"Updated laundry agent services. Active service IDs: {string.Join(",", requestedServiceIds)}.",
+                IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                PerformedAt = DateTime.UtcNow
+            });
+
             await _context.SaveChangesAsync();
 
             return Ok(new
             {
                 agentId,
                 activeServiceIds = requestedServiceIds
+            });
+        }
+
+        // GET: /api/admin/services
+        [HttpGet("services")]
+        public async Task<IActionResult> GetServices()
+        {
+            var services = await _context.ServiceCatalogItems
+                .OrderBy(service => service.Category)
+                .ThenBy(service => service.Type)
+                .ThenBy(service => service.ServiceName)
+                .Select(service => new AdminServiceCatalogItemDto
+                {
+                    ServiceID = service.ServiceID,
+                    ServiceName = service.ServiceName,
+                    Category = (int)service.Category,
+                    Type = (int)service.Type,
+                    Price = service.Price,
+                    PricingModel = (int)service.PricingModel,
+                    DeliveryModel = (int)service.DeliveryModel,
+                    IsAvailable = service.IsAvailable,
+                    IsDeleted = service.IsDeleted,
+                    LinkedAgentCount = service.AgentServices.Count(),
+                    ActiveAgentCount = service.AgentServices.Count(agentService => agentService.IsActive),
+                    HasHistoricalUsage = service.BookingItems.Any(),
+                    CanDelete = !service.AgentServices.Any() && !service.BookingItems.Any(),
+                    CanDisable = !service.IsDeleted && service.IsAvailable
+                })
+                .ToListAsync();
+
+            return Ok(services);
+        }
+
+        // POST: /api/admin/services
+        [HttpPost("services")]
+        public async Task<IActionResult> CreateService([FromBody] ServiceCatalogItemUpsertDto dto)
+        {
+            var adminId = GetAdminId();
+            if (adminId == null)
+            {
+                return Unauthorized(new { message = UnauthorizedAdminMessage });
+            }
+
+            var validationResult = ValidateServiceCatalogItemDto(dto);
+            if (validationResult != null)
+            {
+                return validationResult;
+            }
+
+            var service = new ServiceCatalogItem
+            {
+                ServiceName = dto.ServiceName.Trim(),
+                Category = (ServiceCategory)dto.Category,
+                Type = (ServiceType)dto.Type,
+                Price = dto.Price,
+                PricingModel = (PricingModel)dto.PricingModel,
+                DeliveryModel = (DeliveryModel)dto.DeliveryModel,
+                IsAvailable = dto.IsAvailable,
+                IsDeleted = false,
+                AdminID = adminId.Value
+            };
+
+            _context.ServiceCatalogItems.Add(service);
+
+            _context.AuditLogs.Add(new AuditLog
+            {
+                AdminID = adminId.Value,
+                Action = "CREATE_SERVICE",
+                TargetEntity = "ServiceCatalogItem",
+                TargetID = service.ServiceID,
+                Details = $"Created service '{service.ServiceName}' with price {service.Price}.",
+                IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                PerformedAt = DateTime.UtcNow
+            });
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                service.ServiceID,
+                service.ServiceName,
+                service.Category,
+                service.Type,
+                service.Price,
+                service.PricingModel,
+                service.DeliveryModel,
+                service.IsAvailable,
+                service.IsDeleted
+            });
+        }
+
+        // PUT: /api/admin/services/{serviceId}
+        [HttpPut("services/{serviceId}")]
+        public async Task<IActionResult> UpdateService(int serviceId, [FromBody] ServiceCatalogItemUpsertDto dto)
+        {
+            var adminId = GetAdminId();
+            if (adminId == null)
+            {
+                return Unauthorized(new { message = UnauthorizedAdminMessage });
+            }
+
+            var validationResult = ValidateServiceCatalogItemDto(dto);
+            if (validationResult != null)
+            {
+                return validationResult;
+            }
+
+            var service = await _context.ServiceCatalogItems.FirstOrDefaultAsync(s => s.ServiceID == serviceId);
+            if (service == null)
+            {
+                return NotFound(new { message = $"Service {serviceId} was not found." });
+            }
+
+            service.ServiceName = dto.ServiceName.Trim();
+            service.Category = (ServiceCategory)dto.Category;
+            service.Type = (ServiceType)dto.Type;
+            service.Price = dto.Price;
+            service.PricingModel = (PricingModel)dto.PricingModel;
+            service.DeliveryModel = (DeliveryModel)dto.DeliveryModel;
+            service.IsAvailable = dto.IsAvailable && !service.IsDeleted;
+
+            _context.AuditLogs.Add(new AuditLog
+            {
+                AdminID = adminId.Value,
+                Action = "UPDATE_SERVICE",
+                TargetEntity = "ServiceCatalogItem",
+                TargetID = service.ServiceID,
+                Details = $"Updated service '{service.ServiceName}'.",
+                IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                PerformedAt = DateTime.UtcNow
+            });
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                service.ServiceID,
+                service.ServiceName,
+                service.Category,
+                service.Type,
+                service.Price,
+                service.PricingModel,
+                service.DeliveryModel,
+                service.IsAvailable,
+                service.IsDeleted
+            });
+        }
+
+        // PATCH: /api/admin/services/{serviceId}/availability
+        [HttpPatch("services/{serviceId}/availability")]
+        public async Task<IActionResult> SetServiceAvailability(int serviceId, [FromBody] ServiceAvailabilityDto dto)
+        {
+            var adminId = GetAdminId();
+            if (adminId == null)
+            {
+                return Unauthorized(new { message = UnauthorizedAdminMessage });
+            }
+
+            var service = await _context.ServiceCatalogItems.FirstOrDefaultAsync(s => s.ServiceID == serviceId);
+            if (service == null)
+            {
+                return NotFound(new { message = $"Service {serviceId} was not found." });
+            }
+
+            if (service.IsDeleted)
+            {
+                return BadRequest(new { message = "Deleted services must be restored before changing availability." });
+            }
+
+            service.IsAvailable = dto.IsAvailable;
+
+            _context.AuditLogs.Add(new AuditLog
+            {
+                AdminID = adminId.Value,
+                Action = dto.IsAvailable ? "ENABLE_SERVICE" : "DISABLE_SERVICE",
+                TargetEntity = "ServiceCatalogItem",
+                TargetID = service.ServiceID,
+                Details = $"{(dto.IsAvailable ? "Enabled" : "Disabled")} service '{service.ServiceName}'.",
+                IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                PerformedAt = DateTime.UtcNow
+            });
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                service.ServiceID,
+                service.ServiceName,
+                service.IsAvailable,
+                service.IsDeleted
+            });
+        }
+
+        // DELETE: /api/admin/services/{serviceId}
+        [HttpDelete("services/{serviceId}")]
+        public async Task<IActionResult> DeleteService(int serviceId)
+        {
+            var adminId = GetAdminId();
+            if (adminId == null)
+            {
+                return Unauthorized(new { message = UnauthorizedAdminMessage });
+            }
+
+            var service = await _context.ServiceCatalogItems.FirstOrDefaultAsync(s => s.ServiceID == serviceId);
+            if (service == null)
+            {
+                return NotFound(new { message = $"Service {serviceId} was not found." });
+            }
+
+            if (service.IsDeleted)
+            {
+                return Ok(new
+                {
+                    service.ServiceID,
+                    deletionType = "AlreadySoftDeleted",
+                    message = "Service was already soft deleted."
+                });
+            }
+
+            var hasAgentServices = await _context.AgentServices.AnyAsync(s => s.ServiceID == serviceId);
+            var hasBookingItems = await _context.BookingItems.AnyAsync(i => i.ServiceID == serviceId);
+
+            if (!hasAgentServices && !hasBookingItems)
+            {
+                _context.AuditLogs.Add(new AuditLog
+                {
+                    AdminID = adminId.Value,
+                    Action = "HARD_DELETE_SERVICE",
+                    TargetEntity = "ServiceCatalogItem",
+                    TargetID = service.ServiceID,
+                    Details = $"Hard deleted unused service '{service.ServiceName}'.",
+                    IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    PerformedAt = DateTime.UtcNow
+                });
+
+                _context.ServiceCatalogItems.Remove(service);
+                await _context.SaveChangesAsync();
+
+                return Ok(new
+                {
+                    serviceId,
+                    deletionType = "HardDeleted",
+                    message = "Service was permanently deleted because it had no historical relationships."
+                });
+            }
+
+            service.IsDeleted = true;
+            service.IsAvailable = false;
+
+            _context.AuditLogs.Add(new AuditLog
+            {
+                AdminID = adminId.Value,
+                Action = "SOFT_DELETE_SERVICE",
+                TargetEntity = "ServiceCatalogItem",
+                TargetID = service.ServiceID,
+                Details = $"Soft deleted service '{service.ServiceName}'. Agent links: {hasAgentServices}. Booking history: {hasBookingItems}.",
+                IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                PerformedAt = DateTime.UtcNow
+            });
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                service.ServiceID,
+                deletionType = "SoftDeleted",
+                service.IsAvailable,
+                service.IsDeleted,
+                message = "Service was soft deleted and disabled."
+            });
+        }
+
+        // PATCH: /api/admin/services/{serviceId}/restore
+        [HttpPatch("services/{serviceId}/restore")]
+        public async Task<IActionResult> RestoreService(int serviceId)
+        {
+            var adminId = GetAdminId();
+            if (adminId == null)
+            {
+                return Unauthorized(new { message = UnauthorizedAdminMessage });
+            }
+
+            var service = await _context.ServiceCatalogItems.FirstOrDefaultAsync(s => s.ServiceID == serviceId);
+            if (service == null)
+            {
+                return NotFound(new { message = $"Service {serviceId} was not found." });
+            }
+
+            service.IsDeleted = false;
+
+            _context.AuditLogs.Add(new AuditLog
+            {
+                AdminID = adminId.Value,
+                Action = "RESTORE_SERVICE",
+                TargetEntity = "ServiceCatalogItem",
+                TargetID = service.ServiceID,
+                Details = $"Restored service '{service.ServiceName}'. Availability remains {service.IsAvailable}.",
+                IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                PerformedAt = DateTime.UtcNow
+            });
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                service.ServiceID,
+                service.ServiceName,
+                service.IsAvailable,
+                service.IsDeleted
             });
         }
 
@@ -521,6 +848,80 @@ namespace BrightClean.API.Controllers
                 ? adminId
                 : null;
         }
+
+        private IActionResult? ValidateServiceCatalogItemDto(ServiceCatalogItemUpsertDto? dto)
+        {
+            if (dto == null)
+            {
+                return BadRequest(new { message = "Service payload is required." });
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.ServiceName))
+            {
+                return BadRequest(new { message = "ServiceName is required." });
+            }
+
+            if (dto.Price < 0)
+            {
+                return BadRequest(new { message = "Price must be zero or greater." });
+            }
+
+            if (!Enum.IsDefined(typeof(ServiceCategory), dto.Category))
+            {
+                return BadRequest(new { message = "Invalid service category." });
+            }
+
+            if (!Enum.IsDefined(typeof(ServiceType), dto.Type))
+            {
+                return BadRequest(new { message = "Invalid service type." });
+            }
+
+            if (!Enum.IsDefined(typeof(PricingModel), dto.PricingModel))
+            {
+                return BadRequest(new { message = "Invalid pricing model." });
+            }
+
+            if (!Enum.IsDefined(typeof(DeliveryModel), dto.DeliveryModel))
+            {
+                return BadRequest(new { message = "Invalid delivery model." });
+            }
+
+            return null;
+        }
+    }
+
+    public class AdminServiceCatalogItemDto
+    {
+        public int ServiceID { get; set; }
+        public string ServiceName { get; set; } = string.Empty;
+        public int Category { get; set; }
+        public int Type { get; set; }
+        public decimal Price { get; set; }
+        public int PricingModel { get; set; }
+        public int DeliveryModel { get; set; }
+        public bool IsAvailable { get; set; }
+        public bool IsDeleted { get; set; }
+        public int LinkedAgentCount { get; set; }
+        public int ActiveAgentCount { get; set; }
+        public bool HasHistoricalUsage { get; set; }
+        public bool CanDelete { get; set; }
+        public bool CanDisable { get; set; }
+    }
+
+    public class ServiceCatalogItemUpsertDto
+    {
+        public string ServiceName { get; set; } = string.Empty;
+        public int Category { get; set; }
+        public int Type { get; set; }
+        public decimal Price { get; set; }
+        public int PricingModel { get; set; }
+        public int DeliveryModel { get; set; }
+        public bool IsAvailable { get; set; } = true;
+    }
+
+    public class ServiceAvailabilityDto
+    {
+        public bool IsAvailable { get; set; }
     }
 
     public class PaymentReviewDto

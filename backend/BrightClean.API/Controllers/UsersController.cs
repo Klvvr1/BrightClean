@@ -189,7 +189,10 @@ namespace BrightClean.API.Controllers
                     .Where(r => r.Booking.LaundryAgentID == a.UserID)
                     .ToList();
                 var activeServices = a.SubscribedServices
-                    .Where(s => s.IsActive && s.ServiceCatalogItem != null && s.ServiceCatalogItem.IsAvailable)
+                    .Where(s => s.IsActive &&
+                                s.ServiceCatalogItem != null &&
+                                s.ServiceCatalogItem.IsAvailable &&
+                                !s.ServiceCatalogItem.IsDeleted)
                     .ToList();
                 var agentServiceIds = activeServices
                     .Select(s => s.ServiceID)
@@ -274,18 +277,18 @@ namespace BrightClean.API.Controllers
                     },
                     isStoreClosed = a.IsStoreClosed,
                     serviceIds = a.SubscribedServices
-                        .Where(s => s.IsActive && s.ServiceCatalogItem.IsAvailable)
+                        .Where(s => s.IsActive && s.ServiceCatalogItem.IsAvailable && !s.ServiceCatalogItem.IsDeleted)
                         .Select(s => s.ServiceID)
                         .ToList(),
                     serviceCount = a.SubscribedServices
-                        .Count(s => s.IsActive && s.ServiceCatalogItem.IsAvailable),
+                        .Count(s => s.IsActive && s.ServiceCatalogItem.IsAvailable && !s.ServiceCatalogItem.IsDeleted),
                     averageRating = _context.BookingRatings
                         .Where(r => r.Booking.LaundryAgentID == a.UserID && r.AgentRating.HasValue)
                         .Average(r => (double?)r.AgentRating) ?? 0,
                     reviewCount = _context.BookingRatings
                         .Count(r => r.Booking.LaundryAgentID == a.UserID && r.AgentRating.HasValue),
                     services = a.SubscribedServices
-                        .Where(s => s.IsActive && s.ServiceCatalogItem.IsAvailable)
+                        .Where(s => s.IsActive && s.ServiceCatalogItem.IsAvailable && !s.ServiceCatalogItem.IsDeleted)
                         .Select(s => new
                         {
                             s.ServiceCatalogItem.ServiceID,
