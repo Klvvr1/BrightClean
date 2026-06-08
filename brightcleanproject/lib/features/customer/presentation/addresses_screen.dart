@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_styles.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/error/exceptions.dart';
+import '../data/models/customer_address_model.dart';
 import 'map_picker_screen.dart';
 
 class AddressesScreen extends StatefulWidget {
@@ -14,8 +14,7 @@ class AddressesScreen extends StatefulWidget {
 }
 
 class _AddressesScreenState extends State<AddressesScreen> {
-  // Use SharedPreferences to persist local address display strings
-  List<String> _addresses = [];
+  List<CustomerAddressModel> _addresses = [];
   bool _isLoading = true;
   bool _isSaving = false;
 
@@ -27,35 +26,43 @@ class _AddressesScreenState extends State<AddressesScreen> {
     _loadSavedAddresses();
   }
 
-  // 1. Load addresses from local cache on initialization
   Future<void> _loadSavedAddresses() async {
-    final prefs = await SharedPreferences.getInstance();
-    final userId = prefs.get('user_id')?.toString() ?? 'default_user';
-    if (!mounted) return;
-    setState(() {
-      _addresses = prefs.getStringList('user_saved_addresses_$userId') ?? [];
-      _isLoading = false;
-    });
+    setState(() => _isLoading = true);
+    try {
+      final response = await _apiClient.get('/api/addresses');
+      if (!mounted) return;
+      setState(() {
+        _addresses = response is List
+            ? response
+                .whereType<Map>()
+                .map((item) => CustomerAddressModel.fromJson(
+                      item.map((key, value) => MapEntry(key.toString(), value)),
+                    ))
+                .where((address) => address.isValid)
+                .toList()
+            : [];
+        _isLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+    }
   }
 
-  // 2. Persist address label locally (for display)
-  Future<void> _saveAddressLocally(String address) async {
-    final prefs = await SharedPreferences.getInstance();
-    final userId = prefs.get('user_id')?.toString() ?? 'default_user';
-    _addresses.add(address);
-    await prefs.setStringList('user_saved_addresses_$userId', _addresses);
-    if (!mounted) return;
-    setState(() {});
-  }
-
-  // 3. Remove an address from local cache
   Future<void> _removeAddress(int index) async {
-    final prefs = await SharedPreferences.getInstance();
-    final userId = prefs.get('user_id')?.toString() ?? 'default_user';
-    _addresses.removeAt(index);
-    await prefs.setStringList('user_saved_addresses_$userId', _addresses);
-    if (!mounted) return;
-    setState(() {});
+    final address = _addresses[index];
+    try {
+      await _apiClient.delete('/api/addresses/${address.addressID}');
+      await _loadSavedAddresses();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('ÙØ´Ù„ Ø­Ø°Ù Ø§Ù„Ø¹Ù†ÙˆØ§Ù†: $e'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+    }
   }
 
   Future<void> _navigateAndAddNewAddress() async {
@@ -67,6 +74,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
 
     // MapPickerScreen returns a plain String like 'موقع محدد (lat, lng)'
     if (result == null || result.isEmpty) return;
+    if (!mounted) return;
 
     final addressLabel = result;
 
@@ -77,6 +85,17 @@ class _AddressesScreenState extends State<AddressesScreen> {
     if (coordMatch != null) {
       lat = double.tryParse(coordMatch.group(1) ?? '0') ?? 0.0;
       lng = double.tryParse(coordMatch.group(2) ?? '0') ?? 0.0;
+    }
+
+    if (lat == 0.0 && lng == 0.0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+              'ÙŠØ±Ø¬Ù‰ ØªØ­Ø¯ÙŠØ¯ Ù…ÙˆÙ‚Ø¹ ØµØ§Ù„Ø­ Ø¹Ù„Ù‰ Ø§Ù„Ø®Ø±ÙŠØ·Ø©'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+      return;
     }
 
     // Extract area (everything before first comma or full label) and street (everything after or full label)
@@ -98,17 +117,16 @@ class _AddressesScreenState extends State<AddressesScreen> {
         'longitude': lng,
       });
 
-      await _saveAddressLocally(addressLabel);
+      await _loadSavedAddresses();
 
-      if (mounted) {
-        final theme = Theme.of(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('تمت إضافة العنوان بنجاح'),
-            backgroundColor: theme.colorScheme.primary,
-          ),
-        );
-      }
+      if (!mounted) return;
+      final theme = Theme.of(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('تمت إضافة العنوان بنجاح'),
+          backgroundColor: theme.colorScheme.primary,
+        ),
+      );
     } on ServerException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -203,7 +221,8 @@ class _AddressesScreenState extends State<AddressesScreen> {
           decoration: AppStyles.surface(context),
           child: ListTile(
             leading: Icon(Icons.location_on, color: theme.colorScheme.primary),
-            title: Text(_addresses[index], style: theme.textTheme.bodyLarge),
+            title:
+                Text(_addresses[index].label, style: theme.textTheme.bodyLarge),
             trailing: IconButton(
               icon: Icon(Icons.delete_outline, color: theme.colorScheme.error),
               onPressed: () => _removeAddress(index),

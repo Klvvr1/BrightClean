@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using BrightClean.Infrastructure;
 using BrightClean.Domain.Entities;
 using BrightClean.Domain.Enums;
@@ -17,10 +18,12 @@ namespace BrightClean.API.Controllers
     public class DeliveryTasksController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly ILogger<DeliveryTasksController> _logger;
 
-        public DeliveryTasksController(AppDbContext context)
+        public DeliveryTasksController(AppDbContext context, ILogger<DeliveryTasksController> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         private static int MaxStepForTask(DeliveryTask task)
@@ -121,6 +124,80 @@ namespace BrightClean.API.Controllers
                    await _context.Bookings.AnyAsync(b =>
                        b.BookingID == task.BookingID &&
                        b.Status == BookingStatus.Ready);
+        }
+
+        // GET: /api/deliverytasks/availability
+        [HttpGet("availability")]
+        public async Task<IActionResult> GetAvailability()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out var driverId))
+            {
+                return Unauthorized(new { message = "Invalid token." });
+            }
+
+            var driver = await _context.DeliveryStaffs
+                .AsNoTracking()
+                .Where(d => d.UserID == driverId)
+                .Select(d => new { d.IsAvailable })
+                .FirstOrDefaultAsync();
+
+            if (driver == null)
+            {
+                return NotFound(new { message = "Delivery staff profile was not found." });
+            }
+
+            return Ok(new { isAvailable = driver.IsAvailable });
+        }
+
+        // PATCH: /api/deliverytasks/availability
+        [HttpPatch("availability")]
+        public async Task<IActionResult> UpdateAvailability([FromBody] DriverAvailabilityRequest request)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out var driverId))
+            {
+                return Unauthorized(new { message = "Invalid token." });
+            }
+
+            var driver = await _context.DeliveryStaffs.FirstOrDefaultAsync(d => d.UserID == driverId);
+            if (driver == null)
+            {
+                return NotFound(new { message = "Delivery staff profile was not found." });
+            }
+
+            driver.IsAvailable = request.IsAvailable;
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Delivery staff {DriverId} availability changed to {IsAvailable}.", driverId, request.IsAvailable);
+
+            return Ok(new { isAvailable = driver.IsAvailable });
+        }
+
+        // GET: /api/deliverytasks/my
+        [HttpGet("my")]
+        public async Task<IActionResult> GetMyTasks()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out var driverId))
+            {
+                return Unauthorized(new { message = "Invalid token." });
+            }
+
+            var tasks = await _context.DeliveryTasks
+                .AsNoTracking()
+                .Include(t => t.PickupAddress)
+                .Include(t => t.DropoffAddress)
+                .Include(t => t.Booking).ThenInclude(b => b.Client)
+                .Include(t => t.Booking).ThenInclude(b => b.LaundryAgent)
+                .Include(t => t.Booking).ThenInclude(b => b.BookingItems).ThenInclude(i => i.ServiceCatalogItem)
+                .Where(t => t.DeliveryStaffID == driverId)
+                .OrderByDescending(t => t.CompletedAt ?? t.LastProgressUpdatedAt ?? t.AssignedAt ?? DateTime.MinValue)
+                .ToListAsync();
+
+            _logger.LogInformation("Loaded {TaskCount} delivery tasks for driver {DriverId}.", tasks.Count, driverId);
+
+            return Ok(tasks.Select(ProjectTaskDetails));
         }
 
         // GET: /api/deliverytasks/pool
@@ -406,5 +483,10 @@ namespace BrightClean.API.Controllers
     public class UpdateTaskProgressDto
     {
         public int CurrentStep { get; set; }
+    }
+
+    public class DriverAvailabilityRequest
+    {
+        public bool IsAvailable { get; set; }
     }
 }

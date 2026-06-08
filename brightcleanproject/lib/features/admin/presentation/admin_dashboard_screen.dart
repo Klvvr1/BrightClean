@@ -77,14 +77,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   @override
   void initState() {
     super.initState();
-    _maintenanceMessageController = TextEditingController(text: 'النظام تحت الصيانة');
+    _maintenanceMessageController =
+        TextEditingController(text: 'النظام تحت الصيانة');
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final provider = Provider.of<SystemStatusProvider>(context, listen: false);
-      final currentMessage = provider.maintenanceMessage ?? 'النظام تحت الصيانة';
+      final provider =
+          Provider.of<SystemStatusProvider>(context, listen: false);
+      final currentMessage =
+          provider.maintenanceMessage ?? 'النظام تحت الصيانة';
       _maintenanceMessageController.text = currentMessage;
       context.read<AdminProvider>().fetchPendingUsers();
       context.read<AdminProvider>().fetchApprovedStaff();
       context.read<AdminProvider>().fetchServices();
+      context.read<AdminProvider>().fetchRecentOrders();
     });
   }
 
@@ -93,7 +97,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     _maintenanceMessageController.dispose();
     super.dispose();
   }
-
 
   // Dummy data for live orders
   final List<Map<String, dynamic>> _liveOrders = [];
@@ -210,7 +213,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(adminProvider.errorMessage ?? 'حدث خطأ أثناء تفعيل الحساب'),
+              content: Text(
+                  adminProvider.errorMessage ?? 'حدث خطأ أثناء تفعيل الحساب'),
               backgroundColor: AppColors.error,
             ),
           );
@@ -241,11 +245,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
-            const Icon(Icons.warning_amber_rounded, color: AppColors.error, size: 28),
+            const Icon(Icons.warning_amber_rounded,
+                color: AppColors.error, size: 28),
             const SizedBox(width: 10),
             const Text(
               'تأكيد طرد من النظام',
-              style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.error),
+              style: TextStyle(
+                  fontWeight: FontWeight.bold, color: AppColors.error),
             ),
           ],
         ),
@@ -256,7 +262,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('إلغاء', style: TextStyle(color: AppColors.textLight)),
+            child: const Text('إلغاء',
+                style: TextStyle(color: AppColors.textLight)),
           ),
           ElevatedButton(
             onPressed: () {
@@ -280,9 +287,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.error,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
             ),
-            child: const Text('نعم، طرد من النظام', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: const Text('نعم، طرد من النظام',
+                style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -400,8 +409,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return TweenAnimationBuilder(
       duration: const Duration(milliseconds: 800),
       tween: Tween<double>(begin: 0, end: 1),
-      curve:
-          Interval(start, end, curve: Curves.easeOut),
+      curve: Interval(start, end, curve: Curves.easeOut),
       builder: (context, double opacity, child) {
         return Opacity(
           opacity: opacity,
@@ -463,10 +471,112 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
+  Widget _buildRecentOrdersSection(List<dynamic> recentOrders) {
+    if (recentOrders.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        decoration: AppStyles.surface(context),
+        child: Row(
+          children: [
+            CircleAvatar(
+              backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+              child: const Icon(Icons.receipt_long, color: AppColors.primary),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Text(
+                'لا توجد طلبات حديثة',
+                style: TextStyle(color: AppColors.textLight),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.separated(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: recentOrders.length,
+      separatorBuilder: (context, index) =>
+          const SizedBox(height: AppSpacing.sm),
+      itemBuilder: (context, index) {
+        final order = recentOrders[index] is Map
+            ? Map<dynamic, dynamic>.from(recentOrders[index] as Map)
+            : <dynamic, dynamic>{};
+        final bookingId = AdminServiceModel.readInt(
+          order,
+          ['bookingID', 'bookingId', 'BookingID'],
+        );
+        final clientName = AdminServiceModel.readString(
+          order,
+          ['clientName', 'ClientName'],
+          fallback: 'عميل',
+        );
+        final laundryName = AdminServiceModel.readString(
+          order,
+          ['laundryName', 'LaundryName'],
+          fallback: '',
+        );
+        final finalTotal = AdminServiceModel.readDouble(
+          order,
+          ['finalTotal', 'FinalTotal'],
+        );
+        final status = AdminServiceModel.readString(
+          order,
+          ['status', 'Status'],
+          fallback: '',
+        );
+        return Container(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          decoration: AppStyles.surface(context),
+          child: Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                child: const Icon(Icons.receipt_long, color: AppColors.primary),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('طلب #$bookingId',
+                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Text(
+                      laundryName.isEmpty
+                          ? 'عميل: $clientName'
+                          : 'عميل: $clientName • $laundryName',
+                      style:
+                          TextStyle(color: AppColors.textLight, fontSize: 12),
+                    ),
+                    if (status.isNotEmpty)
+                      Text(
+                        status,
+                        style:
+                            TextStyle(color: AppColors.textLight, fontSize: 11),
+                      ),
+                  ],
+                ),
+              ),
+              Text(
+                finalTotal > 0 ? '${finalTotal.toStringAsFixed(0)} ر.ي' : '-',
+                style: const TextStyle(
+                    fontWeight: FontWeight.bold, color: AppColors.success),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildHomeView() {
-    final approvedStaff = _mapApprovedStaff(context.watch<AdminProvider>().approvedStaff);
+    final adminProvider = context.watch<AdminProvider>();
+    final approvedStaff = _mapApprovedStaff(adminProvider.approvedStaff);
     final driversCount = approvedStaff.where((s) => s['type'] == 'سائق').length;
-    final laundriesCount = approvedStaff.where((s) => s['type'] == 'مغسلة').length;
+    final laundriesCount =
+        approvedStaff.where((s) => s['type'] == 'مغسلة').length;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -532,44 +642,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 color: AppColors.primary),
           ),
           const SizedBox(height: AppSpacing.sm),
-          // Placeholder for recent orders list
-          ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: 0,
-            separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
-            itemBuilder: (context, index) => Container(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              decoration: AppStyles.surface(context),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                    child: const Icon(Icons.receipt_long,
-                        color: AppColors.primary),
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('طلب #102${index + 4}',
-                            style:
-                                const TextStyle(fontWeight: FontWeight.bold)),
-                        Text('عميل: أحمد محمد',
-                            style: TextStyle(
-                                color: AppColors.textLight, fontSize: 12)),
-                      ],
-                    ),
-                  ),
-                  const Text('12,500 ر.ي',
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.success)),
-                ],
-              ),
-            ),
-          ),
+          _buildRecentOrdersSection(adminProvider.recentOrders),
           const SizedBox(height: AppSpacing.xl),
           _buildOperationControlPanel(),
           const SizedBox(height: AppSpacing.xl),
@@ -596,7 +669,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             if (_adminActivities.length > 5)
               TextButton(
                 onPressed: _showAllActivitiesBottomSheet,
-                child: const Text('عرض الكل', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+                child: const Text('عرض الكل',
+                    style: TextStyle(
+                        color: AppColors.primary, fontWeight: FontWeight.bold)),
               ),
           ],
         ),
@@ -618,7 +693,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: _adminActivities.take(5).length,
-            separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
+            separatorBuilder: (context, index) =>
+                const SizedBox(height: AppSpacing.sm),
             itemBuilder: (context, index) {
               final activity = _adminActivities[index];
               return Container(
@@ -696,32 +772,43 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 leading: Container(
                   padding: const EdgeInsets.all(AppSpacing.xs),
                   decoration: BoxDecoration(
-                    color: (!context.watch<SystemStatusProvider>().isLoginEnabled ? AppColors.error : AppColors.primary).withValues(alpha: 0.1),
+                    color:
+                        (!context.watch<SystemStatusProvider>().isLoginEnabled
+                                ? AppColors.error
+                                : AppColors.primary)
+                            .withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
                     Icons.settings_suggest,
-                    color: !context.watch<SystemStatusProvider>().isLoginEnabled ? AppColors.error : AppColors.primary,
+                    color: !context.watch<SystemStatusProvider>().isLoginEnabled
+                        ? AppColors.error
+                        : AppColors.primary,
                   ),
                 ),
                 title: const Text('وضع الصيانة للنظام',
                     style: TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: const Text('إيقاف استقبال طلبات الغسيل الجديدة ومنع تسجيل الدخول',
+                subtitle: const Text(
+                    'إيقاف استقبال طلبات الغسيل الجديدة ومنع تسجيل الدخول',
                     style: TextStyle(fontSize: 12)),
                 trailing: Switch(
                   value: !context.watch<SystemStatusProvider>().isLoginEnabled,
-                 onChanged: (v) async {
+                  onChanged: (v) async {
                     try {
-                      final message = v 
-                          ? (_maintenanceMessageController.text.isNotEmpty 
-                              ? _maintenanceMessageController.text 
+                      final message = v
+                          ? (_maintenanceMessageController.text.isNotEmpty
+                              ? _maintenanceMessageController.text
                               : "النظام تحت الصيانة")
                           : null;
-                      await context.read<AdminProvider>().toggleSystemStatus(!v, message);
+                      await context
+                          .read<AdminProvider>()
+                          .toggleSystemStatus(!v, message);
                       if (!mounted) return;
                       await context.read<SystemStatusProvider>().checkStatus();
                       _logActivity(
-                        v ? 'تم تفعيل وضع صيانة النظام' : 'تم إلغاء وضع صيانة النظام',
+                        v
+                            ? 'تم تفعيل وضع صيانة النظام'
+                            : 'تم إلغاء وضع صيانة النظام',
                         v ? 'error' : 'success',
                         Icons.settings_suggest,
                         v ? AppColors.error : AppColors.success,
@@ -744,13 +831,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   decoration: BoxDecoration(
                     color: AppColors.error.withValues(alpha: 0.05),
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: AppColors.error.withValues(alpha: 0.2)),
+                    border: Border.all(
+                        color: AppColors.error.withValues(alpha: 0.2)),
                   ),
                   child: Column(
                     children: [
                       const Row(
                         children: [
-                          Icon(Icons.warning_amber_rounded, color: AppColors.error, size: 20),
+                          Icon(Icons.warning_amber_rounded,
+                              color: AppColors.error, size: 20),
                           SizedBox(width: AppSpacing.xs),
                           Expanded(
                             child: Text(
@@ -775,14 +864,21 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         child: ElevatedButton(
                           onPressed: () async {
                             try {
-                              await context.read<AdminProvider>().toggleSystemStatus(
-                                false,
-                                _maintenanceMessageController.text,
-                              );
+                              await context
+                                  .read<AdminProvider>()
+                                  .toggleSystemStatus(
+                                    false,
+                                    _maintenanceMessageController.text,
+                                  );
                               if (!mounted) return;
-                              await context.read<SystemStatusProvider>().checkStatus();
+                              await context
+                                  .read<SystemStatusProvider>()
+                                  .checkStatus();
+                              if (!mounted) return;
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('تم حفظ رسالة الصيانة بنجاح!')),
+                                const SnackBar(
+                                    content:
+                                        Text('تم حفظ رسالة الصيانة بنجاح!')),
                               );
                             } catch (e) {
                               if (mounted) {
@@ -799,7 +895,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             ),
                           ),
                           child: const Text('حفظ ونشر الرسالة للعملاء',
-                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold)),
                         ),
                       ),
                     ],
@@ -823,7 +921,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ),
                 title: const Text('إشعارات النظام الذكية',
                     style: TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: const Text('تنبيهات فورية للمشرف عن المشاكل التقنية والشكاوى',
+                subtitle: const Text(
+                    'تنبيهات فورية للمشرف عن المشاكل التقنية والشكاوى',
                     style: TextStyle(fontSize: 12)),
                 trailing: Switch(
                   value: _systemNotificationsEnabled,
@@ -832,7 +931,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       _systemNotificationsEnabled = v;
                     });
                     _logActivity(
-                      v ? 'تم تفعيل إشعارات النظام الذكية' : 'تم تعطيل إشعارات النظام الذكية',
+                      v
+                          ? 'تم تفعيل إشعارات النظام الذكية'
+                          : 'تم تعطيل إشعارات النظام الذكية',
                       'info',
                       Icons.notifications_active_outlined,
                       AppColors.primary,
@@ -879,7 +980,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               children: [
                 const Text(
                   'سجل عمليات المشرف الكامل',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.primary),
+                  style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary),
                 ),
                 IconButton(
                   icon: const Icon(Icons.close, color: AppColors.error),
@@ -892,7 +996,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               child: ListView.separated(
                 physics: const BouncingScrollPhysics(),
                 itemCount: _adminActivities.length,
-                separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
+                separatorBuilder: (context, index) =>
+                    const SizedBox(height: AppSpacing.sm),
                 itemBuilder: (context, index) {
                   final activity = _adminActivities[index];
                   return Container(
@@ -991,14 +1096,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               padding: const EdgeInsets.all(AppSpacing.lg),
               child: Text(
                 adminProvider.errorMessage!,
-                style: const TextStyle(color: AppColors.error, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                    color: AppColors.error, fontWeight: FontWeight.bold),
                 textAlign: TextAlign.center,
               ),
             ),
           );
         }
 
-        final List<Map<String, dynamic>> mappedPending = adminProvider.pendingUsers.map((u) {
+        final List<Map<String, dynamic>> mappedPending =
+            adminProvider.pendingUsers.map((u) {
           final isLaundry = u.role.toLowerCase() == 'laundryagent';
           String? documentUrl(String type) {
             for (final document in u.documents) {
@@ -1012,7 +1119,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
           return {
             'id': u.id,
-            'name': isLaundry ? (u.businessName ?? '${u.firstName} ${u.lastName}') : '${u.firstName} ${u.lastName}',
+            'name': isLaundry
+                ? (u.businessName ?? '${u.firstName} ${u.lastName}')
+                : '${u.firstName} ${u.lastName}',
             'managerName': '${u.firstName} ${u.lastName}',
             'type': isLaundry ? 'مغسلة' : 'سائق',
             'phone': u.phoneNo ?? 'غير متوفر',
@@ -1031,8 +1140,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           };
         }).toList();
 
-        final laundries = mappedPending.where((r) => r['type'] == 'مغسلة').toList();
-        final drivers = mappedPending.where((r) => r['type'] == 'سائق').toList();
+        final laundries =
+            mappedPending.where((r) => r['type'] == 'مغسلة').toList();
+        final drivers =
+            mappedPending.where((r) => r['type'] == 'سائق').toList();
 
         return ListView(
           padding: const EdgeInsets.all(AppSpacing.md),
@@ -1131,60 +1242,96 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ),
             const Divider(height: 40),
             const Text('المعلومات الشخصية والمهنية',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primary)),
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primary)),
             const SizedBox(height: AppSpacing.sm),
             Expanded(
               child: ListView(
                 physics: const BouncingScrollPhysics(),
                 children: [
                   if (staff['type'] == 'مغسلة') ...[
-                    _buildDetailRow(Icons.business, 'اسم المغسلة', staff['name']),
-                    _buildDetailRow(Icons.person, 'اسم المدير المسؤول', staff['managerName'] ?? 'غير متوفر'),
+                    _buildDetailRow(
+                        Icons.business, 'اسم المغسلة', staff['name']),
+                    _buildDetailRow(Icons.person, 'اسم المدير المسؤول',
+                        staff['managerName'] ?? 'غير متوفر'),
                     _buildDetailRow(Icons.phone, 'رقم الهاتف', staff['phone']),
-                    _buildDetailRow(Icons.email, 'البريد الإلكتروني', staff['email'] ?? 'غير متوفر'),
-                    _buildDetailRow(Icons.location_on, 'الموقع', staff['location']),
-                    _buildDetailRow(Icons.badge, 'رقم الهوية الوطنية للمدير', staff['nationalId'] ?? 'غير متوفر'),
-                    _buildDetailRow(Icons.assignment, 'رقم السجل التجاري / الترخيص', staff['commercialRegister'] ?? 'غير متوفر'),
+                    _buildDetailRow(Icons.email, 'البريد الإلكتروني',
+                        staff['email'] ?? 'غير متوفر'),
+                    _buildDetailRow(
+                        Icons.location_on, 'الموقع', staff['location']),
+                    _buildDetailRow(Icons.badge, 'رقم الهوية الوطنية للمدير',
+                        staff['nationalId'] ?? 'غير متوفر'),
+                    _buildDetailRow(
+                        Icons.assignment,
+                        'رقم السجل التجاري / الترخيص',
+                        staff['commercialRegister'] ?? 'غير متوفر'),
                     const SizedBox(height: AppSpacing.md),
                     const Text(
                       'المستندات والوثائق المرفوعة',
-                      style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 14),
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                          fontSize: 14),
                     ),
                     const SizedBox(height: AppSpacing.xs),
-                    _buildDocumentRow('صورة السجل التجاري / الترخيص', staff['commercialRegisterImage']),
-                    _buildDocumentRow('صورة الهوية الوطنية للمدير', staff['nationalIdImage']),
-                    _buildDocumentRow('صورة واجهة/لوحة المغسلة', staff['storefrontImage']),
+                    _buildDocumentRow('صورة السجل التجاري / الترخيص',
+                        staff['commercialRegisterImage']),
+                    _buildDocumentRow(
+                        'صورة الهوية الوطنية للمدير', staff['nationalIdImage']),
+                    _buildDocumentRow(
+                        'صورة واجهة/لوحة المغسلة', staff['storefrontImage']),
                   ] else ...[
                     _buildDetailRow(Icons.person, 'اسم المندوب', staff['name']),
                     _buildDetailRow(Icons.phone, 'رقم الهاتف', staff['phone']),
-                    _buildDetailRow(Icons.email, 'البريد الإلكتروني', staff['email'] ?? 'غير متوفر'),
-                    _buildDetailRow(Icons.location_on, 'الموقع', staff['location']),
-                    _buildDetailRow(Icons.badge, 'رقم الهوية الوطنية', staff['nationalId'] ?? 'غير متوفر'),
-                    _buildDetailRow(Icons.card_membership, 'رقم رخصة القيادة', staff['licenseNumber'] ?? 'غير متوفر'),
-                    _buildDetailRow(Icons.directions_car, 'نوع مركبة التوصيل', staff['vehicleType'] ?? 'غير متوفر'),
-                    _buildDetailRow(Icons.tag, 'رقم لوحة المركبة', staff['vehiclePlate'] ?? 'غير متوفر'),
+                    _buildDetailRow(Icons.email, 'البريد الإلكتروني',
+                        staff['email'] ?? 'غير متوفر'),
+                    _buildDetailRow(
+                        Icons.location_on, 'الموقع', staff['location']),
+                    _buildDetailRow(Icons.badge, 'رقم الهوية الوطنية',
+                        staff['nationalId'] ?? 'غير متوفر'),
+                    _buildDetailRow(Icons.card_membership, 'رقم رخصة القيادة',
+                        staff['licenseNumber'] ?? 'غير متوفر'),
+                    _buildDetailRow(Icons.directions_car, 'نوع مركبة التوصيل',
+                        staff['vehicleType'] ?? 'غير متوفر'),
+                    _buildDetailRow(Icons.tag, 'رقم لوحة المركبة',
+                        staff['vehiclePlate'] ?? 'غير متوفر'),
                     const SizedBox(height: AppSpacing.md),
                     const Text(
                       'المستندات والوثائق المرفوعة',
-                      style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 14),
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                          fontSize: 14),
                     ),
                     const SizedBox(height: AppSpacing.xs),
-                    _buildDocumentRow('صورة رخصة القيادة للمندوب', staff['licenseImage']),
-                    _buildDocumentRow('صورة الهوية الوطنية للمندوب', staff['nationalIdImage']),
-                    _buildDocumentRow('صورة المركبة الخاصة بالتوصيل', staff['vehicleImage']),
+                    _buildDocumentRow(
+                        'صورة رخصة القيادة للمندوب', staff['licenseImage']),
+                    _buildDocumentRow('صورة الهوية الوطنية للمندوب',
+                        staff['nationalIdImage']),
+                    _buildDocumentRow(
+                        'صورة المركبة الخاصة بالتوصيل', staff['vehicleImage']),
                   ],
                   const SizedBox(height: AppSpacing.lg),
                   const Text('الطلبات الحالية/السابقة',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primary)),
+                      style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary)),
                   const SizedBox(height: AppSpacing.sm),
                   if (staff['orders'] == null || staff['orders'].isEmpty)
-                    const Text('لا توجد طلبات مسجلة حالياً', style: TextStyle(color: AppColors.textLight))
+                    const Text('لا توجد طلبات مسجلة حالياً',
+                        style: TextStyle(color: AppColors.textLight))
                   else
-                    ...staff['orders'].map<Widget>((order) => ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: const Icon(Icons.receipt_long, color: AppColors.tertiary),
-                          title: Text(order),
-                        )).toList(),
+                    ...staff['orders']
+                        .map<Widget>((order) => ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              leading: const Icon(Icons.receipt_long,
+                                  color: AppColors.tertiary),
+                              title: Text(order),
+                            ))
+                        .toList(),
                 ],
               ),
             ),
@@ -1349,8 +1496,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     child: Image.network(
                       imageUrl,
                       fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) => const Center(
-                        child: Icon(Icons.image_not_supported, size: 50, color: Colors.grey),
+                      errorBuilder: (context, error, stackTrace) =>
+                          const Center(
+                        child: Icon(Icons.image_not_supported,
+                            size: 50, color: Colors.grey),
                       ),
                     ),
                   ),
@@ -1416,86 +1565,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  Widget _buildServicesView() {
-    return Consumer<AdminProvider>(
-      builder: (context, adminProvider, child) {
-        final services = adminProvider.services;
-        final filteredServices = services.where((service) {
-          final query = _serviceSearchQuery.toLowerCase();
-          return service.serviceName.toLowerCase().contains(query) ||
-              _serviceLabel(_serviceCategoryLabels, service.category).contains(query) ||
-              _serviceLabel(_serviceTypeLabels, service.type).contains(query);
-        }).toList();
-
-        return RefreshIndicator(
-          onRefresh: () async {
-            await context.read<AdminProvider>().fetchServices();
-            await context.read<AdminProvider>().fetchApprovedStaff();
-          },
-          child: ListView(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            children: [
-              Row(
-                children: [
-                  const Expanded(
-                    child: Text(
-                      'إدارة الخدمات',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  ),
-                  ElevatedButton.icon(
-                    onPressed: adminProvider.isActionLoading
-                        ? null
-                        : () => _showServiceFormDialog(),
-                    icon: const Icon(Icons.add, size: 18),
-                    label: const Text('إضافة خدمة'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.md),
-              TextField(
-                onChanged: (v) => setState(() => _serviceSearchQuery = v),
-                decoration: InputDecoration(
-                  hintText: 'بحث عن خدمة...',
-                  prefixIcon: const Icon(Icons.search),
-                  filled: true,
-                  fillColor: AppColors.white,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(15),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              if (adminProvider.isLoading && services.isEmpty)
-                const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(AppSpacing.xl),
-                    child: CircularProgressIndicator(),
-                  ),
-                )
-              else if (adminProvider.errorMessage != null && services.isEmpty)
-                _buildServicesError(adminProvider.errorMessage!)
-              else ...[
-                _buildServiceCatalogTable(filteredServices),
-                const SizedBox(height: AppSpacing.lg),
-                _buildLaundryServicesManager(adminProvider),
-              ],
-            ],
-          ),
-        );
-      },
-    );
-  }
-
   Widget _buildLaundryFirstServicesView() {
     return Consumer<AdminProvider>(
       builder: (context, adminProvider, child) {
@@ -1510,8 +1579,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
         return RefreshIndicator(
           onRefresh: () async {
-            await context.read<AdminProvider>().fetchServices();
-            await context.read<AdminProvider>().fetchApprovedStaff();
+            final provider = context.read<AdminProvider>();
+            await provider.fetchServices();
+            await provider.fetchApprovedStaff();
             if (_selectedLaundryAgentId != null) {
               await _loadLaundryServices(_selectedLaundryAgentId);
             }
@@ -1576,7 +1646,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     final visibleLaundries = laundries.where((laundry) {
       final matchesService = _selectedServiceFilterId == null ||
           _agentServiceIds(laundry).contains(_selectedServiceFilterId);
-      final businessName = AdminServiceModel._readString(
+      final businessName = AdminServiceModel.readString(
         laundry,
         ['businessName', 'BusinessName', 'name'],
         fallback: '',
@@ -1626,15 +1696,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             )
           else
             ...visibleLaundries.map((laundry) {
-              final agentId = AdminServiceModel._readInt(laundry, ['id', 'userID', 'userId', 'UserID']);
+              final agentId = AdminServiceModel.readInt(
+                  laundry, ['id', 'userID', 'userId', 'UserID']);
               final selected = agentId == _selectedLaundryAgentId;
               final serviceIds = _agentServiceIds(laundry);
-              final businessName = AdminServiceModel._readString(
+              final businessName = AdminServiceModel.readString(
                 laundry,
                 ['businessName', 'BusinessName', 'name'],
                 fallback: 'مغسلة #$agentId',
               );
-              final storeClosed = AdminServiceModel._readBool(laundry, ['isStoreClosed', 'IsStoreClosed']);
+              final storeClosed = AdminServiceModel.readBool(
+                  laundry, ['isStoreClosed', 'IsStoreClosed']);
               return Container(
                 margin: const EdgeInsets.only(bottom: AppSpacing.sm),
                 decoration: BoxDecoration(
@@ -1668,7 +1740,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   ),
                   trailing: selected
                       ? const Icon(Icons.check_circle, color: AppColors.success)
-                      : const Icon(Icons.chevron_left, color: AppColors.textLight),
+                      : const Icon(Icons.chevron_left,
+                          color: AppColors.textLight),
                 ),
               );
             }),
@@ -1770,7 +1843,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ),
           const SizedBox(height: AppSpacing.sm),
           DropdownButtonFormField<int>(
-            value: _selectedServiceFilterId ?? -1,
+            initialValue: _selectedServiceFilterId ?? -1,
             decoration: const InputDecoration(
               labelText: 'الخدمة',
               border: OutlineInputBorder(),
@@ -1799,7 +1872,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  Widget _buildCatalogManagementSection(List<AdminServiceModel> filteredServices) {
+  Widget _buildCatalogManagementSection(
+      List<AdminServiceModel> filteredServices) {
     return ExpansionTile(
       tilePadding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
       title: const Text(
@@ -1840,7 +1914,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           Text(
             message,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: AppColors.error, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+                color: AppColors.error, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: AppSpacing.sm),
           TextButton.icon(
@@ -1882,13 +1957,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             return DataRow(
               cells: [
                 DataCell(Text(service.serviceName)),
-                DataCell(Text(_serviceLabel(_serviceCategoryLabels, service.category))),
+                DataCell(Text(
+                    _serviceLabel(_serviceCategoryLabels, service.category))),
                 DataCell(Text(_serviceLabel(_serviceTypeLabels, service.type))),
                 DataCell(Text(service.price.toStringAsFixed(2))),
-                DataCell(Text(_serviceLabel(_pricingModelLabels, service.pricingModel))),
-                DataCell(Text(_serviceLabel(_deliveryModelLabels, service.deliveryModel))),
+                DataCell(Text(
+                    _serviceLabel(_pricingModelLabels, service.pricingModel))),
+                DataCell(Text(_serviceLabel(
+                    _deliveryModelLabels, service.deliveryModel))),
                 DataCell(_buildServiceStatusBadge(service)),
-                DataCell(Text('${service.activeAgentCount}/${service.linkedAgentCount}')),
+                DataCell(Text(
+                    '${service.activeAgentCount}/${service.linkedAgentCount}')),
                 DataCell(_buildServiceActions(service)),
               ],
             );
@@ -1917,7 +1996,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       ),
       child: Text(
         text,
-        style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold),
+        style:
+            TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold),
       ),
     );
   }
@@ -1929,7 +2009,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       children: [
         IconButton(
           tooltip: 'تعديل',
-          onPressed: isBusy ? null : () => _showServiceFormDialog(service: service),
+          onPressed:
+              isBusy ? null : () => _showServiceFormDialog(service: service),
           icon: const Icon(Icons.edit_outlined, color: AppColors.primary),
         ),
         IconButton(
@@ -1939,7 +2020,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               : () => _setServiceAvailability(service, !service.isAvailable),
           icon: Icon(
             service.isAvailable ? Icons.toggle_on : Icons.toggle_off,
-            color: service.isAvailable ? AppColors.success : AppColors.textLight,
+            color:
+                service.isAvailable ? AppColors.success : AppColors.textLight,
           ),
         ),
         IconButton(
@@ -1955,95 +2037,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildLaundryServicesManager(AdminProvider adminProvider) {
-    final laundries = _mapApprovedStaff(adminProvider.approvedStaff)
-        .where((staff) => staff['type'] == 'مغسلة' || staff['type'] == 'ظ…ط؛ط³ظ„ط©')
-        .toList();
-    final assignableServices = adminProvider.services
-        .where((service) => service.isAvailable && !service.isDeleted)
-        .toList();
-
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: AppStyles.surface(context),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'خدمات كل مغسلة',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primary),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          if (laundries.isEmpty)
-            const Text('لا توجد مغاسل معتمدة حالياً')
-          else
-            DropdownButtonFormField<int>(
-              value: _selectedLaundryAgentId,
-              decoration: const InputDecoration(
-                labelText: 'اختر مغسلة',
-                border: OutlineInputBorder(),
-              ),
-              items: laundries
-                  .map((laundry) => DropdownMenuItem<int>(
-                        value: laundry['id'] is int
-                            ? laundry['id'] as int
-                            : int.tryParse(laundry['id'].toString()),
-                        child: Text(laundry['name'].toString()),
-                      ))
-                  .where((item) => item.value != null)
-                  .toList(),
-              onChanged: (agentId) => _loadLaundryServices(agentId),
-            ),
-          const SizedBox(height: AppSpacing.md),
-          if (_isLoadingLaundryServices)
-            const Center(child: CircularProgressIndicator())
-          else if (_selectedLaundryAgentId != null) ...[
-            if (assignableServices.isEmpty)
-              const Text('لا توجد خدمات مفعلة قابلة للربط حالياً')
-            else
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: assignableServices.map((service) {
-                  final selected = _selectedLaundryServiceIds.contains(service.serviceID);
-                  return FilterChip(
-                    label: Text(service.serviceName),
-                    selected: selected,
-                    onSelected: (_) {
-                      setState(() {
-                        if (selected) {
-                          _selectedLaundryServiceIds.remove(service.serviceID);
-                        } else {
-                          _selectedLaundryServiceIds.add(service.serviceID);
-                        }
-                      });
-                    },
-                    selectedColor: AppColors.primary.withValues(alpha: 0.18),
-                    checkmarkColor: AppColors.primary,
-                  );
-                }).toList(),
-              ),
-            const SizedBox(height: AppSpacing.md),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: adminProvider.isActionLoading
-                    ? null
-                    : () => _saveLaundryServices(),
-                icon: const Icon(Icons.save_outlined),
-                label: const Text('حفظ خدمات المغسلة'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                ),
-              ),
-            ),
-          ],
-        ],
-      ),
     );
   }
 
@@ -2088,7 +2081,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       return rawServices
           .whereType<Map>()
           .map((service) =>
-              service['serviceID'] ?? service['serviceId'] ?? service['ServiceID'])
+              service['serviceID'] ??
+              service['serviceId'] ??
+              service['ServiceID'])
           .map((id) => id is int ? id : int.tryParse(id.toString()))
           .whereType<int>()
           .toSet();
@@ -2096,7 +2091,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
     return {};
   }
-
 
   void _selectLaundryAgent(int agentId, Set<int> currentServiceIds) {
     setState(() {
@@ -2116,7 +2110,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     if (agentId == null) return;
 
     try {
-      final serviceIds = await context.read<AdminProvider>().getAgentServiceIds(agentId);
+      final serviceIds =
+          await context.read<AdminProvider>().getAgentServiceIds(agentId);
       if (!mounted) return;
       setState(() {
         _selectedLaundryServiceIds = serviceIds.toSet();
@@ -2142,9 +2137,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     }
 
     try {
-      await context
-          .read<AdminProvider>()
-          .setAgentServices(agentId, _selectedLaundryServiceIds.toList()..sort());
+      await context.read<AdminProvider>().setAgentServices(
+          agentId, _selectedLaundryServiceIds.toList()..sort());
       if (!mounted) return;
       await _loadLaundryServices(agentId);
       if (!mounted) return;
@@ -2167,7 +2161,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           .setServiceAvailability(service.serviceID, isAvailable);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(isAvailable ? 'تم تفعيل الخدمة' : 'تم تعطيل الخدمة')),
+        SnackBar(
+            content: Text(isAvailable ? 'تم تفعيل الخدمة' : 'تم تعطيل الخدمة')),
       );
     } catch (e) {
       if (!mounted) return;
@@ -2182,7 +2177,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       await context.read<AdminProvider>().restoreService(service.serviceID);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تم استرجاع الخدمة. التفعيل يحتاج إجراء منفصل.')),
+        const SnackBar(
+            content: Text('تم استرجاع الخدمة. التفعيل يحتاج إجراء منفصل.')),
       );
     } catch (e) {
       if (!mounted) return;
@@ -2211,7 +2207,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             onPressed: () async {
               Navigator.pop(context);
               try {
-                await this.context
+                await this
+                    .context
                     .read<AdminProvider>()
                     .deleteService(service.serviceID);
                 if (!mounted) return;
@@ -2289,14 +2286,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   value: pricingModel,
                   label: 'طريقة التسعير',
                   labels: _pricingModelLabels,
-                  onChanged: (value) => setDialogState(() => pricingModel = value),
+                  onChanged: (value) =>
+                      setDialogState(() => pricingModel = value),
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 _buildServiceDropdown(
                   value: deliveryModel,
                   label: 'طريقة التنفيذ',
                   labels: _deliveryModelLabels,
-                  onChanged: (value) => setDialogState(() => deliveryModel = value),
+                  onChanged: (value) =>
+                      setDialogState(() => deliveryModel = value),
                 ),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
@@ -2319,7 +2318,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ElevatedButton(
               onPressed: () async {
                 final price = double.tryParse(priceController.text.trim());
-                if (nameController.text.trim().isEmpty || price == null || price < 0) {
+                if (nameController.text.trim().isEmpty ||
+                    price == null ||
+                    price < 0) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('تأكد من اسم الخدمة والسعر')),
                   );
@@ -2338,14 +2339,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
                 try {
                   if (service == null) {
-                    await this.context.read<AdminProvider>().createService(payload);
+                    await this
+                        .context
+                        .read<AdminProvider>()
+                        .createService(payload);
                   } else {
-                    await this.context
+                    await this
+                        .context
                         .read<AdminProvider>()
                         .updateService(service.serviceID, payload);
                   }
-                  if (!mounted) return;
+                  if (!context.mounted) return;
                   Navigator.pop(context);
+                  if (!mounted) return;
                   ScaffoldMessenger.of(this.context).showSnackBar(
                     SnackBar(
                       content: Text(service == null
@@ -2360,7 +2366,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   );
                 }
               },
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+              style:
+                  ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
               child: const Text('حفظ', style: TextStyle(color: Colors.white)),
             ),
           ],
@@ -2379,7 +2386,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     required ValueChanged<int> onChanged,
   }) {
     return DropdownButtonFormField<int>(
-      value: value >= 0 && value < labels.length ? value : 0,
+      initialValue: value >= 0 && value < labels.length ? value : 0,
       decoration: InputDecoration(
         labelText: label,
         border: const OutlineInputBorder(),
@@ -2405,10 +2412,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         final documents = staff['documents'] ?? staff['Documents'];
         if (documents is! List) return null;
         for (final document in documents.whereType<Map>()) {
-          final documentType = document['type']?.toString() ?? document['Type']?.toString() ?? '';
-          final fileUrl = document['fileURL'] ??
-              document['fileUrl'] ??
-              document['FileURL'];
+          final documentType = document['type']?.toString() ??
+              document['Type']?.toString() ??
+              '';
+          final fileUrl =
+              document['fileURL'] ?? document['fileUrl'] ?? document['FileURL'];
           if (documentType.toLowerCase() == type.toLowerCase() &&
               fileUrl != null &&
               fileUrl.toString().isNotEmpty) {
@@ -2425,7 +2433,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
       return {
         'id': staff['userID'] ?? staff['userId'] ?? staff['UserID'],
-        'name': isLaundry && businessName != null && businessName.toString().isNotEmpty
+        'name': isLaundry &&
+                businessName != null &&
+                businessName.toString().isNotEmpty
             ? businessName.toString()
             : '$firstName $lastName'.trim(),
         'managerName': '$firstName $lastName'.trim(),
@@ -2445,7 +2455,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         'vehicleType': staff['vehicleType']?.toString() ??
             staff['VehicleType']?.toString() ??
             'غير متوفر',
-        'vehiclePlate': staff['plateNumber'] ?? staff['PlateNumber'] ?? 'غير متوفر',
+        'vehiclePlate':
+            staff['plateNumber'] ?? staff['PlateNumber'] ?? 'غير متوفر',
         'commercialRegisterImage': documentUrl('CommercialRegistration'),
         'nationalIdImage': documentUrl('NationalID'),
         'storefrontImage': null,
@@ -2580,7 +2591,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   child: Icon(
                     request['type'] == 'مغسلة'
                         ? Icons.local_laundry_service
-                        : _getVehicleIcon(request['vehicleType'], request['name']),
+                        : _getVehicleIcon(
+                            request['vehicleType'], request['name']),
                     size: 40,
                     color: AppColors.tertiary,
                   ),
@@ -2592,11 +2604,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     children: [
                       Text(
                         request['name'],
-                        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                            fontSize: 22, fontWeight: FontWeight.bold),
                       ),
                       Text(
-                        request['type'] == 'مغسلة' ? 'طلب انضمام مغسلة جديدة' : 'طلب انضمام مندوب توصيل',
-                        style: const TextStyle(color: AppColors.tertiary, fontWeight: FontWeight.bold),
+                        request['type'] == 'مغسلة'
+                            ? 'طلب انضمام مغسلة جديدة'
+                            : 'طلب انضمام مندوب توصيل',
+                        style: const TextStyle(
+                            color: AppColors.tertiary,
+                            fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
@@ -2606,7 +2623,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             const Divider(height: 40),
             const Text(
               'بيانات الحساب الشخصية والتسجيل',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primary),
+              style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primary),
             ),
             const SizedBox(height: AppSpacing.md),
             Expanded(
@@ -2614,40 +2634,69 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 physics: const BouncingScrollPhysics(),
                 children: [
                   if (request['type'] == 'مغسلة') ...[
-                    _buildDetailRow(Icons.business, 'اسم المغسلة', request['name']),
-                    _buildDetailRow(Icons.person, 'اسم المدير المسؤول', request['managerName'] ?? 'غير متوفر'),
-                    _buildDetailRow(Icons.phone, 'رقم هاتف المدير', request['phone']),
-                    _buildDetailRow(Icons.email, 'البريد الإلكتروني للمدير', request['email'] ?? 'غير متوفر'),
-                    _buildDetailRow(Icons.location_on, 'عنوان المغسلة', request['location']),
-                    _buildDetailRow(Icons.badge, 'رقم الهوية الوطنية للمدير', request['nationalId'] ?? 'غير متوفر'),
-                    _buildDetailRow(Icons.assignment, 'رقم السجل التجاري / الترخيص', request['commercialRegister'] ?? 'غير متوفر'),
+                    _buildDetailRow(
+                        Icons.business, 'اسم المغسلة', request['name']),
+                    _buildDetailRow(Icons.person, 'اسم المدير المسؤول',
+                        request['managerName'] ?? 'غير متوفر'),
+                    _buildDetailRow(
+                        Icons.phone, 'رقم هاتف المدير', request['phone']),
+                    _buildDetailRow(Icons.email, 'البريد الإلكتروني للمدير',
+                        request['email'] ?? 'غير متوفر'),
+                    _buildDetailRow(Icons.location_on, 'عنوان المغسلة',
+                        request['location']),
+                    _buildDetailRow(Icons.badge, 'رقم الهوية الوطنية للمدير',
+                        request['nationalId'] ?? 'غير متوفر'),
+                    _buildDetailRow(
+                        Icons.assignment,
+                        'رقم السجل التجاري / الترخيص',
+                        request['commercialRegister'] ?? 'غير متوفر'),
                     const SizedBox(height: AppSpacing.md),
                     const Text(
                       'المستندات والوثائق المرفوعة',
-                      style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 14),
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                          fontSize: 14),
                     ),
                     const SizedBox(height: AppSpacing.xs),
-                    _buildDocumentRow('صورة السجل التجاري / الترخيص', request['commercialRegisterImage']),
-                    _buildDocumentRow('صورة الهوية الوطنية للمدير', request['nationalIdImage']),
-                    _buildDocumentRow('صورة واجهة/لوحة المغسلة', request['storefrontImage']),
+                    _buildDocumentRow('صورة السجل التجاري / الترخيص',
+                        request['commercialRegisterImage']),
+                    _buildDocumentRow('صورة الهوية الوطنية للمدير',
+                        request['nationalIdImage']),
+                    _buildDocumentRow(
+                        'صورة واجهة/لوحة المغسلة', request['storefrontImage']),
                   ] else ...[
-                    _buildDetailRow(Icons.person, 'اسم المندوب', request['name']),
-                    _buildDetailRow(Icons.phone, 'رقم هاتف المندوب', request['phone']),
-                    _buildDetailRow(Icons.email, 'البريد الإلكتروني للمندوب', request['email'] ?? 'غير متوفر'),
-                    _buildDetailRow(Icons.location_on, 'عنوان السكن الحالي', request['location']),
-                    _buildDetailRow(Icons.badge, 'رقم الهوية الوطنية', request['nationalId'] ?? 'غير متوفر'),
-                    _buildDetailRow(Icons.card_membership, 'رقم رخصة القيادة', request['licenseNumber'] ?? 'غير متوفر'),
-                    _buildDetailRow(Icons.directions_car, 'نوع مركبة التوصيل', request['vehicleType'] ?? 'غير متوفر'),
-                    _buildDetailRow(Icons.tag, 'رقم لوحة المركبة', request['vehiclePlate'] ?? 'غير متوفر'),
+                    _buildDetailRow(
+                        Icons.person, 'اسم المندوب', request['name']),
+                    _buildDetailRow(
+                        Icons.phone, 'رقم هاتف المندوب', request['phone']),
+                    _buildDetailRow(Icons.email, 'البريد الإلكتروني للمندوب',
+                        request['email'] ?? 'غير متوفر'),
+                    _buildDetailRow(Icons.location_on, 'عنوان السكن الحالي',
+                        request['location']),
+                    _buildDetailRow(Icons.badge, 'رقم الهوية الوطنية',
+                        request['nationalId'] ?? 'غير متوفر'),
+                    _buildDetailRow(Icons.card_membership, 'رقم رخصة القيادة',
+                        request['licenseNumber'] ?? 'غير متوفر'),
+                    _buildDetailRow(Icons.directions_car, 'نوع مركبة التوصيل',
+                        request['vehicleType'] ?? 'غير متوفر'),
+                    _buildDetailRow(Icons.tag, 'رقم لوحة المركبة',
+                        request['vehiclePlate'] ?? 'غير متوفر'),
                     const SizedBox(height: AppSpacing.md),
                     const Text(
                       'المستندات والوثائق المرفوعة',
-                      style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 14),
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                          fontSize: 14),
                     ),
                     const SizedBox(height: AppSpacing.xs),
-                    _buildDocumentRow('صورة رخصة القيادة للمندوب', request['licenseImage']),
-                    _buildDocumentRow('صورة الهوية الوطنية للمندوب', request['nationalIdImage']),
-                    _buildDocumentRow('صورة المركبة الخاصة بالتوصيل', request['vehicleImage']),
+                    _buildDocumentRow(
+                        'صورة رخصة القيادة للمندوب', request['licenseImage']),
+                    _buildDocumentRow('صورة الهوية الوطنية للمندوب',
+                        request['nationalIdImage']),
+                    _buildDocumentRow('صورة المركبة الخاصة بالتوصيل',
+                        request['vehicleImage']),
                   ],
                 ],
               ),
@@ -2661,12 +2710,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       Navigator.pop(context);
                       _acceptStaff(request);
                     },
-                    icon: const Icon(Icons.check_circle_outline, color: Colors.white),
-                    label: const Text('قبول الطلب وتفعيل الحساب', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    icon: const Icon(Icons.check_circle_outline,
+                        color: Colors.white),
+                    label: const Text('قبول الطلب وتفعيل الحساب',
+                        style: TextStyle(
+                            color: Colors.white, fontWeight: FontWeight.bold)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.success,
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
                     ),
                   ),
                 ),
@@ -2678,11 +2731,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       _rejectStaff(request['name']);
                     },
                     icon: const Icon(Icons.highlight_off, color: Colors.white),
-                    label: const Text('رفض الطلب', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    label: const Text('رفض الطلب',
+                        style: TextStyle(
+                            color: Colors.white, fontWeight: FontWeight.bold)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.error,
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
                     ),
                   ),
                 ),
@@ -2817,7 +2873,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         const SizedBox(height: AppSpacing.xl),
         const Text(
           'العروض النشطة حالياً',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textMain),
+          style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textMain),
         ),
         const SizedBox(height: AppSpacing.sm),
         if (activeCoupons.isEmpty)
@@ -2845,9 +2904,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     ),
                   ],
                   border: Border.all(
-                    color: coupon['target'] == 'الجميع' 
-                      ? AppColors.primary.withValues(alpha: 0.1) 
-                      : AppColors.warning.withValues(alpha: 0.2),
+                    color: coupon['target'] == 'الجميع'
+                        ? AppColors.primary.withValues(alpha: 0.1)
+                        : AppColors.warning.withValues(alpha: 0.2),
                   ),
                 ),
                 child: Row(
@@ -2855,13 +2914,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: (coupon['target'] == 'الجميع' ? AppColors.primary : AppColors.warning)
+                        color: (coupon['target'] == 'الجميع'
+                                ? AppColors.primary
+                                : AppColors.warning)
                             .withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
-                        coupon['target'] == 'الجميع' ? Icons.confirmation_number_outlined : Icons.storefront,
-                        color: coupon['target'] == 'الجميع' ? AppColors.primary : AppColors.warning,
+                        coupon['target'] == 'الجميع'
+                            ? Icons.confirmation_number_outlined
+                            : Icons.storefront,
+                        color: coupon['target'] == 'الجميع'
+                            ? AppColors.primary
+                            : AppColors.warning,
                       ),
                     ),
                     const SizedBox(width: AppSpacing.md),
@@ -2869,45 +2934,72 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(coupon['title'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                          Text(coupon['title'],
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold, fontSize: 15)),
                           const SizedBox(height: 4),
                           Row(
                             children: [
-                              Text('الكود: ', style: TextStyle(color: AppColors.textLight, fontSize: 12)),
-                              Text(coupon['code'], style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.secondary, fontSize: 13)),
+                              Text('الكود: ',
+                                  style: TextStyle(
+                                      color: AppColors.textLight,
+                                      fontSize: 12)),
+                              Text(coupon['code'],
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.secondary,
+                                      fontSize: 13)),
                               const SizedBox(width: AppSpacing.sm),
-                              Text('الخصم: ', style: TextStyle(color: AppColors.textLight, fontSize: 12)),
-                              Text(coupon['discount'], style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.success, fontSize: 13)),
+                              Text('الخصم: ',
+                                  style: TextStyle(
+                                      color: AppColors.textLight,
+                                      fontSize: 12)),
+                              Text(coupon['discount'],
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.success,
+                                      fontSize: 13)),
                             ],
                           ),
                           const SizedBox(height: 4),
                           Row(
                             children: [
-                              const Icon(Icons.person_pin_circle_outlined, size: 14, color: AppColors.textLight),
+                              const Icon(Icons.person_pin_circle_outlined,
+                                  size: 14, color: AppColors.textLight),
                               const SizedBox(width: 4),
-                              Text('المستهدف: ${coupon['target']}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+                              Text('المستهدف: ${coupon['target']}',
+                                  style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500)),
                             ],
                           ),
                           const SizedBox(height: 4),
                           Row(
                             children: [
-                              const Icon(Icons.date_range_outlined, size: 14, color: AppColors.textLight),
+                              const Icon(Icons.date_range_outlined,
+                                  size: 14, color: AppColors.textLight),
                               const SizedBox(width: 4),
                               Text(
                                 'المدة: من ${coupon['startDate'] ?? "غير محدد"} إلى ${coupon['endDate'] ?? "غير محدد"}',
-                                style: TextStyle(color: AppColors.textLight, fontSize: 12),
+                                style: TextStyle(
+                                    color: AppColors.textLight, fontSize: 12),
                               ),
                             ],
                           ),
-                          if (coupon['minAmount'] != null && coupon['minAmount'].toString().isNotEmpty) ...[
+                          if (coupon['minAmount'] != null &&
+                              coupon['minAmount'].toString().isNotEmpty) ...[
                             const SizedBox(height: 4),
                             Row(
                               children: [
-                                const Icon(Icons.info_outline, size: 14, color: AppColors.warning),
+                                const Icon(Icons.info_outline,
+                                    size: 14, color: AppColors.warning),
                                 const SizedBox(width: 4),
                                 Text(
                                   'شرط التفعيل: للطلبات أعلى من ${coupon['minAmount']} ريال',
-                                  style: const TextStyle(color: AppColors.warning, fontSize: 12, fontWeight: FontWeight.bold),
+                                  style: const TextStyle(
+                                      color: AppColors.warning,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold),
                                 ),
                               ],
                             ),
@@ -2916,7 +3008,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.delete_outline, color: AppColors.error, size: 20),
+                      icon: const Icon(Icons.delete_outline,
+                          color: AppColors.error, size: 20),
                       onPressed: () {
                         setState(() {
                           _coupons.remove(coupon);
@@ -2932,12 +3025,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   ],
                 ),
               )),
-
         if (expiredCoupons.isNotEmpty) ...[
           const SizedBox(height: AppSpacing.xl),
           const Text(
             'العروض المنتهية الصلاحية ⚠️',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.error),
+            style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: AppColors.error),
           ),
           const SizedBox(height: AppSpacing.sm),
           ...expiredCoupons.map((coupon) => Opacity(
@@ -2979,17 +3074,27 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           children: [
                             Row(
                               children: [
-                                Text(coupon['title'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, decoration: TextDecoration.lineThrough)),
+                                Text(coupon['title'],
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 15,
+                                        decoration:
+                                            TextDecoration.lineThrough)),
                                 const SizedBox(width: AppSpacing.xs),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 2),
                                   decoration: BoxDecoration(
-                                    color: AppColors.error.withValues(alpha: 0.1),
+                                    color:
+                                        AppColors.error.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: const Text(
                                     'منتهي',
-                                    style: TextStyle(fontSize: 10, color: AppColors.error, fontWeight: FontWeight.bold),
+                                    style: TextStyle(
+                                        fontSize: 10,
+                                        color: AppColors.error,
+                                        fontWeight: FontWeight.bold),
                                   ),
                                 ),
                               ],
@@ -2997,21 +3102,39 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             const SizedBox(height: 4),
                             Row(
                               children: [
-                                Text('الكود: ', style: TextStyle(color: AppColors.textLight, fontSize: 12)),
-                                Text(coupon['code'], style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.secondary, fontSize: 13)),
+                                Text('الكود: ',
+                                    style: TextStyle(
+                                        color: AppColors.textLight,
+                                        fontSize: 12)),
+                                Text(coupon['code'],
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.secondary,
+                                        fontSize: 13)),
                                 const SizedBox(width: AppSpacing.sm),
-                                Text('الخصم: ', style: TextStyle(color: AppColors.textLight, fontSize: 12)),
-                                Text(coupon['discount'], style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.success, fontSize: 13)),
+                                Text('الخصم: ',
+                                    style: TextStyle(
+                                        color: AppColors.textLight,
+                                        fontSize: 12)),
+                                Text(coupon['discount'],
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.success,
+                                        fontSize: 13)),
                               ],
                             ),
                             const SizedBox(height: 4),
                             Row(
                               children: [
-                                const Icon(Icons.date_range_outlined, size: 14, color: AppColors.textLight),
+                                const Icon(Icons.date_range_outlined,
+                                    size: 14, color: AppColors.textLight),
                                 const SizedBox(width: 4),
                                 Text(
                                   'انتهى في: ${coupon['endDate']}',
-                                  style: const TextStyle(color: AppColors.error, fontSize: 12, fontWeight: FontWeight.bold),
+                                  style: const TextStyle(
+                                      color: AppColors.error,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold),
                                 ),
                               ],
                             ),
@@ -3019,7 +3142,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.delete_outline, color: AppColors.error, size: 20),
+                        icon: const Icon(Icons.delete_outline,
+                            color: AppColors.error, size: 20),
                         onPressed: () {
                           setState(() {
                             _coupons.remove(coupon);
@@ -3045,7 +3169,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return ListView.separated(
       padding: const EdgeInsets.all(AppSpacing.lg),
       itemCount: _notificationHistory.length,
-      separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
+      separatorBuilder: (context, index) =>
+          const SizedBox(height: AppSpacing.sm),
       itemBuilder: (context, index) {
         final note = _notificationHistory[index];
         return Card(
@@ -3152,359 +3277,396 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
     showDialog(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          final theme = Theme.of(context);
-          return AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            title: const Text(
-              'إضافة عرض أو كوبون جديد',
-              style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
-            ),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  CustomTextField(
-                    hintText: 'اسم العرض (مثال: خصم الصيف)',
-                    controller: titleController,
+      builder: (context) => StatefulBuilder(builder: (context, setDialogState) {
+        final theme = Theme.of(context);
+        return AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text(
+            'إضافة عرض أو كوبون جديد',
+            style: TextStyle(
+                color: AppColors.primary, fontWeight: FontWeight.bold),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CustomTextField(
+                  hintText: 'اسم العرض (مثال: خصم الصيف)',
+                  controller: titleController,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                CustomTextField(
+                  hintText: 'كود الخصم (مثال: SUMMER25)',
+                  controller: codeController,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                CustomTextField(
+                  hintText: 'قيمة الخصم (مثال: 20% أو 500 ريال)',
+                  controller: discountController,
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  'نوع الخصم:',
+                  style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.onSurface),
+                ),
+                const SizedBox(height: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey.shade300),
                   ),
-                  const SizedBox(height: AppSpacing.sm),
-                  CustomTextField(
-                    hintText: 'كود الخصم (مثال: SUMMER25)',
-                    controller: codeController,
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  CustomTextField(
-                    hintText: 'قيمة الخصم (مثال: 20% أو 500 ريال)',
-                    controller: discountController,
-                    keyboardType: TextInputType.number,
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  Text(
-                    'نوع الخصم:',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
-                  ),
-                  const SizedBox(height: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey.shade300),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: selectedOfferType,
+                      isExpanded: true,
+                      dropdownColor: theme.cardColor,
+                      items: const [
+                        DropdownMenuItem<String>(
+                          value: 'Percentage',
+                          child: Text('نسبة مئوية (%)'),
+                        ),
+                        DropdownMenuItem<String>(
+                          value: 'FixedAmount',
+                          child: Text('مبلغ ثابت (ريال)'),
+                        ),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) {
+                          setDialogState(() => selectedOfferType = val);
+                        }
+                      },
                     ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        value: selectedOfferType,
-                        isExpanded: true,
-                        dropdownColor: theme.cardColor,
-                        items: const [
-                          DropdownMenuItem<String>(
-                            value: 'Percentage',
-                            child: Text('نسبة مئوية (%)'),
-                          ),
-                          DropdownMenuItem<String>(
-                            value: 'FixedAmount',
-                            child: Text('مبلغ ثابت (ريال)'),
-                          ),
-                        ],
-                        onChanged: (val) {
-                          if (val != null) {
-                            setDialogState(() => selectedOfferType = val);
-                          }
-                        },
-                      ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  'الفئة المستهدفة:',
+                  style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.onSurface),
+                ),
+                const SizedBox(height: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: selectedTarget,
+                      isExpanded: true,
+                      dropdownColor: theme.cardColor,
+                      items: [
+                        'الجميع',
+                        ...laundryNames,
+                      ].map((String value) {
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(value),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null) {
+                          setDialogState(() => selectedTarget = val);
+                        }
+                      },
                     ),
                   ),
-                  const SizedBox(height: AppSpacing.sm),
-                  Text(
-                    'الفئة المستهدفة:',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
-                  ),
-                  const SizedBox(height: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey.shade300),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        value: selectedTarget,
-                        isExpanded: true,
-                        dropdownColor: theme.cardColor,
-                        items: [
-                          'الجميع',
-                          ...laundryNames,
-                        ].map((String value) {
-                          return DropdownMenuItem<String>(
-                            value: value,
-                            child: Text(value),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  'مدة العرض:',
+                  style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.onSurface),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Row(
+                  children: [
+                    Expanded(
+                      child: InkWell(
+                        onTap: () async {
+                          final date = await showDatePicker(
+                            context: context,
+                            initialDate: startDate ?? DateTime.now(),
+                            firstDate: DateTime(2020),
+                            lastDate: DateTime(2030),
                           );
-                        }).toList(),
-                        onChanged: (val) {
-                          if (val != null) {
-                            setDialogState(() => selectedTarget = val);
+                          if (date != null) {
+                            setDialogState(() => startDate = date);
                           }
                         },
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  Text(
-                    'مدة العرض:',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: InkWell(
-                          onTap: () async {
-                            final date = await showDatePicker(
-                              context: context,
-                              initialDate: startDate ?? DateTime.now(),
-                              firstDate: DateTime(2020),
-                              lastDate: DateTime(2030),
-                            );
-                            if (date != null) {
-                              setDialogState(() => startDate = date);
-                            }
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.grey.shade300),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.calendar_today, size: 14, color: AppColors.primary),
-                                const SizedBox(width: 4),
-                                Expanded(
-                                  child: Text(
-                                    startDate == null 
-                                        ? 'تاريخ البدء' 
-                                        : '${startDate!.year}/${startDate!.month.toString().padLeft(2, '0')}/${startDate!.day.toString().padLeft(2, '0')}',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: startDate == null ? Colors.grey.shade600 : theme.colorScheme.onSurface,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 10),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey.shade300),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.calendar_today,
+                                  size: 14, color: AppColors.primary),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  startDate == null
+                                      ? 'تاريخ البدء'
+                                      : '${startDate!.year}/${startDate!.month.toString().padLeft(2, '0')}/${startDate!.day.toString().padLeft(2, '0')}',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: startDate == null
+                                        ? Colors.grey.shade600
+                                        : theme.colorScheme.onSurface,
                                   ),
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
-                      const SizedBox(width: AppSpacing.xs),
-                      Expanded(
-                        child: InkWell(
-                          onTap: () async {
-                            final date = await showDatePicker(
-                              context: context,
-                              initialDate: endDate ?? DateTime.now().add(const Duration(days: 7)),
-                              firstDate: DateTime(2020),
-                              lastDate: DateTime(2030),
-                            );
-                            if (date != null) {
-                              setDialogState(() => endDate = date);
-                            }
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.grey.shade300),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.calendar_today, size: 14, color: AppColors.primary),
-                                const SizedBox(width: 4),
-                                Expanded(
-                                  child: Text(
-                                    endDate == null 
-                                        ? 'تاريخ الانتهاء' 
-                                        : '${endDate!.year}/${endDate!.month.toString().padLeft(2, '0')}/${endDate!.day.toString().padLeft(2, '0')}',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: endDate == null ? Colors.grey.shade600 : theme.colorScheme.onSurface,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                    Expanded(
+                      child: InkWell(
+                        onTap: () async {
+                          final date = await showDatePicker(
+                            context: context,
+                            initialDate: endDate ??
+                                DateTime.now().add(const Duration(days: 7)),
+                            firstDate: DateTime(2020),
+                            lastDate: DateTime(2030),
+                          );
+                          if (date != null) {
+                            setDialogState(() => endDate = date);
+                          }
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 10),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey.shade300),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.calendar_today,
+                                  size: 14, color: AppColors.primary),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  endDate == null
+                                      ? 'تاريخ الانتهاء'
+                                      : '${endDate!.year}/${endDate!.month.toString().padLeft(2, '0')}/${endDate!.day.toString().padLeft(2, '0')}',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: endDate == null
+                                        ? Colors.grey.shade600
+                                        : theme.colorScheme.onSurface,
                                   ),
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  SwitchListTile(
-                    title: Text(
-                      'تفعيل شرط على العرض',
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
-                    ),
-                    subtitle: const Text(
-                      'مثال: للطلبات التي تتجاوز مبلغاً معيناً',
-                      style: TextStyle(fontSize: 10, color: AppColors.textLight),
-                    ),
-                    value: hasCondition,
-                    activeThumbColor: AppColors.primary,
-                    activeTrackColor: AppColors.primary.withValues(alpha: 0.5),
-                    contentPadding: EdgeInsets.zero,
-                    onChanged: (val) {
-                      setDialogState(() => hasCondition = val);
-                    },
-                  ),
-                  if (hasCondition) ...[
-                    const SizedBox(height: AppSpacing.xs),
-                    CustomTextField(
-                      hintText: 'الحد الأدنى لقيمة الطلب بالريال (مثال: 5000)',
-                      controller: minAmountController,
-                      keyboardType: TextInputType.number,
                     ),
                   ],
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                SwitchListTile(
+                  title: Text(
+                    'تفعيل شرط على العرض',
+                    style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.onSurface),
+                  ),
+                  subtitle: const Text(
+                    'مثال: للطلبات التي تتجاوز مبلغاً معيناً',
+                    style: TextStyle(fontSize: 10, color: AppColors.textLight),
+                  ),
+                  value: hasCondition,
+                  activeThumbColor: AppColors.primary,
+                  activeTrackColor: AppColors.primary.withValues(alpha: 0.5),
+                  contentPadding: EdgeInsets.zero,
+                  onChanged: (val) {
+                    setDialogState(() => hasCondition = val);
+                  },
+                ),
+                if (hasCondition) ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  CustomTextField(
+                    hintText: 'الحد الأدنى لقيمة الطلب بالريال (مثال: 5000)',
+                    controller: minAmountController,
+                    keyboardType: TextInputType.number,
+                  ),
                 ],
-              ),
+              ],
             ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  titleController.dispose();
-                  codeController.dispose();
-                  discountController.dispose();
-                  minAmountController.dispose();
-                  Navigator.pop(context);
-                },
-                child: const Text('إلغاء', style: TextStyle(color: AppColors.textLight)),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  if (titleController.text.isEmpty || codeController.text.isEmpty) {
-                    ScaffoldMessenger.of(context).clearSnackBars();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('الرجاء تعبئة اسم العرض وكود الخصم')),
-                    );
-                    return;
-                  }
-
-                  // Validate discount field
-                  if (discountController.text.isEmpty) {
-                    ScaffoldMessenger.of(context).clearSnackBars();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('يجب إدخال قيمة الخصم')),
-                    );
-                    return;
-                  }
-
-                  // Validate discount is a valid number
-                  final discountValue = double.tryParse(discountController.text.trim());
-                  if (discountValue == null) {
-                    ScaffoldMessenger.of(context).clearSnackBars();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('قيمة الخصم يجب أن تكون رقماً صالحاً')),
-                    );
-                    return;
-                  }
-
-                  // If percentage, validate it is between 1 and 100
-                  if (selectedOfferType == 'Percentage' && (discountValue <= 0 || discountValue > 100)) {
-                    ScaffoldMessenger.of(context).clearSnackBars();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('النسبة المئوية للخصم يجب أن تكون بين 1 و 100')),
-                    );
-                    return;
-                  }
-
-                  // If fixed amount, validate it is greater than 0
-                  if (selectedOfferType == 'FixedAmount' && discountValue <= 0) {
-                    ScaffoldMessenger.of(context).clearSnackBars();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('يجب أن تكون قيمة الخصم أكبر من صفر')),
-                    );
-                    return;
-                  }
-
-                  // Enforce date checks
-                  if (startDate == null || endDate == null) {
-                    ScaffoldMessenger.of(context).clearSnackBars();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('يجب تحديد تاريخ البدء وتاريخ الانتهاء')),
-                    );
-                    return;
-                  }
-
-                  if (!endDate!.isAfter(startDate!)) {
-                    ScaffoldMessenger.of(context).clearSnackBars();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('تاريخ الانتهاء يجب أن يكون بعد تاريخ البدء')),
-                    );
-                    return;
-                  }
-
-                  // Check for duplicate codes
-                  final upperCode = codeController.text.toUpperCase();
-                  final isDuplicate = _coupons.any((c) => c['code'] == upperCode);
-                  if (isDuplicate) {
-                    ScaffoldMessenger.of(context).clearSnackBars();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('كود الكوبون موجود بالفعل')),
-                    );
-                    return;
-                  }
-
-                  // Store raw numeric discount value, format only for display
-                  String storedDiscount;
-                  String displayDiscount;
-                  if (selectedOfferType == 'Percentage') {
-                    storedDiscount = '${discountValue.toStringAsFixed(0)}%';
-                    displayDiscount = storedDiscount;
-                  } else {
-                    // Store raw numeric value for FixedAmount
-                    storedDiscount = discountValue.toStringAsFixed(0);
-                    displayDiscount = '$storedDiscount ريال';
-                  }
-
-                  setState(() {
-                    _coupons.add({
-                      'title': titleController.text,
-                      'code': upperCode,
-                      'discount': storedDiscount,
-                      'displayDiscount': displayDiscount,
-                      'target': selectedTarget,
-                      'status': 'نشط',
-                      'startDate': '${startDate!.year}/${startDate!.month.toString().padLeft(2, '0')}/${startDate!.day.toString().padLeft(2, '0')}',
-                      'endDate': '${endDate!.year}/${endDate!.month.toString().padLeft(2, '0')}/${endDate!.day.toString().padLeft(2, '0')}',
-                      'minAmount': hasCondition ? minAmountController.text : null,
-                      'type': selectedOfferType,
-                    });
-                  });
-                  _logActivity(
-                    'تم إضافة عرض/كوبون جديد ($upperCode) بخصم $displayDiscount',
-                    'add_coupon',
-                    Icons.local_offer,
-                    AppColors.primary,
-                  );
-                  titleController.dispose();
-                  codeController.dispose();
-                  discountController.dispose();
-                  minAmountController.dispose();
-                  Navigator.pop(context);
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                titleController.dispose();
+                codeController.dispose();
+                discountController.dispose();
+                minAmountController.dispose();
+                Navigator.pop(context);
+              },
+              child: const Text('إلغاء',
+                  style: TextStyle(color: AppColors.textLight)),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (titleController.text.isEmpty ||
+                    codeController.text.isEmpty) {
                   ScaffoldMessenger.of(context).clearSnackBars();
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('تم إضافة العرض بنجاح')),
+                    const SnackBar(
+                        content: Text('الرجاء تعبئة اسم العرض وكود الخصم')),
                   );
-                },
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-                child: const Text('إضافة العرض', style: TextStyle(color: Colors.white)),
-              ),
-            ],
-          );
-        }
-      ),
+                  return;
+                }
+
+                // Validate discount field
+                if (discountController.text.isEmpty) {
+                  ScaffoldMessenger.of(context).clearSnackBars();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('يجب إدخال قيمة الخصم')),
+                  );
+                  return;
+                }
+
+                // Validate discount is a valid number
+                final discountValue =
+                    double.tryParse(discountController.text.trim());
+                if (discountValue == null) {
+                  ScaffoldMessenger.of(context).clearSnackBars();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content: Text('قيمة الخصم يجب أن تكون رقماً صالحاً')),
+                  );
+                  return;
+                }
+
+                // If percentage, validate it is between 1 and 100
+                if (selectedOfferType == 'Percentage' &&
+                    (discountValue <= 0 || discountValue > 100)) {
+                  ScaffoldMessenger.of(context).clearSnackBars();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content: Text(
+                            'النسبة المئوية للخصم يجب أن تكون بين 1 و 100')),
+                  );
+                  return;
+                }
+
+                // If fixed amount, validate it is greater than 0
+                if (selectedOfferType == 'FixedAmount' && discountValue <= 0) {
+                  ScaffoldMessenger.of(context).clearSnackBars();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content: Text('يجب أن تكون قيمة الخصم أكبر من صفر')),
+                  );
+                  return;
+                }
+
+                // Enforce date checks
+                if (startDate == null || endDate == null) {
+                  ScaffoldMessenger.of(context).clearSnackBars();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content: Text('يجب تحديد تاريخ البدء وتاريخ الانتهاء')),
+                  );
+                  return;
+                }
+
+                if (!endDate!.isAfter(startDate!)) {
+                  ScaffoldMessenger.of(context).clearSnackBars();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content:
+                            Text('تاريخ الانتهاء يجب أن يكون بعد تاريخ البدء')),
+                  );
+                  return;
+                }
+
+                // Check for duplicate codes
+                final upperCode = codeController.text.toUpperCase();
+                final isDuplicate = _coupons.any((c) => c['code'] == upperCode);
+                if (isDuplicate) {
+                  ScaffoldMessenger.of(context).clearSnackBars();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('كود الكوبون موجود بالفعل')),
+                  );
+                  return;
+                }
+
+                // Store raw numeric discount value, format only for display
+                String storedDiscount;
+                String displayDiscount;
+                if (selectedOfferType == 'Percentage') {
+                  storedDiscount = '${discountValue.toStringAsFixed(0)}%';
+                  displayDiscount = storedDiscount;
+                } else {
+                  // Store raw numeric value for FixedAmount
+                  storedDiscount = discountValue.toStringAsFixed(0);
+                  displayDiscount = '$storedDiscount ريال';
+                }
+
+                setState(() {
+                  _coupons.add({
+                    'title': titleController.text,
+                    'code': upperCode,
+                    'discount': storedDiscount,
+                    'displayDiscount': displayDiscount,
+                    'target': selectedTarget,
+                    'status': 'نشط',
+                    'startDate':
+                        '${startDate!.year}/${startDate!.month.toString().padLeft(2, '0')}/${startDate!.day.toString().padLeft(2, '0')}',
+                    'endDate':
+                        '${endDate!.year}/${endDate!.month.toString().padLeft(2, '0')}/${endDate!.day.toString().padLeft(2, '0')}',
+                    'minAmount': hasCondition ? minAmountController.text : null,
+                    'type': selectedOfferType,
+                  });
+                });
+                _logActivity(
+                  'تم إضافة عرض/كوبون جديد ($upperCode) بخصم $displayDiscount',
+                  'add_coupon',
+                  Icons.local_offer,
+                  AppColors.primary,
+                );
+                titleController.dispose();
+                codeController.dispose();
+                discountController.dispose();
+                minAmountController.dispose();
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).clearSnackBars();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('تم إضافة العرض بنجاح')),
+                );
+              },
+              style:
+                  ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+              child: const Text('إضافة العرض',
+                  style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      }),
     );
   }
 
@@ -3527,8 +3689,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       ),
     );
   }
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -3639,4 +3799,3 @@ bool isCouponExpired(Map<String, dynamic> coupon) {
   }
   return false;
 }
-

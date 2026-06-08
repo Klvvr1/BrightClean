@@ -7,24 +7,77 @@ class DeliveryTaskRepositoryImpl implements DeliveryTaskRepository {
 
   DeliveryTaskRepositoryImpl({required this.apiClient});
 
+  List<DeliveryTaskModel> _parseTaskList(dynamic response) {
+    List<dynamic>? list;
+    if (response is List) {
+      list = response;
+    } else if (response is Map<String, dynamic> &&
+        response.containsKey('value')) {
+      list = response['value'] as List<dynamic>;
+    }
+    if (list != null) {
+      return list
+          .map((item) =>
+              DeliveryTaskModel.fromJson(item as Map<String, dynamic>))
+          .toList();
+    }
+    return [];
+  }
+
   @override
   Future<List<DeliveryTaskModel>> getTaskPool() async {
     try {
       final response = await apiClient.get('/api/deliverytasks/pool');
-      List<dynamic>? list;
-      if (response is List) {
-        list = response;
-      } else if (response is Map<String, dynamic> &&
-          response.containsKey('value')) {
-        list = response['value'] as List<dynamic>;
+      return _parseTaskList(response);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  @override
+  Future<List<DeliveryTaskModel>> getMyTasks() async {
+    try {
+      final response = await apiClient.get('/api/deliverytasks/my');
+      return _parseTaskList(response);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  @override
+  Future<bool> getAvailability() async {
+    try {
+      final response = await apiClient.get('/api/deliverytasks/availability');
+      if (response is Map<String, dynamic>) {
+        return response['isAvailable'] == true ||
+            response['IsAvailable'] == true;
       }
-      if (list != null) {
-        return list
-            .map((item) =>
-                DeliveryTaskModel.fromJson(item as Map<String, dynamic>))
-            .toList();
+      if (response is Map) {
+        return response['isAvailable'] == true ||
+            response['IsAvailable'] == true;
       }
-      return [];
+      return false;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  @override
+  Future<bool> setAvailability(bool isAvailable) async {
+    try {
+      final response = await apiClient.patch(
+        '/api/deliverytasks/availability',
+        body: {'isAvailable': isAvailable},
+      );
+      if (response is Map<String, dynamic>) {
+        return response['isAvailable'] == true ||
+            response['IsAvailable'] == true;
+      }
+      if (response is Map) {
+        return response['isAvailable'] == true ||
+            response['IsAvailable'] == true;
+      }
+      return isAvailable;
     } catch (e) {
       rethrow;
     }

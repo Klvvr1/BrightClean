@@ -15,10 +15,12 @@ class AdminRepositoryImpl implements AdminRepository {
     final response = await _apiClient.get('/api/admin/pending-approvals');
     if (response is List) {
       return response
-          .map((json) => PendingUserModel.fromJson(json as Map<String, dynamic>))
+          .map(
+              (json) => PendingUserModel.fromJson(json as Map<String, dynamic>))
           .toList();
     }
-    throw ServerException(message: 'Invalid API response format for pending approvals');
+    throw ServerException(
+        message: 'Invalid API response format for pending approvals');
   }
 
   @override
@@ -32,7 +34,18 @@ class AdminRepositoryImpl implements AdminRepository {
     if (response is List) {
       return response;
     }
-    throw ServerException(message: 'Invalid API response format for approved staff');
+    throw ServerException(
+        message: 'Invalid API response format for approved staff');
+  }
+
+  @override
+  Future<List<dynamic>> getRecentOrders() async {
+    final response = await _apiClient.get('/api/admin/recent-orders');
+    if (response is List) {
+      return response;
+    }
+    throw ServerException(
+        message: 'Invalid API response format for recent orders');
   }
 
   @override
@@ -51,7 +64,8 @@ class AdminRepositoryImpl implements AdminRepository {
     final response = await _apiClient.get('/api/admin/services');
     if (response is List) {
       return response
-          .map((json) => AdminServiceModel.fromJson(json as Map<String, dynamic>))
+          .map((json) =>
+              AdminServiceModel.fromJson(json as Map<String, dynamic>))
           .toList();
     }
     throw ServerException(message: 'Invalid API response format for services');
@@ -63,7 +77,8 @@ class AdminRepositoryImpl implements AdminRepository {
   }
 
   @override
-  Future<void> updateService(int serviceId, Map<String, dynamic> service) async {
+  Future<void> updateService(
+      int serviceId, Map<String, dynamic> service) async {
     await _apiClient.put('/api/admin/services/$serviceId', body: service);
   }
 
@@ -91,7 +106,8 @@ class AdminRepositoryImpl implements AdminRepository {
     if (response is List) {
       return response;
     }
-    throw ServerException(message: 'Invalid API response format for laundry agents');
+    throw ServerException(
+        message: 'Invalid API response format for laundry agents');
   }
 
   @override
@@ -109,13 +125,17 @@ class AdminRepositoryImpl implements AdminRepository {
       if (rawServices is List) {
         return rawServices
             .whereType<Map>()
-            .map((service) => service['serviceID'] ?? service['serviceId'] ?? service['ServiceID'])
+            .map((service) =>
+                service['serviceID'] ??
+                service['serviceId'] ??
+                service['ServiceID'])
             .map((id) => id is int ? id : int.tryParse(id.toString()))
             .whereType<int>()
             .toList();
       }
     }
-    throw ServerException(message: 'Invalid API response format for agent services');
+    throw ServerException(
+        message: 'Invalid API response format for agent services');
   }
 
   @override

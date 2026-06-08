@@ -10,6 +10,7 @@ class AdminProvider with ChangeNotifier {
 
   List<PendingUserModel> _pendingUsers = [];
   List<dynamic> _approvedStaff = [];
+  List<dynamic> _recentOrders = [];
   List<dynamic> _laundryAgentsWithServices = [];
   List<AdminServiceModel> _services = [];
   bool _isLoading = false;
@@ -21,6 +22,7 @@ class AdminProvider with ChangeNotifier {
 
   List<PendingUserModel> get pendingUsers => _pendingUsers;
   List<dynamic> get approvedStaff => _approvedStaff;
+  List<dynamic> get recentOrders => _recentOrders;
   List<dynamic> get laundryAgentsWithServices => _laundryAgentsWithServices;
   List<AdminServiceModel> get services => _services;
   bool get isLoading => _isLoading;
@@ -36,6 +38,24 @@ class AdminProvider with ChangeNotifier {
       _approvedStaff = await adminRepository.getApprovedStaff();
     } on ServerException catch (e) {
       _errorMessage = e.message ?? 'حدث خطأ أثناء تحميل الموظفين المعتمدين';
+    } catch (e) {
+      _errorMessage = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> fetchRecentOrders() async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      _recentOrders = await adminRepository.getRecentOrders();
+    } on ServerException catch (e) {
+      _errorMessage = e.message ??
+          'Ø­Ø¯Ø« Ø®Ø·Ø£ Ø£Ø«Ù†Ø§Ø¡ ØªØ­Ù…ÙŠÙ„ Ø§Ù„Ø·Ù„Ø¨Ø§Øª Ø§Ù„Ø£Ø®ÙŠØ±Ø©';
     } catch (e) {
       _errorMessage = e.toString();
     } finally {
@@ -140,8 +160,10 @@ class AdminProvider with ChangeNotifier {
     await _runServiceAction(() => adminRepository.createService(service));
   }
 
-  Future<void> updateService(int serviceId, Map<String, dynamic> service) async {
-    await _runServiceAction(() => adminRepository.updateService(serviceId, service));
+  Future<void> updateService(
+      int serviceId, Map<String, dynamic> service) async {
+    await _runServiceAction(
+        () => adminRepository.updateService(serviceId, service));
   }
 
   Future<void> setServiceAvailability(int serviceId, bool isAvailable) async {
@@ -163,7 +185,8 @@ class AdminProvider with ChangeNotifier {
   }
 
   Future<void> setAgentServices(int agentId, List<int> serviceIds) async {
-    await _runServiceAction(() => adminRepository.setAgentServices(agentId, serviceIds));
+    await _runServiceAction(
+        () => adminRepository.setAgentServices(agentId, serviceIds));
   }
 
   Future<void> _runServiceAction(Future<void> Function() action) async {

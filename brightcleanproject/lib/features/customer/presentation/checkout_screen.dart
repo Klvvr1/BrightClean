@@ -16,7 +16,7 @@ import 'package:brightcleanproject/features/customer/domain/models/order.dart';
 import 'package:brightcleanproject/features/customer/data/providers/order_provider.dart';
 import '../data/providers/cart_provider.dart';
 import '../../../../core/widgets/map_picker_screen.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../data/models/customer_address_model.dart';
 
 class CheckoutScreen extends StatefulWidget {
   final List<CartItem>? directItems;
@@ -32,6 +32,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   String _selectedPaymentMethod = 'cash';
   bool _isLocationVerified = false;
   String? _selectedAddress;
+  int? _selectedAddressId;
+  double? _selectedLatitude;
+  double? _selectedLongitude;
+  List<CustomerAddressModel> _savedAddresses = [];
 
   Future<void> _selectLocation() async {
     final result = await Navigator.push(
@@ -40,49 +44,103 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
 
     if (result != null && result is Map<String, dynamic>) {
-      setState(() {
-        _selectedAddress = result['address'] as String;
-        _isLocationVerified = true;
-      });
-    }
-  }
+      final coordinates = result['coordinates'];
+      final latitude =
+          _readDouble(result['latitude']) ?? _readDouble(coordinates?.latitude);
+      final longitude = _readDouble(result['longitude']) ??
+          _readDouble(coordinates?.longitude);
+      final address = result['address']?.toString() ?? '';
 
-  Future<int?> _ensureAddressRegistered() async {
-    if (_selectedAddress == null || _selectedAddress!.isEmpty) return null;
+      if (address.isEmpty ||
+          latitude == null ||
+          longitude == null ||
+          (latitude == 0.0 && longitude == 0.0)) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text(
+                'ÙŠØ±Ø¬Ù‰ ØªØ­Ø¯ÙŠØ¯ Ø¹Ù†ÙˆØ§Ù† ØªÙˆØµÙŠÙ„ ØµØ§Ù„Ø­'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+        return;
+      }
 
-    final prefs = await SharedPreferences.getInstance();
-    final userId = prefs.get('user_id')?.toString() ?? 'default_user';
-    final lastRegStr =
-        prefs.getString('last_registered_address_string_$userId');
-    int? addressId = prefs.getInt('last_registered_address_id_$userId');
-
-    if (lastRegStr != _selectedAddress || addressId == null) {
-      String area = _selectedAddress!;
-      String street = _selectedAddress!;
-      final commaSplit = area.split(',');
+      String area = address;
+      String street = address;
+      final commaSplit = address.split(',');
       if (commaSplit.length >= 2) {
         area = commaSplit[0].trim();
         street = commaSplit.sublist(1).join(',').trim();
       }
 
-      // Propagate errors to caller - do not swallow
-      final response = await _apiClient.post('/api/addresses', body: {
-        'area': area,
-        'street': street,
-        'latitude': 0.0,
-        'longitude': 0.0,
-      });
+      try {
+        final response = await _apiClient.post('/api/addresses', body: {
+          'area': area,
+          'street': street,
+          'latitude': latitude,
+          'longitude': longitude,
+        });
 
-      if (response != null && response is Map<String, dynamic>) {
-        addressId = response['addressID'] as int?;
-        if (addressId != null) {
-          await prefs.setInt('last_registered_address_id_$userId', addressId);
-          await prefs.setString(
-              'last_registered_address_string_$userId', _selectedAddress!);
+        if (response is! Map<String, dynamic>) {
+          throw Exception('Invalid address response');
         }
+
+        final savedAddress = CustomerAddressModel.fromJson(response);
+        if (!savedAddress.isValid) {
+          throw Exception('Invalid address response');
+        }
+
+        if (!mounted) return;
+        setState(() {
+          _selectedAddress = savedAddress.label;
+          _selectedAddressId = savedAddress.addressID;
+          _selectedLatitude = savedAddress.latitude;
+          _selectedLongitude = savedAddress.longitude;
+          _isLocationVerified = true;
+          _savedAddresses = [
+            savedAddress,
+            ..._savedAddresses
+                .where((item) => item.addressID != savedAddress.addressID),
+          ];
+        });
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('ÙØ´Ù„ Ø­ÙØ¸ Ø¹Ù†ÙˆØ§Ù† Ø§Ù„ØªÙˆØµÙŠÙ„: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
       }
     }
-    return addressId;
+  }
+
+  Future<int?> _ensureAddressRegistered() async {
+    if (_selectedAddressId != null &&
+        _selectedAddressId! > 0 &&
+        _selectedAddress != null &&
+        _selectedAddress!.isNotEmpty &&
+        _selectedLatitude != null &&
+        _selectedLongitude != null &&
+        !(_selectedLatitude == 0.0 && _selectedLongitude == 0.0)) {
+      return _selectedAddressId;
+    }
+
+    await _loadLocationData();
+
+    if (_selectedAddressId != null &&
+        _selectedAddressId! > 0 &&
+        _selectedAddress != null &&
+        _selectedAddress!.isNotEmpty &&
+        _selectedLatitude != null &&
+        _selectedLongitude != null &&
+        !(_selectedLatitude == 0.0 && _selectedLongitude == 0.0)) {
+      return _selectedAddressId;
+    }
+
+    throw Exception(
+        'ÙŠØ±Ø¬Ù‰ Ø¥Ø¶Ø§ÙØ© Ø¹Ù†ÙˆØ§Ù† ØªÙˆØµÙŠÙ„ ØµØ§Ù„Ø­ Ù‚Ø¨Ù„ Ø¥ÙƒÙ…Ø§Ù„ Ø§Ù„Ø¯ÙØ¹');
   }
 
   final TextEditingController _locationDescriptionController =
@@ -105,6 +163,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     if (value is int) return value;
     if (value is num) return value.toInt();
     return int.tryParse(value?.toString() ?? '');
+  }
+
+  double? _readDouble(dynamic value) {
+    if (value is double) return value;
+    if (value is num) return value.toDouble();
+    return double.tryParse(value?.toString() ?? '');
   }
 
   dynamic _readAny(Map<dynamic, dynamic> map, List<String> keys) {
@@ -168,49 +232,45 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       if (response is List) {
         if (!mounted) return;
         setState(() {
-          _agents = response
-              .where((a) {
-                if (a == null || a is! Map) return false;
-                final idValue =
-                    _readAny(a, ['id', 'ID', 'userID', 'userId', 'UserID']);
-                final nameValue =
-                    _readAny(a, ['businessName', 'BusinessName', 'name', 'Name']);
-                if (_readInt(idValue) == null || nameValue == null) return false;
-                if (requiredServiceIds.isEmpty) return true;
-                final agentServiceIds = _readServiceIds(a);
-                return requiredServiceIds.every(agentServiceIds.contains);
-              })
-              .map<Map<String, dynamic>>((a) {
-                final agentJson = a as Map;
-                final id = _readInt(
-                  _readAny(agentJson, ['id', 'ID', 'userID', 'userId', 'UserID']),
-                )!;
-                final businessName = (_readAny(
+          _agents = response.where((a) {
+            if (a == null || a is! Map) return false;
+            final idValue =
+                _readAny(a, ['id', 'ID', 'userID', 'userId', 'UserID']);
+            final nameValue =
+                _readAny(a, ['businessName', 'BusinessName', 'name', 'Name']);
+            if (_readInt(idValue) == null || nameValue == null) return false;
+            if (requiredServiceIds.isEmpty) return true;
+            final agentServiceIds = _readServiceIds(a);
+            return requiredServiceIds.every(agentServiceIds.contains);
+          }).map<Map<String, dynamic>>((a) {
+            final agentJson = a as Map;
+            final id = _readInt(
+              _readAny(agentJson, ['id', 'ID', 'userID', 'userId', 'UserID']),
+            )!;
+            final businessName = (_readAny(
                       agentJson,
                       ['businessName', 'BusinessName', 'name', 'Name'],
                     ) ??
-                    '').toString();
-                final rawServices =
-                    _readAny(agentJson, ['services', 'Services']);
-                final services = rawServices is List
-                    ? rawServices
-                        .whereType<Map>()
-                        .map<Map<String, dynamic>>(
-                          (service) => service.map(
-                            (key, value) =>
-                                MapEntry(key.toString(), value),
-                          ),
-                        )
-                        .toList()
-                    : <Map<String, dynamic>>[];
-                return <String, dynamic>{
-                  'id': id,
-                  'businessName': businessName,
-                  'serviceIds': _readServiceIds(agentJson).toList(),
-                  'services': services,
-                };
-              })
-              .toList();
+                    '')
+                .toString();
+            final rawServices = _readAny(agentJson, ['services', 'Services']);
+            final services = rawServices is List
+                ? rawServices
+                    .whereType<Map>()
+                    .map<Map<String, dynamic>>(
+                      (service) => service.map(
+                        (key, value) => MapEntry(key.toString(), value),
+                      ),
+                    )
+                    .toList()
+                : <Map<String, dynamic>>[];
+            return <String, dynamic>{
+              'id': id,
+              'businessName': businessName,
+              'serviceIds': _readServiceIds(agentJson).toList(),
+              'services': services,
+            };
+          }).toList();
 
           // Do not pre-select an agent - let user explicitly choose
           _isLoadingAgents = false;
@@ -281,7 +341,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             };
           }).toList();
           if (itemsDto.any((item) => (item['serviceID'] ?? 0) <= 0)) {
-            throw Exception('هذه الخدمة غير مرتبطة بكتالوج الخادم. يرجى اختيار خدمة متوفرة.');
+            throw Exception(
+                'هذه الخدمة غير مرتبطة بكتالوج الخادم. يرجى اختيار خدمة متوفرة.');
           }
 
           final addressId = await _ensureAddressRegistered();
@@ -420,21 +481,37 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   }
 
   Future<void> _loadLocationData() async {
-    final prefs = await SharedPreferences.getInstance();
-    if (!mounted) return;
-
-    final userId = prefs.get('user_id')?.toString() ?? 'default_user';
-    String? savedAddress = prefs.getString('current_cart_address_$userId');
-    if (savedAddress == null || savedAddress.isEmpty) {
-      savedAddress = prefs.getString('user_registration_address_$userId');
-    }
-    if (!mounted) return;
-
-    if (savedAddress != null && savedAddress.isNotEmpty) {
+    try {
+      final response = await _apiClient.get('/api/addresses');
+      if (!mounted) return;
+      final addresses = response is List
+          ? response
+              .whereType<Map>()
+              .map((item) => CustomerAddressModel.fromJson(
+                    item.map((key, value) => MapEntry(key.toString(), value)),
+                  ))
+              .where((address) => address.isValid)
+              .toList()
+          : <CustomerAddressModel>[];
       setState(() {
-        _selectedAddress = savedAddress;
-        _isLocationVerified = true;
+        _savedAddresses = addresses;
+        if (addresses.isNotEmpty && _selectedAddressId == null) {
+          final address = addresses.first;
+          _selectedAddress = address.label;
+          _selectedAddressId = address.addressID;
+          _selectedLatitude = address.latitude;
+          _selectedLongitude = address.longitude;
+          _isLocationVerified = true;
+        } else if (addresses.isEmpty) {
+          _selectedAddress = null;
+          _selectedAddressId = null;
+          _selectedLatitude = null;
+          _selectedLongitude = null;
+          _isLocationVerified = false;
+        }
       });
+    } catch (e) {
+      debugPrint('Error loading customer addresses: $e');
     }
   }
 
@@ -618,12 +695,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       },
                 disabledHint: _selectedAgentId != null
                     ? Text(
-                        _agents.firstWhere(
-                          (agent) => agent['id'] == _selectedAgentId,
-                          orElse: () => <String, dynamic>{
-                            'businessName': 'مغسلة محددة',
-                          },
-                        )['businessName']?.toString() ??
+                        _agents
+                                .firstWhere(
+                                  (agent) => agent['id'] == _selectedAgentId,
+                                  orElse: () => <String, dynamic>{
+                                    'businessName': 'مغسلة محددة',
+                                  },
+                                )['businessName']
+                                ?.toString() ??
                             'مغسلة محددة',
                       )
                     : const Text('اختر المغسلة'),
@@ -1129,7 +1208,8 @@ class _CheckoutBottomBarState extends State<_CheckoutBottomBar> {
                   {'serviceID': item.serviceId, 'quantity': item.quantity})
               .toList();
           if (itemsDto.any((item) => (item['serviceID'] ?? 0) <= 0)) {
-            throw Exception('هذه الخدمة غير مرتبطة بكتالوج الخادم. يرجى اختيار خدمة متوفرة.');
+            throw Exception(
+                'هذه الخدمة غير مرتبطة بكتالوج الخادم. يرجى اختيار خدمة متوفرة.');
           }
           final addressId = await widget.ensureAddressRegistered();
           bookingId = await orderProvider.createBooking(

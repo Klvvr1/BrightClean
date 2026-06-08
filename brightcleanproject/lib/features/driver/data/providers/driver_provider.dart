@@ -10,11 +10,13 @@ class DriverProvider extends ChangeNotifier {
   List<DeliveryTaskModel> _tasks = [];
   bool _isLoading = false;
   bool _isActionLoading = false;
+  bool _isAvailable = false;
   String? _errorMessage;
 
   List<DeliveryTaskModel> get tasks => _tasks;
   bool get isLoading => _isLoading;
   bool get isActionLoading => _isActionLoading;
+  bool get isAvailable => _isAvailable;
   String? get errorMessage => _errorMessage;
 
   DriverProvider({DeliveryTaskRepository? deliveryTaskRepository})
@@ -27,11 +29,46 @@ class DriverProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _tasks = await deliveryTaskRepository.getTaskPool();
+      final poolTasks = await deliveryTaskRepository.getTaskPool();
+      final myTasks = await deliveryTaskRepository.getMyTasks();
+      final merged = <int, DeliveryTaskModel>{};
+      for (final task in poolTasks) {
+        merged[task.taskID] = task;
+      }
+      for (final task in myTasks) {
+        merged[task.taskID] = task;
+      }
+      _tasks = merged.values.toList();
     } catch (e) {
       _errorMessage = e.toString();
     } finally {
       _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> refreshAvailability() async {
+    try {
+      _isAvailable = await deliveryTaskRepository.getAvailability();
+      notifyListeners();
+    } catch (e) {
+      _errorMessage = e.toString();
+      notifyListeners();
+    }
+  }
+
+  Future<void> setAvailability(bool isAvailable) async {
+    _isActionLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      _isAvailable = await deliveryTaskRepository.setAvailability(isAvailable);
+    } catch (e) {
+      _errorMessage = e.toString();
+      rethrow;
+    } finally {
+      _isActionLoading = false;
       notifyListeners();
     }
   }
