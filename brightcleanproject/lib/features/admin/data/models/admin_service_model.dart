@@ -1,3 +1,5 @@
+import '../../../../core/utils/json_map_extension.dart';
+
 class AdminServiceModel {
   final int serviceID;
   final String serviceName;
@@ -61,10 +63,8 @@ class AdminServiceModel {
       deliveryModel: readInt(json, ['deliveryModel', 'DeliveryModel']),
       isAvailable: readBool(json, ['isAvailable', 'IsAvailable']),
       isDeleted: readBool(json, ['isDeleted', 'IsDeleted']),
-      linkedAgentCount:
-          readInt(json, ['linkedAgentCount', 'LinkedAgentCount']),
-      activeAgentCount:
-          readInt(json, ['activeAgentCount', 'ActiveAgentCount']),
+      linkedAgentCount: readInt(json, ['linkedAgentCount', 'LinkedAgentCount']),
+      activeAgentCount: readInt(json, ['activeAgentCount', 'ActiveAgentCount']),
       hasHistoricalUsage:
           readBool(json, ['hasHistoricalUsage', 'HasHistoricalUsage']),
       canDelete: readBool(json, ['canDelete', 'CanDelete']),
@@ -73,13 +73,7 @@ class AdminServiceModel {
   }
 
   static int readInt(Map json, List<String> keys) {
-    for (final key in keys) {
-      final value = json[key];
-      if (value is int) return value;
-      if (value is num) return value.toInt();
-      if (value is String) return int.tryParse(value) ?? 0;
-    }
-    return 0;
+    return _typedJson(json).readFirstInt(keys);
   }
 
   static double readDouble(Map json, List<String> keys) {
@@ -93,13 +87,7 @@ class AdminServiceModel {
   }
 
   static bool readBool(Map json, List<String> keys) {
-    for (final key in keys) {
-      final value = json[key];
-      if (value is bool) return value;
-      if (value is String) return value.toLowerCase() == 'true';
-      if (value is num) return value != 0;
-    }
-    return false;
+    return _typedJson(json).readFirstBool(keys);
   }
 
   static String readString(
@@ -107,12 +95,11 @@ class AdminServiceModel {
     List<String> keys, {
     required String fallback,
   }) {
-    for (final key in keys) {
-      final value = json[key];
-      if (value != null && value.toString().isNotEmpty) {
-        return value.toString();
-      }
-    }
-    return fallback;
+    return _typedJson(json).readFirstString(keys, fallback: fallback);
+  }
+
+  static Map<String, dynamic> _typedJson(Map json) {
+    if (json is Map<String, dynamic>) return json;
+    return json.map((key, value) => MapEntry(key.toString(), value));
   }
 }

@@ -3,6 +3,7 @@ import '../../../../core/error/exceptions.dart';
 import '../../domain/repositories/admin_repository.dart';
 import '../models/pending_user_model.dart';
 import '../models/admin_service_model.dart';
+import '../models/activation_request_model.dart';
 
 class AdminRepositoryImpl implements AdminRepository {
   final BaseApiClient _apiClient;
@@ -144,5 +145,42 @@ class AdminRepositoryImpl implements AdminRepository {
       '/api/admin/agents/$agentId/services',
       body: {'serviceIDs': serviceIds},
     );
+  }
+
+  @override
+  Future<List<ActivationRequestModel>> getServiceActivationRequests() async {
+    final response =
+        await _apiClient.get('/api/admin/service-activation-requests');
+    if (response is List) {
+      final result = <ActivationRequestModel>[];
+      for (int i = 0; i < response.length; i++) {
+        final item = response[i];
+        if (item is! Map) {
+          throw FormatException(
+            'Invalid item at index $i in service activation requests: expected Map but got ${item.runtimeType}. Value: $item',
+          );
+        }
+        result.add(ActivationRequestModel.fromJson(
+          item.map((key, value) => MapEntry(key.toString(), value)),
+        ));
+      }
+      return result;
+    }
+    throw ServerException(
+        message: 'Invalid API response format for service activation requests');
+  }
+
+  @override
+  Future<void> approveServiceActivationRequest(
+      int agentId, int serviceId) async {
+    await _apiClient
+        .post('/api/admin/agents/$agentId/services/$serviceId/approve');
+  }
+
+  @override
+  Future<void> rejectServiceActivationRequest(
+      int agentId, int serviceId) async {
+    await _apiClient
+        .post('/api/admin/agents/$agentId/services/$serviceId/reject');
   }
 }

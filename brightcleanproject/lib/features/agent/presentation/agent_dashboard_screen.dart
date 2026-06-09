@@ -10,7 +10,8 @@ import 'package:brightcleanproject/core/controllers/theme_controller.dart';
 import 'package:provider/provider.dart';
 import '../../auth/data/providers/auth_provider.dart';
 import '../../customer/data/providers/cart_provider.dart';
-import '../../customer/data/models/booking_model.dart';
+import '../../../core/enums/service_activation_status.dart';
+import '../data/models/agent_service_model.dart';
 import '../data/repositories/agent_booking_repository.dart';
 
 // UI display model mapped from backend booking DTOs.
@@ -40,6 +41,166 @@ class AgentOrderModel {
   });
 }
 
+class AgentServiceEditScreen extends StatefulWidget {
+  final List<AgentServiceModel> services;
+  final AgentBookingRepository repository;
+
+  const AgentServiceEditScreen({
+    super.key,
+    required this.services,
+    required this.repository,
+  });
+
+  @override
+  State<AgentServiceEditScreen> createState() => _AgentServiceEditScreenState();
+}
+
+class _AgentServiceEditScreenState extends State<AgentServiceEditScreen> {
+  late final Map<int, bool> _originalSelection;
+  late final Map<int, bool> _selection;
+  bool _isSubmitting = false;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _originalSelection = {
+      for (final service in widget.services)
+        service.serviceId:
+            service.status == AgentServiceStatus.active || service.isActive,
+    };
+    _selection = Map<int, bool>.from(_originalSelection);
+  }
+
+  bool _isPending(AgentServiceModel service) {
+    return service.status == AgentServiceStatus.pendingActivation ||
+        service.pendingActivation;
+  }
+
+  List<AgentServiceModel> get _changedServices {
+    return widget.services.where((service) {
+      if (_isPending(service)) return false;
+      return _selection[service.serviceId] !=
+          _originalSelection[service.serviceId];
+    }).toList();
+  }
+
+  Future<void> _submitChanges() async {
+    final changedServices = _changedServices;
+    if (changedServices.isEmpty) {
+      Navigator.of(context).pop(false);
+      return;
+    }
+
+    setState(() {
+      _isSubmitting = true;
+      _errorMessage = null;
+    });
+
+    try {
+      for (final service in changedServices) {
+        await widget.repository.requestServiceChange(service.serviceId);
+      }
+      if (mounted) Navigator.of(context).pop(true);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = e.toString();
+        _isSubmitting = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isArabic = LanguageController().isArabic;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final changedCount = _changedServices.length;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(isArabic ? 'طلب تعديل خدمة' : 'Request service edit'),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        children: [
+          if (_errorMessage != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+              child: Text(
+                _errorMessage!,
+                style: const TextStyle(color: AppColors.error),
+              ),
+            ),
+          ...widget.services.map((service) {
+            final pending = _isPending(service);
+            final selected = _selection[service.serviceId] ?? false;
+            return Container(
+              margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.05)
+                    : Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: pending
+                      ? AppColors.tertiary.withValues(alpha: 0.35)
+                      : Colors.black.withValues(alpha: 0.06),
+                ),
+              ),
+              child: CheckboxListTile(
+                value: selected,
+                onChanged: pending || _isSubmitting
+                    ? null
+                    : (value) {
+                        setState(() {
+                          _selection[service.serviceId] = value ?? false;
+                        });
+                      },
+                title: Text(
+                  service.serviceName,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                subtitle: pending
+                    ? Text(isArabic
+                        ? 'بانتظار موافقة المشرف'
+                        : 'Waiting for admin approval')
+                    : null,
+                controlAffinity: ListTileControlAffinity.trailing,
+                activeColor: AppColors.primary,
+              ),
+            );
+          }),
+        ],
+      ),
+      bottomNavigationBar: SafeArea(
+        minimum: const EdgeInsets.all(AppSpacing.md),
+        child: ElevatedButton(
+          onPressed: _isSubmitting || changedCount == 0 ? null : _submitChanges,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+          ),
+          child: _isSubmitting
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : Text(
+                  changedCount == 0
+                      ? (isArabic ? 'لا توجد تغييرات' : 'No changes')
+                      : (isArabic
+                          ? 'إرسال طلب التعديل'
+                          : 'Submit edit request'),
+                ),
+        ),
+      ),
+    );
+  }
+}
+
 class OrderItemMock {
   final String itemName;
   final String serviceType;
@@ -64,7 +225,7 @@ class AgentDashboardScreen extends StatefulWidget {
 class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
   final AgentBookingRepository _bookingRepository = AgentBookingRepository();
   late List<AgentOrderModel> _allOrders;
-  List<ServiceCatalogItemModel> _agentServices = [];
+  List<AgentServiceModel> _agentServices = [];
   bool _isLoadingOrders = false;
   String? _ordersError;
   bool _isLaundryOpen = true;
@@ -182,7 +343,13 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
       final profileResponse = await _bookingRepository.getMyProfile();
       final profile = profileResponse?['profile'];
       final agent = profileResponse?['agent'];
+      int? agentId;
       if (profile is Map<String, dynamic>) {
+        final rawAgentId =
+            profile['userId'] ?? profile['userID'] ?? profile['UserID'];
+        agentId = rawAgentId is int
+            ? rawAgentId
+            : int.tryParse(rawAgentId?.toString() ?? '');
         final firstName = profile['firstName']?.toString() ?? '';
         final lastName = profile['lastName']?.toString() ?? '';
         final displayName = '$firstName $lastName'.trim();
@@ -194,28 +361,94 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
         _emailController.text =
             profile['email']?.toString() ?? _emailController.text;
       }
+      final subscribedServices = <int, AgentServiceModel>{};
       if (agent is Map<String, dynamic>) {
         _nameController.text =
             agent['businessName']?.toString() ?? _nameController.text;
         _isLaundryOpen = !(agent['isStoreClosed'] as bool? ?? false);
         final rawServices = agent['services'];
         if (rawServices is List) {
-          _agentServices = rawServices
+          final parsedServices = rawServices
               .whereType<Map>()
               .map((service) => _toStringKeyedMap(service))
-              .map(ServiceCatalogItemModel.fromJson)
+              .map(AgentServiceModel.fromJson)
               .toList();
+          for (final service in parsedServices) {
+            subscribedServices[service.serviceId] = service;
+          }
         }
       }
 
-      final bookings = await _bookingRepository.getMyBookings();
-      _allOrders = bookings.map(_mapBookingToAgentOrder).toList();
+      final servicesById = <int, AgentServiceModel>{
+        for (final service in subscribedServices.values)
+          service.serviceId: service,
+      };
+
+      try {
+        final catalogServices = await _bookingRepository.getAvailableServices();
+        for (final service in catalogServices) {
+          servicesById.putIfAbsent(
+            service.serviceID,
+            () => AgentServiceModel(
+              agentId: 0,
+              serviceId: service.serviceID,
+              serviceName: service.serviceName,
+              status: AgentServiceStatus.inactive,
+              isActive: false,
+              pendingActivation: false,
+              category: service.category.toString(),
+              price: service.price,
+            ),
+          );
+        }
+        if (agentId != null) {
+          final activeCatalogServices =
+              await _bookingRepository.getMyServices(agentId);
+          for (final service in activeCatalogServices) {
+            servicesById[service.serviceID] = AgentServiceModel(
+              agentId: agentId,
+              serviceId: service.serviceID,
+              serviceName: service.serviceName,
+              status: AgentServiceStatus.active,
+              isActive: true,
+              pendingActivation: false,
+              category: service.category.toString(),
+              price: service.price,
+            );
+          }
+        }
+        _agentServices = servicesById.values.toList();
+      } catch (e) {
+        debugPrint('Failed to fetch services: $e');
+        _agentServices = [];
+      }
+
+      try {
+        final bookings = await _bookingRepository.getMyBookings();
+        _allOrders = bookings.map(_mapBookingToAgentOrder).toList();
+      } catch (e) {
+        _ordersError = e.toString();
+      }
     } catch (e) {
       _ordersError = e.toString();
     } finally {
       if (mounted) {
         setState(() => _isLoadingOrders = false);
       }
+    }
+  }
+
+  Future<void> _openServiceEditPage() async {
+    final changed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => AgentServiceEditScreen(
+          services: _agentServices,
+          repository: _bookingRepository,
+        ),
+      ),
+    );
+    if (changed == true) {
+      await _loadAgentData();
     }
   }
 
@@ -433,11 +666,13 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
 
   Widget _buildServicesSection() {
     final isArabic = LanguageController().isArabic;
-    final services = _agentServices
-        .map((service) => service.serviceName)
-        .where((name) => name.trim().isNotEmpty)
-        .toSet()
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final activeServices = _agentServices
+        .where((service) =>
+            (service.status == AgentServiceStatus.active || service.isActive) &&
+            !service.pendingActivation)
         .toList();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -445,23 +680,32 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
           children: [
             const Icon(Icons.star_outline, size: 20, color: AppColors.tertiary),
             const SizedBox(width: AppSpacing.xs),
-            Text(isArabic ? 'الخدمات التي تقدمها' : 'Your Services',
+            Expanded(
+              child: Text(
+                isArabic ? 'الخدمات التي تقدمها' : 'Your Services',
                 style:
-                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
+            TextButton.icon(
+              onPressed: _agentServices.isEmpty ? null : _openServiceEditPage,
+              icon: const Icon(Icons.edit_outlined, size: 18),
+              label: Text(isArabic ? 'طلب تعديل خدمة' : 'Request service edit'),
+            ),
           ],
         ),
         const SizedBox(height: AppSpacing.sm),
-        if (services.isEmpty)
+        if (activeServices.isEmpty)
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: Theme.of(context).brightness == Brightness.dark
+              color: isDark
                   ? Colors.white.withValues(alpha: 0.05)
                   : Colors.grey.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: Theme.of(context).brightness == Brightness.dark
+                color: isDark
                     ? Colors.white10
                     : Colors.grey.withValues(alpha: 0.2),
               ),
@@ -469,9 +713,7 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
             child: Text(
               isArabic ? 'لا توجد خدمات مفعلة حاليا' : 'No active services yet',
               style: TextStyle(
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.white70
-                    : Colors.grey.shade700,
+                color: isDark ? Colors.white70 : Colors.grey.shade700,
                 fontWeight: FontWeight.w600,
                 fontSize: 13,
               ),
@@ -481,8 +723,7 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
-              children: services.map((s) {
-                final isDark = Theme.of(context).brightness == Brightness.dark;
+              children: activeServices.map((service) {
                 return Container(
                   margin: const EdgeInsets.only(right: 8),
                   padding:
@@ -493,15 +734,19 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
                         : AppColors.primary.withValues(alpha: 0.05),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                        color: isDark
-                            ? Colors.white10
-                            : AppColors.primary.withValues(alpha: 0.1)),
+                      color: isDark
+                          ? Colors.white10
+                          : AppColors.primary.withValues(alpha: 0.1),
+                    ),
                   ),
-                  child: Text(s,
-                      style: TextStyle(
-                          color: isDark ? Colors.white : AppColors.primary,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13)),
+                  child: Text(
+                    service.serviceName,
+                    style: TextStyle(
+                      color: isDark ? Colors.white : AppColors.primary,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                  ),
                 );
               }).toList(),
             ),

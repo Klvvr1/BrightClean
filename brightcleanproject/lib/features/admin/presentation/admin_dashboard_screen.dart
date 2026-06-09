@@ -2,8 +2,10 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:provider/provider.dart';
+import '../../../../core/enums/service_activation_status.dart';
 import '../data/providers/admin_provider.dart';
 import '../data/models/admin_service_model.dart';
+import '../data/models/activation_request_model.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_styles.dart';
@@ -88,6 +90,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       context.read<AdminProvider>().fetchPendingUsers();
       context.read<AdminProvider>().fetchApprovedStaff();
       context.read<AdminProvider>().fetchServices();
+      context.read<AdminProvider>().fetchServiceActivationRequests();
       context.read<AdminProvider>().fetchRecentOrders();
     });
   }
@@ -1581,6 +1584,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           onRefresh: () async {
             final provider = context.read<AdminProvider>();
             await provider.fetchServices();
+            await provider.fetchServiceActivationRequests();
             await provider.fetchApprovedStaff();
             if (_selectedLaundryAgentId != null) {
               await _loadLaundryServices(_selectedLaundryAgentId);
@@ -1625,6 +1629,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               else if (adminProvider.errorMessage != null && services.isEmpty)
                 _buildServicesError(adminProvider.errorMessage!)
               else ...[
+                _buildServiceActivationRequestsSection(adminProvider),
+                const SizedBox(height: AppSpacing.lg),
                 _buildLaundryAgentsSection(adminProvider),
                 const SizedBox(height: AppSpacing.lg),
                 _buildSelectedLaundryServicesEditor(adminProvider),
@@ -1637,6 +1643,172 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildServiceActivationRequestsSection(AdminProvider adminProvider) {
+    final requests = adminProvider.serviceActivationRequests;
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: AppStyles.surface(context),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.fact_check_outlined, color: AppColors.primary),
+              const SizedBox(width: AppSpacing.sm),
+              const Expanded(
+                child: Text(
+                  'طلبات تعديل خدمات المغاسل',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ),
+              IconButton(
+                tooltip: 'تحديث',
+                onPressed: adminProvider.isLoading
+                    ? null
+                    : adminProvider.fetchServiceActivationRequests,
+                icon: const Icon(Icons.refresh),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          if (requests.isEmpty)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(AppSpacing.md),
+              decoration: BoxDecoration(
+                color: AppColors.background,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: AppColors.primary.withValues(alpha: 0.08),
+                ),
+              ),
+              child: const Text(
+                'لا توجد طلبات تعديل خدمات حالياً',
+                style: TextStyle(
+                  color: AppColors.textLight,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            )
+          else
+            ...requests.map(
+              (request) => _buildServiceActivationRequestTile(
+                adminProvider,
+                request,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildServiceActivationRequestTile(
+    AdminProvider adminProvider,
+    ActivationRequestModel request,
+  ) {
+    final isActivation =
+        request.requestType == ActivationRequestType.activation;
+    final actionText = isActivation ? 'تفعيل' : 'إلغاء تفعيل';
+    final actionColor = isActivation ? AppColors.success : AppColors.warning;
+    final isBusy = adminProvider.isActionLoading;
+
+    return InkWell(
+      onTap: () => _showServiceActivationRequestDetails(request),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+        padding: const EdgeInsets.all(AppSpacing.md),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.08)),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    request.serviceName,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textMain,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    request.agentName,
+                    style: const TextStyle(
+                      color: AppColors.textLight,
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: actionColor.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          'طلب $actionText',
+                          style: TextStyle(
+                            color: actionColor,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ),
+                      const Text(
+                        'اضغط لعرض التفاصيل',
+                        style: TextStyle(
+                          color: AppColors.textLight,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            TextButton(
+              onPressed: isBusy
+                  ? null
+                  : () => _rejectServiceActivationRequest(request),
+              child: const Text('رفض'),
+            ),
+            const SizedBox(width: AppSpacing.xs),
+            ElevatedButton(
+              onPressed: isBusy
+                  ? null
+                  : () => _approveServiceActivationRequest(request),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('قبول'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -2149,6 +2321,230 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('تعذر حفظ خدمات المغسلة: $e')),
+      );
+    }
+  }
+
+  Future<void> _showServiceActivationRequestDetails(
+      ActivationRequestModel request) async {
+    final provider = context.read<AdminProvider>();
+    final currentServiceIds =
+        await _readRequestAgentServiceIds(provider, request);
+    if (!mounted) return;
+
+    final currentServices = provider.services
+        .where((service) => currentServiceIds.contains(service.serviceID))
+        .toList();
+    final isActivation =
+        request.requestType == ActivationRequestType.activation;
+    final resultingServices = isActivation
+        ? {
+            ...currentServiceIds,
+            request.serviceId,
+          }
+        : currentServiceIds.where((id) => id != request.serviceId).toSet();
+    final resultingServiceNames = provider.services
+        .where((service) => resultingServices.contains(service.serviceID))
+        .map((service) => service.serviceName)
+        .toList();
+
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('تفاصيل طلب تعديل الخدمة'),
+          content: SizedBox(
+            width: 460,
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildRequestDetailRow('المغسلة', request.agentName),
+                  _buildRequestDetailRow('معرف المغسلة', '${request.agentId}'),
+                  const Divider(height: 24),
+                  const Text(
+                    'الخدمات الحالية',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  _buildServiceNameWrap(
+                    currentServices.map((service) => service.serviceName),
+                    emptyText: 'لا توجد خدمات مفعلة حالياً',
+                  ),
+                  const Divider(height: 24),
+                  _buildRequestDetailRow(
+                    isActivation
+                        ? 'الخدمة التي ستتم إضافتها'
+                        : 'الخدمة التي ستتم إزالتها',
+                    request.serviceName,
+                  ),
+                  _buildRequestDetailRow(
+                    'نوع الطلب',
+                    isActivation
+                        ? 'إضافة / تفعيل خدمة'
+                        : 'حذف / إلغاء تفعيل خدمة',
+                  ),
+                  const Divider(height: 24),
+                  const Text(
+                    'الخدمات بعد الموافقة',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  _buildServiceNameWrap(
+                    resultingServiceNames,
+                    emptyText: 'لن تبقى خدمات مفعلة',
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('إغلاق'),
+            ),
+            TextButton(
+              onPressed: provider.isActionLoading
+                  ? null
+                  : () {
+                      Navigator.of(dialogContext).pop();
+                      _rejectServiceActivationRequest(request);
+                    },
+              child: const Text('رفض'),
+            ),
+            ElevatedButton(
+              onPressed: provider.isActionLoading
+                  ? null
+                  : () {
+                      Navigator.of(dialogContext).pop();
+                      _approveServiceActivationRequest(request);
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('قبول'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<Set<int>> _readRequestAgentServiceIds(
+    AdminProvider provider,
+    ActivationRequestModel request,
+  ) async {
+    for (final laundry in _serviceAwareLaundryAgents(provider)) {
+      final agentId = AdminServiceModel.readInt(
+        laundry,
+        ['id', 'userID', 'userId', 'UserID'],
+      );
+      if (agentId == request.agentId) {
+        return _agentServiceIds(laundry).toSet();
+      }
+    }
+
+    try {
+      final serviceIds = await provider.getAgentServiceIds(request.agentId);
+      return serviceIds.toSet();
+    } catch (e, s) {
+      debugPrint('Failed to fetch agent service IDs for agent ${request.agentId}: $e');
+      debugPrint('Stack trace: $s');
+      rethrow;
+    }
+  }
+
+  Widget _buildRequestDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 145,
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: AppColors.textLight,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildServiceNameWrap(
+    Iterable<String> names, {
+    required String emptyText,
+  }) {
+    final visibleNames = names.where((name) => name.trim().isNotEmpty).toList();
+    if (visibleNames.isEmpty) {
+      return Text(
+        emptyText,
+        style: const TextStyle(color: AppColors.textLight),
+      );
+    }
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: visibleNames.map((name) {
+        return Chip(
+          label: Text(name),
+          backgroundColor: AppColors.primary.withValues(alpha: 0.08),
+          labelStyle: const TextStyle(
+            color: AppColors.primary,
+            fontWeight: FontWeight.w600,
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Future<void> _approveServiceActivationRequest(
+      ActivationRequestModel request) async {
+    try {
+      await context.read<AdminProvider>().approveServiceActivationRequest(
+            request.agentId,
+            request.serviceId,
+          );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تم قبول طلب تعديل الخدمة')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('تعذر قبول طلب تعديل الخدمة: $e')),
+      );
+    }
+  }
+
+  Future<void> _rejectServiceActivationRequest(
+      ActivationRequestModel request) async {
+    try {
+      await context.read<AdminProvider>().rejectServiceActivationRequest(
+            request.agentId,
+            request.serviceId,
+          );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تم رفض طلب تعديل الخدمة')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('تعذر رفض طلب تعديل الخدمة: $e')),
       );
     }
   }

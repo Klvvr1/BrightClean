@@ -1,5 +1,6 @@
 import '../../data/models/pending_user_model.dart';
 import '../../data/models/admin_service_model.dart';
+import '../../data/models/activation_request_model.dart';
 
 abstract class AdminRepository {
   Future<List<PendingUserModel>> getPendingApprovals();
@@ -16,4 +17,7 @@ abstract class AdminRepository {
   Future<List<dynamic>> getLaundryAgentsWithServices();
   Future<List<int>> getAgentServiceIds(int agentId);
   Future<void> setAgentServices(int agentId, List<int> serviceIds);
+  Future<List<ActivationRequestModel>> getServiceActivationRequests();
+  Future<void> approveServiceActivationRequest(int agentId, int serviceId);
+  Future<void> rejectServiceActivationRequest(int agentId, int serviceId);
 }
