@@ -1,5 +1,6 @@
 import '../../../../core/network/api_client.dart';
 import '../../../customer/data/models/booking_model.dart';
+import '../models/agent_service_model.dart';
 
 class AgentBookingRepository {
   final BaseApiClient apiClient;
@@ -68,6 +69,27 @@ class AgentBookingRepository {
           .toList();
     }
     return [];
+  }
+
+  Future<List<ServiceCatalogItemModel>> getAvailableServices() async {
+    final response = await apiClient.get('/api/services');
+    if (response is List) {
+      return _readMapList(response)
+          .map(ServiceCatalogItemModel.fromJson)
+          .toList();
+    }
+    return [];
+  }
+
+  Future<AgentServiceModel?> requestServiceChange(int serviceId) async {
+    final response =
+        await apiClient.post('/api/agents/services/$serviceId/request');
+    if (response is Map) {
+      return AgentServiceModel.fromJson(
+        response.map((key, value) => MapEntry(key.toString(), value)),
+      );
+    }
+    return null;
   }
 
   Future<Map<String, dynamic>?> getMyProfile() async {

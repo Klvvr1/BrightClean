@@ -4,6 +4,7 @@ import '../../domain/repositories/admin_repository.dart';
 import '../../data/repositories/admin_repository_impl.dart';
 import '../models/pending_user_model.dart';
 import '../models/admin_service_model.dart';
+import '../models/activation_request_model.dart';
 
 class AdminProvider with ChangeNotifier {
   final AdminRepository adminRepository;
@@ -13,6 +14,7 @@ class AdminProvider with ChangeNotifier {
   List<dynamic> _recentOrders = [];
   List<dynamic> _laundryAgentsWithServices = [];
   List<AdminServiceModel> _services = [];
+  List<ActivationRequestModel> _serviceActivationRequests = [];
   bool _isLoading = false;
   bool _isActionLoading = false;
   String? _errorMessage;
@@ -25,6 +27,8 @@ class AdminProvider with ChangeNotifier {
   List<dynamic> get recentOrders => _recentOrders;
   List<dynamic> get laundryAgentsWithServices => _laundryAgentsWithServices;
   List<AdminServiceModel> get services => _services;
+  List<ActivationRequestModel> get serviceActivationRequests =>
+      _serviceActivationRequests;
   bool get isLoading => _isLoading;
   bool get isActionLoading => _isActionLoading;
   String? get errorMessage => _errorMessage;
@@ -156,6 +160,38 @@ class AdminProvider with ChangeNotifier {
     }
   }
 
+  Future<void> fetchServiceActivationRequests() async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      _serviceActivationRequests =
+          await adminRepository.getServiceActivationRequests();
+    } on ServerException catch (e) {
+      _errorMessage = e.message ?? 'حدث خطأ أثناء تحميل طلبات تعديل الخدمات';
+    } catch (e) {
+      _errorMessage = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> approveServiceActivationRequest(
+      int agentId, int serviceId) async {
+    await _runServiceActivationAction(
+      () => adminRepository.approveServiceActivationRequest(agentId, serviceId),
+    );
+  }
+
+  Future<void> rejectServiceActivationRequest(
+      int agentId, int serviceId) async {
+    await _runServiceActivationAction(
+      () => adminRepository.rejectServiceActivationRequest(agentId, serviceId),
+    );
+  }
+
   Future<void> createService(Map<String, dynamic> service) async {
     await _runServiceAction(() => adminRepository.createService(service));
   }
@@ -210,6 +246,39 @@ class AdminProvider with ChangeNotifier {
       }
     } on ServerException catch (e) {
       _errorMessage = e.message ?? 'حدث خطأ أثناء تنفيذ العملية';
+      _isActionLoading = false;
+      notifyListeners();
+      rethrow;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _isActionLoading = false;
+      notifyListeners();
+      rethrow;
+    } finally {
+      _isActionLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> _runServiceActivationAction(
+      Future<void> Function() action) async {
+    _isActionLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await action();
+      _serviceActivationRequests =
+          await adminRepository.getServiceActivationRequests();
+      _services = await adminRepository.getServices();
+      try {
+        _laundryAgentsWithServices =
+            await adminRepository.getLaundryAgentsWithServices();
+      } catch (e) {
+        debugPrint('Error refreshing laundry agents after service request: $e');
+      }
+    } on ServerException catch (e) {
+      _errorMessage = e.message ?? 'حدث خطأ أثناء تنفيذ طلب تعديل الخدمة';
       _isActionLoading = false;
       notifyListeners();
       rethrow;
