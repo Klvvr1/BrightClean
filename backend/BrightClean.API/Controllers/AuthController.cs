@@ -251,6 +251,7 @@ namespace BrightClean.API.Controllers
                         ServiceID = service.ServiceID,
                         IsActive = false,
                         PendingActivation = true,
+                        RequestedAction = AgentServiceRequestedAction.Activate,
                         Notes = "Selected during agent registration; pending admin activation."
                     });
                 }

@@ -4,6 +4,7 @@ import '../../domain/repositories/admin_repository.dart';
 import '../models/pending_user_model.dart';
 import '../models/admin_service_model.dart';
 import '../models/activation_request_model.dart';
+import '../models/admin_summary_model.dart';
 
 class AdminRepositoryImpl implements AdminRepository {
   final BaseApiClient _apiClient;
@@ -37,6 +38,16 @@ class AdminRepositoryImpl implements AdminRepository {
     }
     throw ServerException(
         message: 'Invalid API response format for approved staff');
+  }
+
+  @override
+  Future<AdminSummaryModel> getSummary() async {
+    final response = await _apiClient.get('/api/admin/summary');
+    if (response is Map<String, dynamic>) {
+      return AdminSummaryModel.fromJson(response);
+    }
+    throw ServerException(
+        message: 'Invalid API response format for admin summary');
   }
 
   @override

@@ -81,6 +81,13 @@ namespace BrightClean.Domain.Enums
         TechnicianDispatch
     }
 
+    public enum AgentServiceRequestedAction
+    {
+        None = 0,
+        Activate = 1,
+        Deactivate = 2
+    }
+
     public enum BookingStatus
     {
         Draft,

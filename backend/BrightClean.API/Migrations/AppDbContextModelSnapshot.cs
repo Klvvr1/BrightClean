@@ -80,6 +80,9 @@ namespace BrightClean.API.Migrations
                     b.Property<bool>("PendingActivation")
                         .HasColumnType("bit");
 
+                    b.Property<int>("RequestedAction")
+                        .HasColumnType("int");
+
                     b.Property<int>("ServiceID")
                         .HasColumnType("int");
 
