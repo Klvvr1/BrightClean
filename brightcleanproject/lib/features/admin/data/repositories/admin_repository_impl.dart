@@ -152,12 +152,19 @@ class AdminRepositoryImpl implements AdminRepository {
     final response =
         await _apiClient.get('/api/admin/service-activation-requests');
     if (response is List) {
-      return response
-          .whereType<Map>()
-          .map((json) => ActivationRequestModel.fromJson(
-                json.map((key, value) => MapEntry(key.toString(), value)),
-              ))
-          .toList();
+      final result = <ActivationRequestModel>[];
+      for (int i = 0; i < response.length; i++) {
+        final item = response[i];
+        if (item is! Map) {
+          throw FormatException(
+            'Invalid item at index $i in service activation requests: expected Map but got ${item.runtimeType}. Value: $item',
+          );
+        }
+        result.add(ActivationRequestModel.fromJson(
+          item.map((key, value) => MapEntry(key.toString(), value)),
+        ));
+      }
+      return result;
     }
     throw ServerException(
         message: 'Invalid API response format for service activation requests');

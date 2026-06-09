@@ -51,6 +51,7 @@ class ActivationRequestModel {
         json.readValue('status') ??
             json.readValue('activationRequestStatus') ??
             json.readValue('ActivationRequestStatus') ??
+            json.readValue('Status') ??
             (json.readFirstBool(['pendingActivation', 'PendingActivation'])
                 ? 'Pending'
                 : null),

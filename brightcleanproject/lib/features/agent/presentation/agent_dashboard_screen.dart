@@ -383,42 +383,52 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
         for (final service in subscribedServices.values)
           service.serviceId: service,
       };
-      final catalogServices = await _bookingRepository.getAvailableServices();
-      for (final service in catalogServices) {
-        servicesById.putIfAbsent(
-          service.serviceID,
-          () => AgentServiceModel(
-            agentId: 0,
-            serviceId: service.serviceID,
-            serviceName: service.serviceName,
-            status: AgentServiceStatus.inactive,
-            isActive: false,
-            pendingActivation: false,
-            category: service.category.toString(),
-            price: service.price,
-          ),
-        );
-      }
-      if (agentId != null) {
-        final activeCatalogServices =
-            await _bookingRepository.getMyServices(agentId);
-        for (final service in activeCatalogServices) {
-          servicesById[service.serviceID] = AgentServiceModel(
-            agentId: agentId,
-            serviceId: service.serviceID,
-            serviceName: service.serviceName,
-            status: AgentServiceStatus.active,
-            isActive: true,
-            pendingActivation: false,
-            category: service.category.toString(),
-            price: service.price,
+
+      try {
+        final catalogServices = await _bookingRepository.getAvailableServices();
+        for (final service in catalogServices) {
+          servicesById.putIfAbsent(
+            service.serviceID,
+            () => AgentServiceModel(
+              agentId: 0,
+              serviceId: service.serviceID,
+              serviceName: service.serviceName,
+              status: AgentServiceStatus.inactive,
+              isActive: false,
+              pendingActivation: false,
+              category: service.category.toString(),
+              price: service.price,
+            ),
           );
         }
+        if (agentId != null) {
+          final activeCatalogServices =
+              await _bookingRepository.getMyServices(agentId);
+          for (final service in activeCatalogServices) {
+            servicesById[service.serviceID] = AgentServiceModel(
+              agentId: agentId,
+              serviceId: service.serviceID,
+              serviceName: service.serviceName,
+              status: AgentServiceStatus.active,
+              isActive: true,
+              pendingActivation: false,
+              category: service.category.toString(),
+              price: service.price,
+            );
+          }
+        }
+        _agentServices = servicesById.values.toList();
+      } catch (e) {
+        debugPrint('Failed to fetch services: $e');
+        _agentServices = [];
       }
-      _agentServices = servicesById.values.toList();
 
-      final bookings = await _bookingRepository.getMyBookings();
-      _allOrders = bookings.map(_mapBookingToAgentOrder).toList();
+      try {
+        final bookings = await _bookingRepository.getMyBookings();
+        _allOrders = bookings.map(_mapBookingToAgentOrder).toList();
+      } catch (e) {
+        _ordersError = e.toString();
+      }
     } catch (e) {
       _ordersError = e.toString();
     } finally {

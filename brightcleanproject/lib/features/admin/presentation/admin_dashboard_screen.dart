@@ -2449,8 +2449,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     try {
       final serviceIds = await provider.getAgentServiceIds(request.agentId);
       return serviceIds.toSet();
-    } catch (_) {
-      return <int>{};
+    } catch (e, s) {
+      debugPrint('Failed to fetch agent service IDs for agent ${request.agentId}: $e');
+      debugPrint('Stack trace: $s');
+      rethrow;
     }
   }
 
