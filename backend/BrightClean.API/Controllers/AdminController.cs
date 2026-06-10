@@ -94,6 +94,16 @@ namespace BrightClean.API.Controllers
                 return BadRequest(new { message = "Notification title and message are required." });
             }
 
+            if (dto.Title.Trim().Length > 200)
+            {
+                return BadRequest(new { message = "Notification title cannot exceed 200 characters." });
+            }
+
+            if (dto.Message.Trim().Length > 1000)
+            {
+                return BadRequest(new { message = "Notification message cannot exceed 1000 characters." });
+            }
+
             if (!TryParseNotificationTargetRole(dto.TargetRole, out var targetRole))
             {
                 return BadRequest(new { message = "Invalid notification target role." });
@@ -104,14 +114,17 @@ namespace BrightClean.API.Controllers
                 .Select(u => u.UserID)
                 .ToListAsync();
 
+            var trimmedTitle = dto.Title.Trim();
+            var trimmedMessage = dto.Message.Trim();
+
             var now = DateTime.UtcNow;
             foreach (var userId in targetUserIds)
             {
                 _context.Notifications.Add(new Notification
                 {
                     UserID = userId,
-                    Title = dto.Title.Trim(),
-                    Message = dto.Message.Trim(),
+                    Title = trimmedTitle,
+                    Message = trimmedMessage,
                     Date = now
                 });
             }
@@ -244,12 +257,22 @@ namespace BrightClean.API.Controllers
                     : $"{dto.DiscountValue:0} ريال";
                 var message = $"عرض جديد متاح: استخدم الكود {offerCode} للحصول على خصم {discountText} حتى {dto.EndDate:yyyy-MM-dd}.";
 
+                const string notificationTitle = "عرض جديد متاح";
+                if (notificationTitle.Length > 200)
+                {
+                    return BadRequest(new { message = "Notification title too long." });
+                }
+                if (message.Length > 1000)
+                {
+                    return BadRequest(new { message = "Notification message too long." });
+                }
+
                 foreach (var clientId in clientIds)
                 {
                     _context.Notifications.Add(new Notification
                     {
                         UserID = clientId,
-                        Title = "عرض جديد متاح",
+                        Title = notificationTitle,
                         Message = message,
                         Date = now
                     });

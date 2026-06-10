@@ -215,10 +215,17 @@ class AdminRepositoryImpl implements AdminRepository {
   Future<List<AdminOfferModel>> getOffers() async {
     final response = await _apiClient.get('/api/admin/offers');
     if (response is List) {
-      return response
-          .map((json) =>
-              AdminOfferModel.fromJson(json as Map<String, dynamic>))
-          .toList();
+      final result = <AdminOfferModel>[];
+      for (int i = 0; i < response.length; i++) {
+        final item = response[i];
+        if (item is! Map<String, dynamic>) {
+          throw FormatException(
+            'Invalid item at index $i in offers: expected Map<String, dynamic> but got ${item.runtimeType}',
+          );
+        }
+        result.add(AdminOfferModel.fromJson(item));
+      }
+      return result;
     }
     throw ServerException(message: 'Invalid API response format for offers');
   }

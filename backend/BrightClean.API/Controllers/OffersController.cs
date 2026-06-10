@@ -39,9 +39,9 @@ namespace BrightClean.API.Controllers
             }
 
             // Look up the offer by code (case-insensitive)
-            var normalizedCode = dto.Code.Trim().ToUpper();
+            var normalizedCode = dto.Code.Trim().ToUpperInvariant();
             var offer = await _context.Offers
-                .FirstOrDefaultAsync(o => o.OfferCode.ToUpper() == normalizedCode);
+                .FirstOrDefaultAsync(o => o.OfferCode.ToUpperInvariant() == normalizedCode);
 
             if (offer == null || !offer.IsValid)
             {

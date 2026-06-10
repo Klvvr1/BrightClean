@@ -549,6 +549,7 @@ namespace BrightClean.API.Controllers
                 {
                     return Ok(new {
                     message = "إذا كان الحساب موجوداً، سوف تستلم تعليمات إعادة تعيين كلمة المرور.",
+                        otp = otp,
                         devOtp = otp
                     });
                 }
