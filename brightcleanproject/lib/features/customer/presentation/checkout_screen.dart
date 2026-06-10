@@ -1299,6 +1299,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         ensureAddressRegistered: _ensureAddressRegistered,
         receiptPath: _selectedDocumentPath,
         receiptName: _selectedDocumentName,
+        receiptBytes: _selectedDocumentBytes,
       ),
     );
   }
@@ -1321,6 +1322,7 @@ class _CheckoutBottomBar extends StatefulWidget {
   final Future<int?> Function() ensureAddressRegistered;
   final String? receiptPath;
   final String? receiptName;
+  final List<int>? receiptBytes;
 
   const _CheckoutBottomBar({
     required this.canCompleteOrder,
@@ -1335,6 +1337,7 @@ class _CheckoutBottomBar extends StatefulWidget {
     required this.ensureAddressRegistered,
     this.receiptPath,
     this.receiptName,
+    this.receiptBytes,
   });
 
   @override
@@ -1425,29 +1428,83 @@ class _CheckoutBottomBarState extends State<_CheckoutBottomBar> {
         'wallet': 'Wallet',
       };
 
-      if (capturedPaymentMethod == 'bank_transfer' && widget.receiptPath != null) {
+      String? receiptProofUrl;
+
+      if (capturedPaymentMethod == 'bank_transfer' &&
+          (widget.receiptPath != null || widget.receiptBytes != null)) {
         try {
-          final file = await http.MultipartFile.fromPath('receipt', widget.receiptPath!);
-          await widget.apiClient.postMultipart('/api/payments', fields: {
-            'bookingID': bookingId.toString(),
-            'amount': paymentAmount.toString(),
-            'method': 'BankTransfer',
-          }, files: [file]);
+          // Upload receipt to dedicated endpoint
+          final http.MultipartFile file;
+          if (widget.receiptPath != null) {
+            // Native platforms: use file path
+            file = await http.MultipartFile.fromPath('receipt', widget.receiptPath!);
+          } else if (widget.receiptBytes != null && widget.receiptName != null) {
+            // Web platform: use bytes
+            file = http.MultipartFile.fromBytes(
+              'receipt',
+              widget.receiptBytes!,
+              filename: widget.receiptName!,
+            );
+          } else {
+            throw Exception('No valid receipt file available');
+          }
+
+          final uploadResponse = await widget.apiClient.postMultipart(
+            '/api/payments/upload-receipt',
+            fields: {
+              'bookingID': bookingId.toString(),
+            },
+            files: [file],
+          );
+
+          // Extract proof URL from response
+          if (uploadResponse is Map && uploadResponse['proofUrl'] != null) {
+            receiptProofUrl = uploadResponse['proofUrl'].toString();
+          }
         } catch (e) {
-          debugPrint('⚠️ Multipart payment upload failed, falling back to JSON: $e');
-          await widget.apiClient.post('/api/payments', body: {
-            'bookingID': bookingId,
-            'amount': paymentAmount,
-            'method': 'BankTransfer',
-          });
+          debugPrint('Receipt upload failed: $e');
+
+          // Show error dialog and require user confirmation
+          if (mounted) {
+            final shouldContinue = await showDialog<bool>(
+              context: context,
+              barrierDismissible: false,
+              builder: (dialogContext) => AlertDialog(
+                title: const Text('فشل رفع سند الدفع'),
+                content: Text(
+                  'حدث خطأ أثناء رفع سند الدفع:\n\n$e\n\nهل تريد المتابعة بدون إرفاق السند؟',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(dialogContext).pop(false),
+                    child: const Text('إعادة المحاولة'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.of(dialogContext).pop(true),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Theme.of(dialogContext).colorScheme.error,
+                    ),
+                    child: const Text('المتابعة بدون السند'),
+                  ),
+                ],
+              ),
+            );
+
+            if (shouldContinue != true) {
+              // User chose to retry or dismissed - abort the submission
+              throw Exception('تم إلغاء العملية من قبل المستخدم');
+            }
+          }
         }
-      } else {
-        await widget.apiClient.post('/api/payments', body: {
-          'bookingID': bookingId,
-          'amount': paymentAmount,
-          'method': methodMap[capturedPaymentMethod] ?? 'Cash',
-        });
       }
+
+      // Create payment record with or without proof URL
+      await widget.apiClient.post('/api/payments', body: {
+        'bookingID': bookingId,
+        'amount': paymentAmount,
+        'method': methodMap[capturedPaymentMethod] ?? 'Cash',
+        if (receiptProofUrl != null) 'proofUrl': receiptProofUrl,
+      });
 
       await orderProvider.completeCheckoutAfterPayment(
         newOrder,
