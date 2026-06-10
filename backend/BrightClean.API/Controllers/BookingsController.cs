@@ -265,7 +265,7 @@ namespace BrightClean.API.Controllers
             var activeAgentServiceIds = await _context.AgentServices
                 .Where(s => s.LaundryAgentID == agent.UserID &&
                             s.IsActive &&
-                            (!s.PendingActivation || s.RequestedAction != AgentServiceRequestedAction.Activate) &&
+                            (!s.PendingActivation || s.RequestedAction == AgentServiceRequestedAction.Deactivate) &&
                             s.ServiceCatalogItem.IsAvailable &&
                             !s.ServiceCatalogItem.IsDeleted)
                 .Select(s => s.ServiceID)

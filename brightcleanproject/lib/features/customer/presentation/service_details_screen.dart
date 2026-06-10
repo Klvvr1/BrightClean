@@ -685,8 +685,20 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
       final catalogName = arabicToServiceName[itemName];
       final targetType = _targetServiceType();
 
+      // If targetType is known, prioritize exact type match
+      if (targetType != null) {
+        try {
+          final matchingItem = _catalogServices.firstWhere(
+            (s) => s.isAvailable && s.type == targetType,
+          );
+          return matchingItem.serviceID;
+        } catch (_) {
+          // Fall through to name-based matching
+        }
+      }
+
+      // Fall back to name-based matching
       try {
-        // First, attempt strict name matching
         final matchingItem = _catalogServices.firstWhere(
           (s) =>
               (catalogName != null && s.serviceName == catalogName) ||
@@ -694,16 +706,7 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
         );
         return matchingItem.serviceID;
       } catch (_) {
-        // If no name match, use the selected option's exact catalog type
-        if (targetType == null) return 0;
-        try {
-          final matchingItem = _catalogServices.firstWhere(
-            (s) => s.isAvailable && s.type == targetType,
-          );
-          return matchingItem.serviceID;
-        } catch (_) {
-          return 0;
-        }
+        return 0;
       }
     }
 

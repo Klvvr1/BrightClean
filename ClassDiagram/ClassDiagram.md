@@ -1,6 +1,6 @@
 # Laundry Platform — Class Diagram Documentation
 
-> **Version:** 6.8 — Server-Backed Frontend Data Flow Updated
+> **Version:** 6.9 — Agent Service Activation Requests
 > **Last Updated:** June 2026
 > **Diagram Type:** UML Class Diagram
 > **Architecture Pattern:** Table Per Type (TPT) Inheritance + Rich Junction Entities

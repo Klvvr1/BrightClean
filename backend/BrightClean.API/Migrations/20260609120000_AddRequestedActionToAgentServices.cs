@@ -23,7 +23,11 @@ namespace BrightClean.API.Migrations
                 UPDATE AgentServices
                 SET RequestedAction =
                     CASE
-                        WHEN PendingActivation = 1 AND Notes LIKE '%deactivation%' THEN 2
+                        WHEN PendingActivation = 1 AND (
+                            LOWER(COALESCE(Notes, '')) LIKE '%deactivat%' OR
+                            LOWER(COALESCE(Notes, '')) LIKE '%disable%' OR
+                            LOWER(COALESCE(Notes, '')) LIKE '%decommission%'
+                        ) THEN 2
                         WHEN PendingActivation = 1 THEN 1
                         ELSE 0
                     END;

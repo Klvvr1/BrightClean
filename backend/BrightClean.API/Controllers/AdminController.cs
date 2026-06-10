@@ -439,16 +439,22 @@ namespace BrightClean.API.Controllers
             }
 
             var requestedAction = agentService.RequestedAction;
-            if (requestedAction == AgentServiceRequestedAction.None)
+
+            if (requestedAction == AgentServiceRequestedAction.Activate)
             {
-                return BadRequest(new { message = "Pending request action is missing." });
+                agentService.Notes = "Activation request rejected by admin.";
+            }
+            else if (requestedAction == AgentServiceRequestedAction.Deactivate)
+            {
+                agentService.Notes = "Deactivation request rejected by admin.";
+            }
+            else
+            {
+                return BadRequest(new { message = "Pending request action is invalid or missing." });
             }
 
             agentService.PendingActivation = false;
             agentService.RequestedAction = AgentServiceRequestedAction.None;
-            agentService.Notes = requestedAction == AgentServiceRequestedAction.Activate
-                ? "Activation request rejected by admin."
-                : "Deactivation request rejected by admin.";
 
             _context.AuditLogs.Add(new AuditLog
             {
