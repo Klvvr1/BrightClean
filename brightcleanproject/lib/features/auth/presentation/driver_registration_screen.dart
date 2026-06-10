@@ -11,6 +11,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/widgets/map_picker_screen.dart';
 import 'package:http/http.dart' as http;
 import '../../../../core/network/api_client.dart';
+import 'widgets/terms_agreement_label.dart';
 
 
 class DriverRegistrationScreen extends StatefulWidget {
@@ -603,9 +604,8 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
                       onChanged: (v) => setState(() => _isTermsAccepted = v ?? false),
                     ),
                     Expanded(
-                      child: Text(
-                        'أوافق على الشروط والأحكام',
-                        style: theme.textTheme.bodyMedium,
+                      child: const TermsAgreementLabel(
+                        role: TermsUserRole.driver,
                       ),
                     ),
                   ],

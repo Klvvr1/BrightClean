@@ -79,6 +79,264 @@ namespace BrightClean.API.Controllers
             return Ok(summary);
         }
 
+        // POST: /api/admin/notifications
+        [HttpPost("notifications")]
+        public async Task<IActionResult> SendNotification([FromBody] AdminNotificationCreateDto dto)
+        {
+            var adminId = GetAdminId();
+            if (adminId == null)
+            {
+                return Unauthorized(new { message = UnauthorizedAdminMessage });
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.Title) || string.IsNullOrWhiteSpace(dto.Message))
+            {
+                return BadRequest(new { message = "Notification title and message are required." });
+            }
+
+            if (!TryParseNotificationTargetRole(dto.TargetRole, out var targetRole))
+            {
+                return BadRequest(new { message = "Invalid notification target role." });
+            }
+
+            var targetUserIds = await _context.Users
+                .Where(u => u.Role == targetRole && u.IsApproved)
+                .Select(u => u.UserID)
+                .ToListAsync();
+
+            var now = DateTime.UtcNow;
+            foreach (var userId in targetUserIds)
+            {
+                _context.Notifications.Add(new Notification
+                {
+                    UserID = userId,
+                    Title = dto.Title.Trim(),
+                    Message = dto.Message.Trim(),
+                    Date = now
+                });
+            }
+
+            _context.AuditLogs.Add(new AuditLog
+            {
+                AdminID = adminId.Value,
+                Action = "SEND_NOTIFICATION",
+                TargetEntity = "Notification",
+                TargetID = 0,
+                Details = $"Sent notification to {targetRole}. Recipient count: {targetUserIds.Count}.",
+                IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                PerformedAt = now
+            });
+
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Admin {AdminId} sent notification to {TargetRole}. Recipients: {RecipientCount}.", adminId.Value, targetRole, targetUserIds.Count);
+
+            return Ok(new
+            {
+                message = "Notification sent successfully.",
+                targetRole = targetRole.ToString(),
+                recipientCount = targetUserIds.Count
+            });
+        }
+
+        // GET: /api/admin/notifications
+        [HttpGet("notifications")]
+        public async Task<IActionResult> GetNotificationHistory()
+        {
+            var notifications = await _context.Notifications
+                .AsNoTracking()
+                .GroupBy(n => new { n.Title, n.Message, n.Date })
+                .OrderByDescending(g => g.Key.Date)
+                .Take(50)
+                .Select(g => new
+                {
+                    title = g.Key.Title,
+                    message = g.Key.Message,
+                    date = g.Key.Date,
+                    recipientCount = g.Count()
+                })
+                .ToListAsync();
+
+            return Ok(notifications);
+        }
+
+        // GET: /api/admin/offers
+        [HttpGet("offers")]
+        public async Task<IActionResult> GetOffers()
+        {
+            var now = DateTime.UtcNow;
+            var offers = await _context.Offers
+                .AsNoTracking()
+                .Include(o => o.ScopedAgent)
+                .OrderByDescending(o => o.StartDate)
+                .Select(o => new
+                {
+                    o.OfferID,
+                    o.OfferCode,
+                    Type = o.Type.ToString(),
+                    Scope = o.Scope.ToString(),
+                    o.DiscountValue,
+                    o.StartDate,
+                    o.EndDate,
+                    o.MinOrderValue,
+                    o.MaxUsageCount,
+                    o.UsageCount,
+                    o.LaundryAgentID,
+                    LaundryAgentName = o.ScopedAgent != null ? o.ScopedAgent.BusinessName : null,
+                    IsValid = now >= o.StartDate &&
+                        now <= o.EndDate &&
+                        (!o.MaxUsageCount.HasValue || o.UsageCount < o.MaxUsageCount.Value)
+                })
+                .ToListAsync();
+
+            return Ok(offers);
+        }
+
+        // POST: /api/admin/offers
+        [HttpPost("offers")]
+        public async Task<IActionResult> CreateOffer([FromBody] AdminOfferCreateDto dto)
+        {
+            var adminId = GetAdminId();
+            if (adminId == null)
+            {
+                return Unauthorized(new { message = UnauthorizedAdminMessage });
+            }
+
+            var validation = await ValidateOfferCreateDto(dto);
+            if (validation != null)
+            {
+                return validation;
+            }
+
+            var offerCode = dto.OfferCode.Trim().ToUpperInvariant();
+            var existingCode = await _context.Offers.AnyAsync(o => o.OfferCode.ToUpper() == offerCode);
+            if (existingCode)
+            {
+                return Conflict(new { message = "Offer code already exists." });
+            }
+
+            var offer = new Offer
+            {
+                OfferCode = offerCode,
+                Type = dto.Type,
+                Scope = dto.Scope,
+                DiscountValue = dto.DiscountValue,
+                StartDate = dto.StartDate,
+                EndDate = dto.EndDate,
+                MinOrderValue = dto.MinOrderValue,
+                MaxUsageCount = dto.MaxUsageCount,
+                LaundryAgentID = dto.Scope == OfferScope.SpecificAgent ? dto.LaundryAgentID : null,
+                AdminID = adminId.Value
+            };
+
+            _context.Offers.Add(offer);
+
+            if (dto.SendNotificationToClients)
+            {
+                var clientIds = await _context.Users
+                    .Where(u => u.Role == UserRole.Client && u.IsApproved)
+                    .Select(u => u.UserID)
+                    .ToListAsync();
+
+                var now = DateTime.UtcNow;
+                var discountText = dto.Type == OfferType.Percentage
+                    ? $"{dto.DiscountValue:0}%"
+                    : $"{dto.DiscountValue:0} ريال";
+                var message = $"عرض جديد متاح: استخدم الكود {offerCode} للحصول على خصم {discountText} حتى {dto.EndDate:yyyy-MM-dd}.";
+
+                foreach (var clientId in clientIds)
+                {
+                    _context.Notifications.Add(new Notification
+                    {
+                        UserID = clientId,
+                        Title = "عرض جديد متاح",
+                        Message = message,
+                        Date = now
+                    });
+                }
+
+                _logger.LogInformation("Offer {OfferCode} will notify {RecipientCount} clients.", offerCode, clientIds.Count);
+            }
+
+            _context.AuditLogs.Add(new AuditLog
+            {
+                AdminID = adminId.Value,
+                Action = "CREATE_OFFER",
+                TargetEntity = "Offer",
+                TargetID = 0,
+                Details = $"Created offer {offerCode}. Scope: {dto.Scope}.",
+                IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                PerformedAt = DateTime.UtcNow
+            });
+
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Admin {AdminId} created offer {OfferCode}.", adminId.Value, offerCode);
+
+            return Ok(new
+            {
+                offer.OfferID,
+                offer.OfferCode,
+                Type = offer.Type.ToString(),
+                Scope = offer.Scope.ToString(),
+                offer.DiscountValue,
+                offer.StartDate,
+                offer.EndDate,
+                offer.MinOrderValue,
+                offer.MaxUsageCount,
+                offer.UsageCount,
+                offer.LaundryAgentID,
+                IsValid = offer.IsValid
+            });
+        }
+
+        // DELETE: /api/admin/offers/{offerId}
+        [HttpDelete("offers/{offerId}")]
+        public async Task<IActionResult> DeleteOffer(int offerId)
+        {
+            var adminId = GetAdminId();
+            if (adminId == null)
+            {
+                return Unauthorized(new { message = UnauthorizedAdminMessage });
+            }
+
+            var offer = await _context.Offers.FirstOrDefaultAsync(o => o.OfferID == offerId);
+            if (offer == null)
+            {
+                return NotFound(new { message = "Offer was not found." });
+            }
+
+            var hasBookings = await _context.Bookings.AnyAsync(b => b.OfferID == offerId);
+            var now = DateTime.UtcNow;
+            var deletionType = "HardDeleted";
+            if (hasBookings)
+            {
+                offer.EndDate = now.AddSeconds(-1);
+                deletionType = "Expired";
+            }
+            else
+            {
+                _context.Offers.Remove(offer);
+            }
+
+            _context.AuditLogs.Add(new AuditLog
+            {
+                AdminID = adminId.Value,
+                Action = hasBookings ? "EXPIRE_OFFER" : "DELETE_OFFER",
+                TargetEntity = "Offer",
+                TargetID = offerId,
+                Details = $"{deletionType} offer {offer.OfferCode}.",
+                IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                PerformedAt = now
+            });
+
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Admin {AdminId} removed offer {OfferId} with mode {DeletionType}.", adminId.Value, offerId, deletionType);
+
+            return Ok(new { offerId, deletionType });
+        }
+
         // GET: /api/admin/pending-approvals
         [HttpGet("pending-approvals")]
         public async Task<IActionResult> GetPendingApprovals()
@@ -1076,6 +1334,105 @@ namespace BrightClean.API.Controllers
                 : null;
         }
 
+        private bool TryParseNotificationTargetRole(string? value, out UserRole role)
+        {
+            role = UserRole.Client;
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return false;
+            }
+
+            var normalized = value.Trim();
+            if (normalized.Equals("Clients", StringComparison.OrdinalIgnoreCase) ||
+                normalized.Equals("Client", StringComparison.OrdinalIgnoreCase))
+            {
+                role = UserRole.Client;
+                return true;
+            }
+
+            if (normalized.Equals("Drivers", StringComparison.OrdinalIgnoreCase) ||
+                normalized.Equals("Driver", StringComparison.OrdinalIgnoreCase) ||
+                normalized.Equals("DeliveryStaff", StringComparison.OrdinalIgnoreCase))
+            {
+                role = UserRole.DeliveryStaff;
+                return true;
+            }
+
+            if (normalized.Equals("LaundryAgents", StringComparison.OrdinalIgnoreCase) ||
+                normalized.Equals("LaundryAgent", StringComparison.OrdinalIgnoreCase))
+            {
+                role = UserRole.LaundryAgent;
+                return true;
+            }
+
+            return false;
+        }
+
+        private async Task<IActionResult?> ValidateOfferCreateDto(AdminOfferCreateDto? dto)
+        {
+            if (dto == null)
+            {
+                return BadRequest(new { message = "Offer payload is required." });
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.OfferCode))
+            {
+                return BadRequest(new { message = "OfferCode is required." });
+            }
+
+            if (!Enum.IsDefined(typeof(OfferType), dto.Type))
+            {
+                return BadRequest(new { message = "Invalid offer type." });
+            }
+
+            if (!Enum.IsDefined(typeof(OfferScope), dto.Scope))
+            {
+                return BadRequest(new { message = "Invalid offer scope." });
+            }
+
+            if (dto.DiscountValue <= 0)
+            {
+                return BadRequest(new { message = "DiscountValue must be greater than zero." });
+            }
+
+            if (dto.Type == OfferType.Percentage && dto.DiscountValue > 100)
+            {
+                return BadRequest(new { message = "Percentage discount cannot be greater than 100." });
+            }
+
+            if (dto.EndDate <= dto.StartDate)
+            {
+                return BadRequest(new { message = "EndDate must be after StartDate." });
+            }
+
+            if (dto.MinOrderValue.HasValue && dto.MinOrderValue.Value < 0)
+            {
+                return BadRequest(new { message = "MinOrderValue cannot be negative." });
+            }
+
+            if (dto.MaxUsageCount.HasValue && dto.MaxUsageCount.Value <= 0)
+            {
+                return BadRequest(new { message = "MaxUsageCount must be greater than zero." });
+            }
+
+            if (dto.Scope == OfferScope.SpecificAgent)
+            {
+                if (!dto.LaundryAgentID.HasValue)
+                {
+                    return BadRequest(new { message = "LaundryAgentID is required for a specific-agent offer." });
+                }
+
+                var agentExists = await _context.LaundryAgents
+                    .AnyAsync(a => a.UserID == dto.LaundryAgentID.Value && a.IsApproved);
+                if (!agentExists)
+                {
+                    return BadRequest(new { message = "Selected laundry agent was not found or is not approved." });
+                }
+            }
+
+            return null;
+        }
+
         private IActionResult? ValidateServiceCatalogItemDto(ServiceCatalogItemUpsertDto? dto)
         {
             if (dto == null)
@@ -1172,5 +1529,26 @@ namespace BrightClean.API.Controllers
     public class SetAgentServicesDto
     {
         public List<int> ServiceIDs { get; set; } = new();
+    }
+
+    public class AdminNotificationCreateDto
+    {
+        public string Title { get; set; } = string.Empty;
+        public string Message { get; set; } = string.Empty;
+        public string TargetRole { get; set; } = string.Empty;
+    }
+
+    public class AdminOfferCreateDto
+    {
+        public string OfferCode { get; set; } = string.Empty;
+        public OfferType Type { get; set; }
+        public OfferScope Scope { get; set; }
+        public decimal DiscountValue { get; set; }
+        public DateTime StartDate { get; set; }
+        public DateTime EndDate { get; set; }
+        public decimal? MinOrderValue { get; set; }
+        public int? MaxUsageCount { get; set; }
+        public int? LaundryAgentID { get; set; }
+        public bool SendNotificationToClients { get; set; }
     }
 }

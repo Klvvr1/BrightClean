@@ -20,17 +20,19 @@ namespace BrightClean.API.Migrations
                         CONSTRAINT DF_AgentServices_RequestedAction DEFAULT 0;
                 END
 
-                UPDATE AgentServices
-                SET RequestedAction =
-                    CASE
-                        WHEN PendingActivation = 1 AND (
-                            LOWER(COALESCE(Notes, '')) LIKE '%deactivat%' OR
-                            LOWER(COALESCE(Notes, '')) LIKE '%disable%' OR
-                            LOWER(COALESCE(Notes, '')) LIKE '%decommission%'
-                        ) THEN 2
-                        WHEN PendingActivation = 1 THEN 1
-                        ELSE 0
-                    END;
+                EXEC(N'
+                    UPDATE AgentServices
+                    SET RequestedAction =
+                        CASE
+                            WHEN PendingActivation = 1 AND (
+                                LOWER(COALESCE(Notes, '''')) LIKE ''%deactivat%'' OR
+                                LOWER(COALESCE(Notes, '''')) LIKE ''%disable%'' OR
+                                LOWER(COALESCE(Notes, '''')) LIKE ''%decommission%''
+                            ) THEN 2
+                            WHEN PendingActivation = 1 THEN 1
+                            ELSE 0
+                        END;
+                ');
             ");
         }
 

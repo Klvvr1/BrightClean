@@ -11,6 +11,7 @@ import '../data/providers/auth_provider.dart';
 import '../data/models/register_client_model.dart';
 import '../../../../core/error/exceptions.dart';
 import '../../../../core/widgets/map_picker_screen.dart';
+import 'widgets/terms_agreement_label.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class CustomerRegistrationScreen extends StatefulWidget {
@@ -402,9 +403,8 @@ class _CustomerRegistrationScreenState
                         },
                       ),
                       Expanded(
-                        child: Text(
-                          'أوافق على الشروط والأحكام',
-                          style: theme.textTheme.bodyMedium,
+                        child: const TermsAgreementLabel(
+                          role: TermsUserRole.customer,
                         ),
                       ),
                     ],

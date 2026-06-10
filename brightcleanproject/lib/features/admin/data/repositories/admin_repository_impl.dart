@@ -5,6 +5,7 @@ import '../models/pending_user_model.dart';
 import '../models/admin_service_model.dart';
 import '../models/activation_request_model.dart';
 import '../models/admin_summary_model.dart';
+import '../models/admin_offer_model.dart';
 
 class AdminRepositoryImpl implements AdminRepository {
   final BaseApiClient _apiClient;
@@ -193,5 +194,42 @@ class AdminRepositoryImpl implements AdminRepository {
       int agentId, int serviceId) async {
     await _apiClient
         .post('/api/admin/agents/$agentId/services/$serviceId/reject');
+  }
+
+  @override
+  Future<void> sendNotification(Map<String, dynamic> notification) async {
+    await _apiClient.post('/api/admin/notifications', body: notification);
+  }
+
+  @override
+  Future<List<dynamic>> getNotificationHistory() async {
+    final response = await _apiClient.get('/api/admin/notifications');
+    if (response is List) {
+      return response;
+    }
+    throw ServerException(
+        message: 'Invalid API response format for notification history');
+  }
+
+  @override
+  Future<List<AdminOfferModel>> getOffers() async {
+    final response = await _apiClient.get('/api/admin/offers');
+    if (response is List) {
+      return response
+          .map((json) =>
+              AdminOfferModel.fromJson(json as Map<String, dynamic>))
+          .toList();
+    }
+    throw ServerException(message: 'Invalid API response format for offers');
+  }
+
+  @override
+  Future<void> createOffer(Map<String, dynamic> offer) async {
+    await _apiClient.post('/api/admin/offers', body: offer);
+  }
+
+  @override
+  Future<void> deleteOffer(int offerId) async {
+    await _apiClient.delete('/api/admin/offers/$offerId');
   }
 }
