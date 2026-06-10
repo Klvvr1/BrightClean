@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:http/http.dart' as http;
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_radius.dart';
@@ -28,7 +31,6 @@ class CheckoutScreen extends StatefulWidget {
 
 class _CheckoutScreenState extends State<CheckoutScreen> {
   DateTime? _selectedDate;
-  String? _selectedTimeSlot;
   String _selectedPaymentMethod = 'cash';
   bool _isLocationVerified = false;
   String? _selectedAddress;
@@ -36,6 +38,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   double? _selectedLatitude;
   double? _selectedLongitude;
   List<CustomerAddressModel> _savedAddresses = [];
+  String? _selectedDocumentName;
+  String? _selectedDocumentPath;
+  List<int>? _selectedDocumentBytes;
+  bool _isPickingFile = false;
 
   Future<void> _selectLocation() async {
     final result = await Navigator.push(
@@ -534,6 +540,58 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     }
   }
 
+  void _pickReceiptDocument() async {
+    if (_isPickingFile) return;
+    setState(() => _isPickingFile = true);
+
+    try {
+      final result = await FilePicker.pickFiles(
+        type: FileType.any,
+      );
+
+      if (result != null && result.files.isNotEmpty) {
+        final file = result.files.first;
+        final ext = file.extension?.toLowerCase() ?? '';
+
+        if (['jpg', 'jpeg', 'png', 'pdf'].contains(ext)) {
+          setState(() {
+            _selectedDocumentName = file.name;
+            _selectedDocumentPath = file.path;
+            _selectedDocumentBytes = file.bytes;
+          });
+        } else {
+          setState(() {
+            _selectedDocumentName = null;
+            _selectedDocumentPath = null;
+            _selectedDocumentBytes = null;
+          });
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text('يرجى اختيار صورة (PNG/JPG) أو ملف PDF فقط.'),
+                backgroundColor: Theme.of(context).colorScheme.error,
+              ),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error picking receipt: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isPickingFile = false);
+      }
+    }
+  }
+
+  void _removeReceiptDocument() {
+    setState(() {
+      _selectedDocumentName = null;
+      _selectedDocumentPath = null;
+      _selectedDocumentBytes = null;
+    });
+  }
+
   Widget _buildPaymentOption(
       BuildContext context, String title, String value, IconData icon) {
     final isSelected = _selectedPaymentMethod == value;
@@ -587,6 +645,157 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
+  Widget _buildBankAccountsCard(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
+    final bankAccounts = [
+      {'name': 'بنك أمجاد', 'account': '124587639'},
+      {'name': 'بنك بن دول', 'account': '279547'},
+      {'name': 'بنك الكريمي', 'account': '3165478256'},
+      {'name': 'بنك البسيري', 'account': '23458'},
+      {'name': 'بنك القطيبي', 'account': '479251347'},
+    ];
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: isDark ? theme.colorScheme.surfaceContainerHighest : Colors.grey.shade50,
+        borderRadius: AppRadius.card,
+        border: Border.all(
+          color: theme.colorScheme.primary.withValues(alpha: 0.2),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.account_balance, color: theme.colorScheme.primary, size: 20),
+              const SizedBox(width: AppSpacing.sm),
+              Text(
+                'الحسابات البنكية (باسم: برايت كلين)',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+            ],
+          ),
+          const Divider(height: AppSpacing.lg),
+          ...bankAccounts.map((bank) => Padding(
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  bank['name']!,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Row(
+                  children: [
+                    Text(
+                      bank['account']!,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontFamily: 'monospace',
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.0,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                    IconButton(
+                      icon: const Icon(Icons.copy, size: 16),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      onPressed: () {
+                        Clipboard.setData(ClipboardData(text: bank['account']!));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('تم نسخ رقم حساب ${bank['name']}'),
+                            duration: const Duration(seconds: 1),
+                          ),
+                        );
+                      },
+                      tooltip: 'نسخ رقم الحساب',
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          )),
+          const Divider(height: AppSpacing.lg),
+          Text(
+            'إرفاق سند الدفع',
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            'يرجى إرفاق صورة السند أو ملف PDF لتأكيد عملية التحويل.',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Row(
+            children: [
+              ElevatedButton.icon(
+                onPressed: _pickReceiptDocument,
+                icon: _isPickingFile
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.attach_file),
+                label: const Text('إرفاق سند الدفع'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: theme.colorScheme.primaryContainer,
+                  foregroundColor: theme.colorScheme.onPrimaryContainer,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                    vertical: AppSpacing.sm,
+                  ),
+                ),
+              ),
+              if (_selectedDocumentName != null) ...[
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Row(
+                    children: [
+                      const Icon(Icons.check_circle, color: AppColors.success, size: 18),
+                      const SizedBox(width: AppSpacing.xs),
+                      Expanded(
+                        child: Text(
+                          _selectedDocumentName!,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.success,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: AppColors.error, size: 18),
+                        onPressed: _removeReceiptDocument,
+                        tooltip: 'إزالة السند',
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // ✅ listen:false — يمنع CheckoutScreen من إعادة البناء عند أي تغيير في CartProvider
@@ -610,9 +819,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
     final canCompleteOrder = _isLocationVerified &&
         _selectedDate != null &&
-        _selectedTimeSlot != null &&
         itemsToCheckout.isNotEmpty &&
-        (widget.directItems == null || _selectedAgentId != null);
+        (widget.directItems == null || _selectedAgentId != null) &&
+        (_selectedPaymentMethod != 'bank_transfer' || _selectedDocumentName != null);
 
     return Scaffold(
       appBar: AppBar(title: const Text('إتمام الطلب')),
@@ -802,91 +1011,50 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 ?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: AppSpacing.xs),
-          Row(
-            children: [
-              Expanded(
-                child: InkWell(
-                  onTap: _pickDate,
-                  borderRadius: AppRadius.button,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.sm,
-                      vertical: AppSpacing.md,
-                    ),
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: _selectedDate == null
-                            ? theme.colorScheme.onSurface.withValues(alpha: 0.3)
-                            : theme.colorScheme.primary,
-                      ),
-                      borderRadius: AppRadius.button,
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.calendar_today,
-                          color: _selectedDate == null
-                              ? theme.colorScheme.onSurface
-                                  .withValues(alpha: 0.5)
-                              : theme.colorScheme.primary,
-                          size: 20,
-                        ),
-                        const SizedBox(width: AppSpacing.xs),
-                        Text(
-                          _selectedDate == null
-                              ? 'اختر التاريخ'
-                              : DateFormat('yyyy/MM/dd').format(_selectedDate!),
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: _selectedDate == null
-                                ? theme.colorScheme.onSurface
-                                    .withValues(alpha: 0.7)
-                                : theme.colorScheme.primary,
-                            fontWeight: _selectedDate == null
-                                ? FontWeight.normal
-                                : FontWeight.bold,
-                          ),
-                        ),
-                      ],
+          InkWell(
+            onTap: _pickDate,
+            borderRadius: AppRadius.button,
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.md,
+              ),
+              decoration: BoxDecoration(
+                border: Border.all(
+                  color: _selectedDate == null
+                      ? theme.colorScheme.onSurface.withValues(alpha: 0.3)
+                      : theme.colorScheme.primary,
+                ),
+                borderRadius: AppRadius.button,
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.calendar_today,
+                    color: _selectedDate == null
+                        ? theme.colorScheme.onSurface
+                            .withValues(alpha: 0.5)
+                        : theme.colorScheme.primary,
+                    size: 20,
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Text(
+                    _selectedDate == null
+                        ? 'اختر التاريخ'
+                        : DateFormat('yyyy/MM/dd').format(_selectedDate!),
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: _selectedDate == null
+                          ? theme.colorScheme.onSurface
+                              .withValues(alpha: 0.7)
+                          : theme.colorScheme.primary,
+                      fontWeight: _selectedDate == null
+                          ? FontWeight.normal
+                          : FontWeight.bold,
                     ),
                   ),
-                ),
+                ],
               ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: DropdownButtonFormField<String>(
-                  decoration: InputDecoration(
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.sm,
-                      vertical: 14,
-                    ),
-                    hintText: 'اختر الوقت',
-                    border: OutlineInputBorder(
-                      borderRadius: AppRadius.button,
-                    ),
-                  ),
-                  initialValue: _selectedTimeSlot,
-                  items: const [
-                    DropdownMenuItem(
-                      value: 'morning',
-                      child: Text('09:00 - 12:00'),
-                    ),
-                    DropdownMenuItem(
-                      value: 'afternoon',
-                      child: Text('12:00 - 15:00'),
-                    ),
-                    DropdownMenuItem(
-                      value: 'evening',
-                      child: Text('15:00 - 18:00'),
-                    ),
-                  ],
-                  onChanged: (v) {
-                    setState(() {
-                      _selectedTimeSlot = v;
-                    });
-                  },
-                ),
-              ),
-            ],
+            ),
           ),
           const SizedBox(height: AppSpacing.xl),
           Text(
@@ -898,6 +1066,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           _buildPaymentOption(context, 'الدفع كاش', 'cash', Icons.money),
           _buildPaymentOption(context, 'تحويل لحساب بنكي', 'bank_transfer',
               Icons.account_balance),
+          AnimatedCrossFade(
+            firstChild: _buildBankAccountsCard(context),
+            secondChild: const SizedBox.shrink(),
+            crossFadeState: _selectedPaymentMethod == 'bank_transfer'
+                ? CrossFadeState.showFirst
+                : CrossFadeState.showSecond,
+            duration: const Duration(milliseconds: 300),
+          ),
           _buildPaymentOption(context, 'الدفع عبر المحفظة', 'wallet',
               Icons.account_balance_wallet),
           const SizedBox(height: AppSpacing.xl),
@@ -1116,12 +1292,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         itemsToCheckout: itemsToCheckout,
         selectedPaymentMethod: _selectedPaymentMethod,
         selectedDate: _selectedDate,
-        selectedTimeSlot: _selectedTimeSlot,
         locationDescription: _locationDescriptionController.text,
         selectedAgentId: _selectedAgentId,
         directItems: widget.directItems,
         apiClient: _apiClient,
         ensureAddressRegistered: _ensureAddressRegistered,
+        receiptPath: _selectedDocumentPath,
+        receiptName: _selectedDocumentName,
       ),
     );
   }
@@ -1137,12 +1314,13 @@ class _CheckoutBottomBar extends StatefulWidget {
   final List<CartItem> itemsToCheckout;
   final String selectedPaymentMethod;
   final DateTime? selectedDate;
-  final String? selectedTimeSlot;
   final String locationDescription;
   final int? selectedAgentId;
   final List<CartItem>? directItems;
   final BaseApiClient apiClient;
   final Future<int?> Function() ensureAddressRegistered;
+  final String? receiptPath;
+  final String? receiptName;
 
   const _CheckoutBottomBar({
     required this.canCompleteOrder,
@@ -1150,12 +1328,13 @@ class _CheckoutBottomBar extends StatefulWidget {
     required this.itemsToCheckout,
     required this.selectedPaymentMethod,
     required this.selectedDate,
-    required this.selectedTimeSlot,
     required this.locationDescription,
     required this.selectedAgentId,
     required this.directItems,
     required this.apiClient,
     required this.ensureAddressRegistered,
+    this.receiptPath,
+    this.receiptName,
   });
 
   @override
@@ -1190,7 +1369,7 @@ class _CheckoutBottomBarState extends State<_CheckoutBottomBar> {
       locationDescription: widget.locationDescription,
       paymentMethod: capturedPaymentMethod,
       pickupDate: widget.selectedDate,
-      pickupTimeSlot: widget.selectedTimeSlot,
+      pickupTimeSlot: null,
     );
 
     setState(() => _isSubmitting = true);
@@ -1245,11 +1424,30 @@ class _CheckoutBottomBarState extends State<_CheckoutBottomBar> {
         'bank_transfer': 'BankTransfer',
         'wallet': 'Wallet',
       };
-      await widget.apiClient.post('/api/payments', body: {
-        'bookingID': bookingId,
-        'amount': paymentAmount,
-        'method': methodMap[capturedPaymentMethod] ?? 'Cash',
-      });
+
+      if (capturedPaymentMethod == 'bank_transfer' && widget.receiptPath != null) {
+        try {
+          final file = await http.MultipartFile.fromPath('receipt', widget.receiptPath!);
+          await widget.apiClient.postMultipart('/api/payments', fields: {
+            'bookingID': bookingId.toString(),
+            'amount': paymentAmount.toString(),
+            'method': 'BankTransfer',
+          }, files: [file]);
+        } catch (e) {
+          debugPrint('⚠️ Multipart payment upload failed, falling back to JSON: $e');
+          await widget.apiClient.post('/api/payments', body: {
+            'bookingID': bookingId,
+            'amount': paymentAmount,
+            'method': 'BankTransfer',
+          });
+        }
+      } else {
+        await widget.apiClient.post('/api/payments', body: {
+          'bookingID': bookingId,
+          'amount': paymentAmount,
+          'method': methodMap[capturedPaymentMethod] ?? 'Cash',
+        });
+      }
 
       await orderProvider.completeCheckoutAfterPayment(
         newOrder,
@@ -1295,10 +1493,12 @@ class _CheckoutBottomBarState extends State<_CheckoutBottomBar> {
 
     void showValidationMessage() {
       ScaffoldMessenger.of(context).clearSnackBars();
+      String msg = 'الرجاء التحقق من الموقع واختيار موعد الاستلام لتأكيد الطلب';
+      if (widget.selectedPaymentMethod == 'bank_transfer' && widget.receiptName == null) {
+        msg = 'يرجى إرفاق سند الدفع لتأكيد الطلب';
+      }
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: const Text(
-          'الرجاء التحقق من الموقع واختيار موعد الاستلام لتأكيد الطلب',
-        ),
+        content: Text(msg),
         backgroundColor: theme.colorScheme.error,
       ));
     }

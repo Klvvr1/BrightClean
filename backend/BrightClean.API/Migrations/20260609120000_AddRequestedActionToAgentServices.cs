@@ -19,7 +19,9 @@ namespace BrightClean.API.Migrations
                     ADD RequestedAction int NOT NULL
                         CONSTRAINT DF_AgentServices_RequestedAction DEFAULT 0;
                 END
+            ");
 
+            migrationBuilder.Sql(@"
                 UPDATE AgentServices
                 SET RequestedAction =
                     CASE
