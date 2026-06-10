@@ -27,11 +27,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   int _selectedIndex = 0;
   bool _systemNotificationsEnabled = true;
 
-  // State variables for dynamic counts
-  final int _customersCount = 0;
-  final double _totalRevenue = 0.0;
-  final int _totalOrders = 0;
-
   String _searchQuery = '';
   String _serviceSearchQuery = '';
   String _laundrySearchQuery = '';
@@ -87,6 +82,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       final currentMessage =
           provider.maintenanceMessage ?? 'النظام تحت الصيانة';
       _maintenanceMessageController.text = currentMessage;
+      context.read<AdminProvider>().fetchSummary();
       context.read<AdminProvider>().fetchPendingUsers();
       context.read<AdminProvider>().fetchApprovedStaff();
       context.read<AdminProvider>().fetchServices();
@@ -104,15 +100,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   // Dummy data for live orders
   final List<Map<String, dynamic>> _liveOrders = [];
 
-  List<FlSpot> _getRevenueSpots() {
-    return const [
-      FlSpot(0, 30),
-      FlSpot(1, 45),
-      FlSpot(2, 35),
-      FlSpot(3, 50),
-      FlSpot(4, 48),
-      FlSpot(5, 60),
-      FlSpot(6, 55),
+  List<FlSpot> _getRevenueSpots(double totalRevenue) {
+    return [
+      const FlSpot(0, 0),
+      FlSpot(1, totalRevenue),
     ];
   }
 
@@ -301,7 +292,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  Widget _buildRevenueChart() {
+  Widget _buildRevenueChart(double totalRevenue) {
     return Container(
       height: 250,
       padding: const EdgeInsets.all(AppSpacing.md),
@@ -309,7 +300,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('نمو الإيرادات (أسبوعي)',
+          const Text('الإيرادات المسجلة',
               style: TextStyle(
                   fontWeight: FontWeight.bold, color: AppColors.primary)),
           const SizedBox(height: AppSpacing.lg),
@@ -321,7 +312,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 borderData: FlBorderData(show: false),
                 lineBarsData: [
                   LineChartBarData(
-                    spots: _getRevenueSpots(),
+                    spots: _getRevenueSpots(totalRevenue),
                     isCurved: true,
                     color: AppColors.success,
                     barWidth: 4,
@@ -576,10 +567,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   Widget _buildHomeView() {
     final adminProvider = context.watch<AdminProvider>();
-    final approvedStaff = _mapApprovedStaff(adminProvider.approvedStaff);
-    final driversCount = approvedStaff.where((s) => s['type'] == 'سائق').length;
-    final laundriesCount =
-        approvedStaff.where((s) => s['type'] == 'مغسلة').length;
+    final summary = adminProvider.summary;
+    final driversCount = summary.driversCount;
+    final laundriesCount = summary.laundryAgentsCount;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -594,7 +584,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 color: AppColors.primary),
           ),
           const SizedBox(height: AppSpacing.lg),
-          _buildRevenueChart(),
+          _buildRevenueChart(summary.totalRevenue),
           const SizedBox(height: AppSpacing.xl),
           GridView.count(
             shrinkWrap: true,
@@ -604,16 +594,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             crossAxisSpacing: 16,
             childAspectRatio: 1.1,
             children: [
-              _buildStatCard('إجمالي الطلبات', '$_totalOrders',
+              _buildStatCard('إجمالي الطلبات', '${summary.totalOrders}',
                   Icons.shopping_bag_outlined, AppColors.primary,
                   delay: 0),
               _buildStatCard(
                   'الإيرادات',
-                  '${_totalRevenue.toStringAsFixed(0)} ر.ي',
+                  '${summary.totalRevenue.toStringAsFixed(0)} ر.ي',
                   Icons.account_balance_wallet_outlined,
                   AppColors.success,
                   delay: 100),
-              _buildStatCard('عدد العملاء', '$_customersCount',
+              _buildStatCard('عدد العملاء', '${summary.customersCount}',
                   Icons.people_outline, AppColors.secondary,
                   delay: 200),
               _buildStatCard(

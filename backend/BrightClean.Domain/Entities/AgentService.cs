@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using BrightClean.Domain.Enums;
 
 namespace BrightClean.Domain.Entities
 {
@@ -26,6 +27,9 @@ namespace BrightClean.Domain.Entities
 
         [Required]
         public bool PendingActivation { get; set; } = true;
+
+        [Required]
+        public AgentServiceRequestedAction RequestedAction { get; set; } = AgentServiceRequestedAction.None;
 
         public DateTime? ActivatedAt { get; set; }
 

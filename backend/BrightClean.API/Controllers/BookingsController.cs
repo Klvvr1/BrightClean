@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using BrightClean.Infrastructure;
 using BrightClean.Domain.Entities;
 using BrightClean.Domain.Enums;
@@ -17,10 +18,12 @@ namespace BrightClean.API.Controllers
     public class BookingsController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly ILogger<BookingsController> _logger;
 
-        public BookingsController(AppDbContext context)
+        public BookingsController(AppDbContext context, ILogger<BookingsController> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         private static object ProjectAgentBooking(Booking b)
@@ -262,6 +265,7 @@ namespace BrightClean.API.Controllers
             var activeAgentServiceIds = await _context.AgentServices
                 .Where(s => s.LaundryAgentID == agent.UserID &&
                             s.IsActive &&
+                            (!s.PendingActivation || s.RequestedAction == AgentServiceRequestedAction.Deactivate) &&
                             s.ServiceCatalogItem.IsAvailable &&
                             !s.ServiceCatalogItem.IsDeleted)
                 .Select(s => s.ServiceID)
@@ -293,25 +297,25 @@ namespace BrightClean.API.Controllers
                 return BadRequest(new { message = "Services with delivery pickup and on-site technician dispatch cannot be mixed in the same booking." });
             }
 
-            int addressId = dto.AddressID ?? 0;
-            if (addressId == 0)
+            if (!dto.AddressID.HasValue || dto.AddressID.Value <= 0)
             {
-                var defaultAddress = await _context.Addresses.FirstOrDefaultAsync(a => a.ClientID == clientId);
-                if (defaultAddress == null)
-                {
-                    return BadRequest(new { message = "يجب تسجيل عنوان العميل أولاً لإنشاء الحجز." });
-                }
-                addressId = defaultAddress.AddressID;
+                _logger.LogWarning("Rejected booking create for client {ClientId}: missing AddressID.", clientId);
+                return BadRequest(new { message = "AddressID is required to create a booking." });
             }
-            else
+
+            int addressId = dto.AddressID.Value;
+            var addressOwnership = await _context.Addresses
+                .FirstOrDefaultAsync(a => a.AddressID == addressId && a.ClientID == clientId);
+            if (addressOwnership == null)
             {
-                // Verify the provided address belongs to the authenticated client
-                var addressOwnership = await _context.Addresses
-                    .FirstOrDefaultAsync(a => a.AddressID == addressId && a.ClientID == clientId);
-                if (addressOwnership == null)
-                {
-                    return BadRequest(new { message = "العنوان المحدد غير موجود أو لا ينتمي لهذا العميل." });
-                }
+                _logger.LogWarning("Rejected booking create for client {ClientId}: invalid AddressID {AddressID}.", clientId, addressId);
+                return BadRequest(new { message = "The selected address was not found or does not belong to this customer." });
+            }
+
+            if (addressOwnership.IsArchived)
+            {
+                _logger.LogWarning("Rejected booking create for client {ClientId}: archived AddressID {AddressID}.", clientId, addressId);
+                return BadRequest(new { message = "The selected address is archived. Please select an active delivery address." });
             }
 
             // Validate ScheduledAt before creating booking

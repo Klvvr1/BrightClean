@@ -57,6 +57,28 @@ namespace BrightClean.API.Controllers
             return Ok(orders);
         }
 
+        // GET: /api/admin/summary
+        [HttpGet("summary")]
+        public async Task<IActionResult> GetSummary()
+        {
+            var summary = new AdminSummaryDto
+            {
+                CustomersCount = await _context.Users.CountAsync(u => u.Role == UserRole.Client),
+                LaundryAgentsCount = await _context.Users.CountAsync(u => u.Role == UserRole.LaundryAgent && u.IsApproved),
+                DriversCount = await _context.Users.CountAsync(u => u.Role == UserRole.DeliveryStaff && u.IsApproved),
+                TotalOrders = await _context.Bookings.CountAsync(b => b.Status != BookingStatus.Draft),
+                PendingOrders = await _context.Bookings.CountAsync(b => b.Status == BookingStatus.Pending),
+                CompletedOrders = await _context.Bookings.CountAsync(b => b.Status == BookingStatus.Completed),
+                TotalRevenue = await _context.Payments
+                    .Where(p => p.Status == PaymentStatus.Success || p.Status == PaymentStatus.Collected)
+                    .SumAsync(p => (decimal?)p.Amount) ?? 0
+            };
+
+            _logger.LogInformation("Loaded admin dashboard summary metrics.");
+
+            return Ok(summary);
+        }
+
         // GET: /api/admin/pending-approvals
         [HttpGet("pending-approvals")]
         public async Task<IActionResult> GetPendingApprovals()
@@ -164,6 +186,7 @@ namespace BrightClean.API.Controllers
                 {
                     service.IsActive = true;
                     service.PendingActivation = false;
+                    service.RequestedAction = AgentServiceRequestedAction.None;
                     service.ActivatedAt = DateTime.UtcNow;
                     service.Notes = "Activated as part of account approval.";
                 }
@@ -245,6 +268,7 @@ namespace BrightClean.API.Controllers
             {
                 existing.IsActive = requestedServiceIds.Contains(existing.ServiceID);
                 existing.PendingActivation = false;
+                existing.RequestedAction = AgentServiceRequestedAction.None;
                 existing.ActivatedAt = existing.IsActive ? DateTime.UtcNow : existing.ActivatedAt;
                 existing.Notes = existing.IsActive
                     ? "Activated by admin service assignment."
@@ -260,6 +284,7 @@ namespace BrightClean.API.Controllers
                     ServiceID = serviceId,
                     IsActive = true,
                     PendingActivation = false,
+                    RequestedAction = AgentServiceRequestedAction.None,
                     ActivatedAt = DateTime.UtcNow,
                     Notes = "Assigned by admin."
                 });
@@ -307,7 +332,7 @@ namespace BrightClean.API.Controllers
                 BusinessName = service.LaundryAgent.BusinessName,
                 service.ServiceID,
                 ServiceName = service.ServiceCatalogItem.ServiceName,
-                RequestedAction = GetServiceActivationRequestAction(service),
+                RequestedAction = service.RequestedAction,
                 service.IsActive,
                 service.PendingActivation,
                 service.Notes
@@ -338,9 +363,9 @@ namespace BrightClean.API.Controllers
                 return BadRequest(new { message = "There is no pending request for this agent service." });
             }
 
-            var requestedAction = GetServiceActivationRequestAction(agentService);
+            var requestedAction = agentService.RequestedAction;
 
-            if (requestedAction == "Activate")
+            if (requestedAction == AgentServiceRequestedAction.Activate)
             {
                 if (agentService.ServiceCatalogItem == null ||
                     !agentService.ServiceCatalogItem.IsAvailable ||
@@ -353,21 +378,26 @@ namespace BrightClean.API.Controllers
                 agentService.ActivatedAt = DateTime.UtcNow;
                 agentService.Notes = "Activation approved by admin.";
             }
-            else
+            else if (requestedAction == AgentServiceRequestedAction.Deactivate)
             {
                 agentService.IsActive = false;
                 agentService.Notes = "Deactivation approved by admin.";
             }
+            else
+            {
+                return BadRequest(new { message = "Pending request action is missing." });
+            }
 
             agentService.PendingActivation = false;
+            agentService.RequestedAction = AgentServiceRequestedAction.None;
 
             _context.AuditLogs.Add(new AuditLog
             {
                 AdminID = adminId.Value,
-                Action = requestedAction == "Activate" ? "APPROVE_AGENT_SERVICE_ACTIVATION" : "APPROVE_AGENT_SERVICE_DEACTIVATION",
+                Action = requestedAction == AgentServiceRequestedAction.Activate ? "APPROVE_AGENT_SERVICE_ACTIVATION" : "APPROVE_AGENT_SERVICE_DEACTIVATION",
                 TargetEntity = "AgentService",
                 TargetID = agentService.AgentServiceID,
-                Details = $"Approved {requestedAction.ToLower()} request for agent {agentId} and service {serviceId}.",
+                Details = $"Approved {requestedAction.ToString().ToLower()} request for agent {agentId} and service {serviceId}.",
                 IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
                 PerformedAt = DateTime.UtcNow
             });
@@ -378,7 +408,7 @@ namespace BrightClean.API.Controllers
             {
                 agentId,
                 serviceId,
-                requestedAction,
+                requestedAction = requestedAction.ToString(),
                 agentService.IsActive,
                 agentService.PendingActivation,
                 message = "Service request was approved."
@@ -408,19 +438,31 @@ namespace BrightClean.API.Controllers
                 return BadRequest(new { message = "There is no pending request for this agent service." });
             }
 
-            var requestedAction = GetServiceActivationRequestAction(agentService);
+            var requestedAction = agentService.RequestedAction;
+
+            if (requestedAction == AgentServiceRequestedAction.Activate)
+            {
+                agentService.Notes = "Activation request rejected by admin.";
+            }
+            else if (requestedAction == AgentServiceRequestedAction.Deactivate)
+            {
+                agentService.Notes = "Deactivation request rejected by admin.";
+            }
+            else
+            {
+                return BadRequest(new { message = "Pending request action is invalid or missing." });
+            }
+
             agentService.PendingActivation = false;
-            agentService.Notes = requestedAction == "Activate"
-                ? "Activation request rejected by admin."
-                : "Deactivation request rejected by admin.";
+            agentService.RequestedAction = AgentServiceRequestedAction.None;
 
             _context.AuditLogs.Add(new AuditLog
             {
                 AdminID = adminId.Value,
-                Action = requestedAction == "Activate" ? "REJECT_AGENT_SERVICE_ACTIVATION" : "REJECT_AGENT_SERVICE_DEACTIVATION",
+                Action = requestedAction == AgentServiceRequestedAction.Activate ? "REJECT_AGENT_SERVICE_ACTIVATION" : "REJECT_AGENT_SERVICE_DEACTIVATION",
                 TargetEntity = "AgentService",
                 TargetID = agentService.AgentServiceID,
-                Details = $"Rejected {requestedAction.ToLower()} request for agent {agentId} and service {serviceId}.",
+                Details = $"Rejected {requestedAction.ToString().ToLower()} request for agent {agentId} and service {serviceId}.",
                 IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
                 PerformedAt = DateTime.UtcNow
             });
@@ -431,7 +473,7 @@ namespace BrightClean.API.Controllers
             {
                 agentId,
                 serviceId,
-                requestedAction,
+                requestedAction = requestedAction.ToString(),
                 agentService.IsActive,
                 agentService.PendingActivation,
                 message = "Service request was rejected."
@@ -1034,14 +1076,6 @@ namespace BrightClean.API.Controllers
                 : null;
         }
 
-        private static string GetServiceActivationRequestAction(AgentService service)
-        {
-            return service.Notes != null &&
-                service.Notes.IndexOf("deactivation", StringComparison.OrdinalIgnoreCase) >= 0
-                    ? "Deactivate"
-                    : "Activate";
-        }
-
         private IActionResult? ValidateServiceCatalogItemDto(ServiceCatalogItemUpsertDto? dto)
         {
             if (dto == null)
@@ -1099,6 +1133,17 @@ namespace BrightClean.API.Controllers
         public bool HasHistoricalUsage { get; set; }
         public bool CanDelete { get; set; }
         public bool CanDisable { get; set; }
+    }
+
+    public class AdminSummaryDto
+    {
+        public int CustomersCount { get; set; }
+        public int LaundryAgentsCount { get; set; }
+        public int DriversCount { get; set; }
+        public int TotalOrders { get; set; }
+        public int PendingOrders { get; set; }
+        public int CompletedOrders { get; set; }
+        public decimal TotalRevenue { get; set; }
     }
 
     public class ServiceCatalogItemUpsertDto

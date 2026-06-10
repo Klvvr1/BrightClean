@@ -68,7 +68,7 @@ namespace BrightClean.API.Controllers
                 .AsNoTracking()
                 .Where(s => s.LaundryAgentID == agentId &&
                             s.IsActive &&
-                            !s.PendingActivation &&
+                            (!s.PendingActivation || s.RequestedAction == AgentServiceRequestedAction.Deactivate) &&
                             s.ServiceCatalogItem.IsAvailable &&
                             !s.ServiceCatalogItem.IsDeleted)
                 .OrderBy(s => s.ServiceCatalogItem.Category)

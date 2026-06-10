@@ -1,6 +1,6 @@
 # Laundry Platform — Class Diagram Documentation
 
-> **Version:** 6.8 — Server-Backed Frontend Data Flow Updated
+> **Version:** 6.9 — Agent Service Activation Requests
 > **Last Updated:** June 2026
 > **Diagram Type:** UML Class Diagram
 > **Architecture Pattern:** Table Per Type (TPT) Inheritance + Rich Junction Entities
@@ -57,6 +57,11 @@
 > - Bookings cannot mix `TwoStage` and `TechnicianDispatch` service delivery models in the same booking
 > - `DeliveryTask` now persists driver progress with `CurrentStep`, `StartedAt`, and `LastProgressUpdatedAt`
 > - Driver tracking loads real task details from `GET /api/deliverytasks/{taskId}` instead of mock customer, laundry, item, and address data
+>
+> **Changelog v6.9 (Agent Service Activation Requests):**
+> - Added `AgentServiceRequestedAction` to store pending service activation/deactivation intent explicitly
+> - Added `AgentService.RequestedAction`; `Notes` is no longer used as the source of request state
+> - Approved active agent services remain visible while a deactivation request is pending; only admin approval applies the deactivation
 >
 > **Changelog v6.2:**
 > - `SystemStatus.Reason` removed — `Message` is the sole public-facing explanation shown on the login screen
@@ -126,7 +131,7 @@ This platform is a **multi-service on-demand marketplace** that connects clients
 | Metric | Count |
 |---|---|
 | Total Classes | 18 |
-| Total Enumerations | 17 |
+| Total Enumerations | 18 |
 | Total Relationships | 26 |
 | Inheritance Relationships | 4 |
 | One-to-One Relationships | 2 |
@@ -349,6 +354,20 @@ The most operationally significant enum. Determines logistics behavior for each 
 | `TechnicianDispatch` | 0 tasks | Agent dispatches staff to client location; service performed on-site |
 
 **Used in:** `ServiceCatalogItem.DeliveryModel`
+
+---
+
+### 4.10.1 `AgentServiceRequestedAction`
+
+Stores the pending admin-review intent for an agent service request. `Notes` remains descriptive only.
+
+| Value | Description |
+|---|---|
+| `None` | No pending service activation/deactivation request |
+| `Activate` | Agent requested activation and is awaiting admin approval |
+| `Deactivate` | Agent requested deactivation and is awaiting admin approval |
+
+**Used in:** `AgentService.RequestedAction`
 
 ---
 
@@ -701,19 +720,22 @@ Resolves the many-to-many relationship between `LaundryAgent` and `ServiceCatalo
 | `LaundryAgentID` (FK) | int | FK → LaundryAgent, NOT NULL | The subscribing agent |
 | `ServiceID` (FK) | int | FK → ServiceCatalogItem, NOT NULL | The catalog service |
 | `IsActive` | boolean | NOT NULL, DEFAULT false | false = pending/suspended, true = live |
+| `PendingActivation` | boolean | NOT NULL, DEFAULT false | true = waiting for admin review |
+| `RequestedAction` | AgentServiceRequestedAction | NOT NULL, DEFAULT None | Pending request intent: None, Activate, or Deactivate |
 | `ActivatedAt` | datetime | NULLABLE | Stamped when admin sets IsActive = true |
-| `Notes` | string? | NULLABLE | Optional scope notes (e.g. "Residential only") |
+| `Notes` | string? | NULLABLE | Optional descriptive notes; not a source of request state |
 
 **Unique Constraint:** `(LaundryAgentID, ServiceID)` — an agent cannot subscribe to the same service twice.
 
 **State Logic:**
 
-| `User.AccountStatus` | `AgentService.IsActive` | Client Visibility |
-|---|---|---|
-| `PendingVerification` | `false` | Not visible |
-| `Active` | `true` | Visible and bookable |
-| `Active` | `false` | Not visible |
-| `Suspended` | Any | Not visible |
+| `User.AccountStatus` | `AgentService.IsActive` | `RequestedAction` | Client Visibility |
+|---|---|---|---|
+| `PendingVerification` | `false` | Any | Not visible |
+| `Active` | `true` | `None` | Visible and bookable |
+| `Active` | `true` | `Deactivate` | Visible and bookable until admin approves deactivation |
+| `Active` | `false` | `Activate` | Not visible |
+| `Suspended` | Any | Any | Not visible |
 
 **Agent Profile Examples:**
 
@@ -1085,8 +1107,10 @@ LIMIT 1
 
 ### Agent Service Rules
 - Only admin can activate or deactivate `AgentService` records
-- Clients only see services where both `AccountStatus = Active` and `AgentService.IsActive = true`
-- Booking creation rejects agents that are unapproved, inactive, store-closed, or missing any requested active service subscription
+- Agents can request service activation/deactivation, but requests remain pending until admin approval
+- Clients see services where `AccountStatus = Active`, `AgentService.IsActive = true`, and the service is not a pending activation request
+- Pending deactivation requests remain visible and bookable until the admin approves deactivation
+- Booking creation rejects agents that are unapproved, inactive, store-closed, or missing any requested visible active service subscription
 - All `BookingItem` records must reference services in the selected agent's active subscriptions
 - Frontend cart and direct checkout must use real backend `ServiceID` values from the catalog; placeholder/fallback IDs are rejected before checkout
 

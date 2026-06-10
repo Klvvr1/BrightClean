@@ -48,11 +48,7 @@ namespace BrightClean.API.Controllers
                 return NotFound(new { message = "Laundry agent was not found." });
             }
 
-            var activateImmediately = agent.IsApproved &&
-                agent.AccountStatus == AccountStatus.Active;
-
             var addedServices = new List<int>();
-            var activatedServices = new List<int>();
             var skippedServices = new List<int>();
 
             foreach (var serviceId in dto.ServiceIDs)
@@ -73,13 +69,12 @@ namespace BrightClean.API.Controllers
 
                 if (existingService != null)
                 {
-                    if (activateImmediately && !existingService.IsActive)
+                    if (!existingService.IsActive && !existingService.PendingActivation)
                     {
-                        existingService.IsActive = true;
-                        existingService.PendingActivation = false;
-                        existingService.ActivatedAt = DateTime.UtcNow;
-                        existingService.Notes = "Activated because the agent account is already approved.";
-                        activatedServices.Add(serviceId);
+                        existingService.PendingActivation = true;
+                        existingService.RequestedAction = AgentServiceRequestedAction.Activate;
+                        existingService.Notes = "Agent requested activation.";
+                        addedServices.Add(serviceId);
                     }
                     else
                     {
@@ -93,12 +88,11 @@ namespace BrightClean.API.Controllers
                 {
                     LaundryAgentID = agentId,
                     ServiceID = serviceId,
-                    IsActive = activateImmediately,
-                    PendingActivation = !activateImmediately,
-                    ActivatedAt = activateImmediately ? DateTime.UtcNow : null,
-                    Notes = activateImmediately
-                        ? "Activated because the agent account is already approved."
-                        : "Pending activation by admin."
+                    IsActive = false,
+                    PendingActivation = true,
+                    RequestedAction = AgentServiceRequestedAction.Activate,
+                    ActivatedAt = null,
+                    Notes = "Pending activation by admin."
                 });
 
                 addedServices.Add(serviceId);
@@ -108,11 +102,9 @@ namespace BrightClean.API.Controllers
 
             return Ok(new
             {
-                message = activateImmediately
-                    ? "Services were saved and activated."
-                    : "Service subscription requests were submitted and are waiting for admin approval.",
+                message = "Service subscription requests were submitted and are waiting for admin approval.",
                 addedServiceIds = addedServices,
-                activatedServiceIds = activatedServices,
+                activatedServiceIds = Array.Empty<int>(),
                 skippedServiceIds = skippedServices
             });
         }
@@ -169,6 +161,7 @@ namespace BrightClean.API.Controllers
                     ServiceID = serviceId,
                     IsActive = false,
                     PendingActivation = true,
+                    RequestedAction = AgentServiceRequestedAction.Activate,
                     Notes = "Agent requested activation."
                 };
                 _context.AgentServices.Add(agentService);
@@ -177,11 +170,13 @@ namespace BrightClean.API.Controllers
             {
                 requestedAction = "Deactivate";
                 agentService.PendingActivation = true;
+                agentService.RequestedAction = AgentServiceRequestedAction.Deactivate;
                 agentService.Notes = "Agent requested deactivation.";
             }
             else
             {
                 agentService.PendingActivation = true;
+                agentService.RequestedAction = AgentServiceRequestedAction.Activate;
                 agentService.Notes = "Agent requested activation.";
             }
 

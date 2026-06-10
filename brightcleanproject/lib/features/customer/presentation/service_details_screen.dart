@@ -633,7 +633,7 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
     );
   }
 
-// Resolved catalog lookup from backend API with Arabic mapping and resilient fallback
+// Resolved catalog lookup from backend API with Arabic mapping
   int _resolveServiceId(String itemName) {
     final Map<String, String> arabicToServiceName = {
       'ثوب أبيض': 'Wash & Iron',
@@ -684,31 +684,29 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
     if (_catalogServices.isNotEmpty) {
       final catalogName = arabicToServiceName[itemName];
       final targetType = _targetServiceType();
-      final targetCategory = _targetServiceCategory();
 
-      try {
-        // First, attempt strict name matching
-        final matchingItem = _catalogServices.firstWhere(
-          (s) =>
-              (catalogName != null && s.serviceName == catalogName) ||
-              s.serviceName == itemName ||
-              s.serviceName.contains(itemName) ||
-              itemName.contains(s.serviceName),
-        );
-        return matchingItem.serviceID;
-      } catch (_) {
-        // If no name match, fallback to type-based search
+      // If targetType is known, prioritize exact type match
+      if (targetType != null) {
         try {
           final matchingItem = _catalogServices.firstWhere(
             (s) => s.isAvailable && s.type == targetType,
           );
           return matchingItem.serviceID;
         } catch (_) {
-          final fallbackByCategory =
-              _fallbackCatalogServiceIdByCategory(targetCategory);
-          if (fallbackByCategory > 0) return fallbackByCategory;
-          return 0;
+          // Fall through to name-based matching
         }
+      }
+
+      // Fall back to name-based matching
+      try {
+        final matchingItem = _catalogServices.firstWhere(
+          (s) =>
+              (catalogName != null && s.serviceName == catalogName) ||
+              s.serviceName == itemName,
+        );
+        return matchingItem.serviceID;
+      } catch (_) {
+        return 0;
       }
     }
 
@@ -724,18 +722,7 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
     }
   }
 
-  int _fallbackCatalogServiceIdByCategory(int? targetCategory) {
-    if (targetCategory == null) return 0;
-
-    final categoryServices = _catalogServices
-        .where((service) =>
-            service.isAvailable && service.category == targetCategory)
-        .toList();
-
-    return categoryServices.length == 1 ? categoryServices.first.serviceID : 0;
-  }
-
-  int _targetServiceType() {
+  int? _targetServiceType() {
     switch (selectedOption.id) {
       case 'iron_only':
         return 2; // ServiceType.IronOnly
@@ -757,29 +744,10 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
         return 11; // ServiceType.CarWash
       case 'wash_iron':
       case 'wash_only':
-      default:
         return 0; // ServiceType.WashAndIron
+      default:
+        return null;
     }
-  }
-
-  int? _targetServiceCategory() {
-    if (widget.serviceType.contains('سيار')) {
-      return 3; // ServiceCategory.VehicleWash
-    }
-    if (widget.serviceType.contains('سجاد') ||
-        widget.serviceType.contains('مفروشات')) {
-      return 1; // ServiceCategory.HomeWovens
-    }
-    if (widget.serviceType.contains('مكيف') ||
-        widget.serviceType.contains('خزان') ||
-        widget.serviceType.contains('شمس') ||
-        widget.serviceType.contains('عاملات')) {
-      return 2; // ServiceCategory.HomeServices
-    }
-    if (widget.serviceType.contains('ملابس')) {
-      return 0; // ServiceCategory.Laundry
-    }
-    return null;
   }
 
   double _resolveServicePrice(String itemName) {
@@ -801,7 +769,7 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
     messenger.showSnackBar(
       SnackBar(
         content: Text(_catalogLoadError ??
-            'هذه الخدمة غير متوفرة في كتالوج الخادم حاليا. يرجى اختيار خدمة أخرى.'),
+            'تعذر تحديد هذه الخدمة. يرجى الرجوع واختيار الخدمة مرة أخرى.'),
         backgroundColor: AppColors.error,
       ),
     );

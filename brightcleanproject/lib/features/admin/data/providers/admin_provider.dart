@@ -5,6 +5,7 @@ import '../../data/repositories/admin_repository_impl.dart';
 import '../models/pending_user_model.dart';
 import '../models/admin_service_model.dart';
 import '../models/activation_request_model.dart';
+import '../models/admin_summary_model.dart';
 
 class AdminProvider with ChangeNotifier {
   final AdminRepository adminRepository;
@@ -15,6 +16,7 @@ class AdminProvider with ChangeNotifier {
   List<dynamic> _laundryAgentsWithServices = [];
   List<AdminServiceModel> _services = [];
   List<ActivationRequestModel> _serviceActivationRequests = [];
+  AdminSummaryModel _summary = AdminSummaryModel.empty();
   bool _isLoading = false;
   bool _isActionLoading = false;
   String? _errorMessage;
@@ -29,6 +31,7 @@ class AdminProvider with ChangeNotifier {
   List<AdminServiceModel> get services => _services;
   List<ActivationRequestModel> get serviceActivationRequests =>
       _serviceActivationRequests;
+  AdminSummaryModel get summary => _summary;
   bool get isLoading => _isLoading;
   bool get isActionLoading => _isActionLoading;
   String? get errorMessage => _errorMessage;
@@ -50,6 +53,23 @@ class AdminProvider with ChangeNotifier {
     }
   }
 
+  Future<void> fetchSummary() async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      _summary = await adminRepository.getSummary();
+    } on ServerException catch (e) {
+      _errorMessage = e.message ?? 'حدث خطأ أثناء تحميل ملخص لوحة المشرف';
+    } catch (e) {
+      _errorMessage = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   Future<void> fetchRecentOrders() async {
     _isLoading = true;
     _errorMessage = null;
@@ -58,8 +78,7 @@ class AdminProvider with ChangeNotifier {
     try {
       _recentOrders = await adminRepository.getRecentOrders();
     } on ServerException catch (e) {
-      _errorMessage = e.message ??
-          'Ø­Ø¯Ø« Ø®Ø·Ø£ Ø£Ø«Ù†Ø§Ø¡ ØªØ­Ù…ÙŠÙ„ Ø§Ù„Ø·Ù„Ø¨Ø§Øª Ø§Ù„Ø£Ø®ÙŠØ±Ø©';
+      _errorMessage = e.message ?? 'حدث خطأ أثناء تحميل الطلبات الأخيرة';
     } catch (e) {
       _errorMessage = e.toString();
     } finally {
