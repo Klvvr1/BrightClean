@@ -1,6 +1,5 @@
-﻿import 'dart:math';
+import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:fl_chart/fl_chart.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/enums/service_activation_status.dart';
 import '../data/providers/admin_provider.dart';
@@ -100,12 +99,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   // Dummy data for live orders
   final List<Map<String, dynamic>> _liveOrders = [];
 
-  List<FlSpot> _getRevenueSpots(double totalRevenue) {
-    return [
-      const FlSpot(0, 0),
-      FlSpot(1, totalRevenue),
-    ];
-  }
+
 
   // Dummy data for pending requests
   final List<Map<String, dynamic>> _pendingRequests = [];
@@ -290,44 +284,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  Widget _buildRevenueChart(double totalRevenue) {
-    return Container(
-      height: 250,
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: AppStyles.surface(context),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Ø§Ù„Ø¥ÙŠØ±Ø§Ø¯Ø§Øª Ø§Ù„Ù…Ø³Ø¬Ù„Ø©',
-              style: TextStyle(
-                  fontWeight: FontWeight.bold, color: AppColors.primary)),
-          const SizedBox(height: AppSpacing.lg),
-          Expanded(
-            child: LineChart(
-              LineChartData(
-                gridData: const FlGridData(show: false),
-                titlesData: const FlTitlesData(show: false),
-                borderData: FlBorderData(show: false),
-                lineBarsData: [
-                  LineChartBarData(
-                    spots: _getRevenueSpots(totalRevenue),
-                    isCurved: true,
-                    color: AppColors.success,
-                    barWidth: 4,
-                    belowBarData: BarAreaData(
-                      show: true,
-                      color: AppColors.success.withValues(alpha: 0.1),
-                    ),
-                    dotData: const FlDotData(show: false),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+
 
   Widget _buildLiveOrdersSection() {
     return Column(
@@ -582,8 +539,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 color: AppColors.primary),
           ),
           const SizedBox(height: AppSpacing.lg),
-          _buildRevenueChart(summary.totalRevenue),
-          const SizedBox(height: AppSpacing.xl),
           GridView.count(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -1125,7 +1080,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             'vehiclePlate': u.plateNumber ?? 'ØºÙŠØ± Ù…ØªÙˆÙØ±',
             'commercialRegisterImage': documentUrl('CommercialRegistration'),
             'nationalIdImage': documentUrl('NationalID'),
-            'storefrontImage': null,
             'licenseImage': documentUrl('DriverLicense'),
             'vehicleImage': documentUrl('VehicleImage'),
           };
@@ -1271,8 +1225,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         staff['commercialRegisterImage']),
                     _buildDocumentRow(
                         'ØµÙˆØ±Ø© Ø§Ù„Ù‡ÙˆÙŠØ© Ø§Ù„ÙˆØ·Ù†ÙŠØ© Ù„Ù„Ù…Ø¯ÙŠØ±', staff['nationalIdImage']),
-                    _buildDocumentRow(
-                        'ØµÙˆØ±Ø© ÙˆØ§Ø¬Ù‡Ø©/Ù„ÙˆØ­Ø© Ø§Ù„Ù…ØºØ³Ù„Ø©', staff['storefrontImage']),
                   ] else ...[
                     _buildDetailRow(Icons.person, 'Ø§Ø³Ù… Ø§Ù„Ù…Ù†Ø¯ÙˆØ¨', staff['name']),
                     _buildDetailRow(Icons.phone, 'Ø±Ù‚Ù… Ø§Ù„Ù‡Ø§ØªÙ', staff['phone']),
@@ -2843,7 +2795,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             staff['plateNumber'] ?? staff['PlateNumber'] ?? 'ØºÙŠØ± Ù…ØªÙˆÙØ±',
         'commercialRegisterImage': documentUrl('CommercialRegistration'),
         'nationalIdImage': documentUrl('NationalID'),
-        'storefrontImage': null,
         'licenseImage': documentUrl('DriverLicense'),
         'vehicleImage': documentUrl('VehicleImage'),
         'orders': const <String>[],
@@ -3047,8 +2998,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         request['commercialRegisterImage']),
                     _buildDocumentRow('ØµÙˆØ±Ø© Ø§Ù„Ù‡ÙˆÙŠØ© Ø§Ù„ÙˆØ·Ù†ÙŠØ© Ù„Ù„Ù…Ø¯ÙŠØ±',
                         request['nationalIdImage']),
-                    _buildDocumentRow(
-                        'ØµÙˆØ±Ø© ÙˆØ§Ø¬Ù‡Ø©/Ù„ÙˆØ­Ø© Ø§Ù„Ù…ØºØ³Ù„Ø©', request['storefrontImage']),
                   ] else ...[
                     _buildDetailRow(
                         Icons.person, 'Ø§Ø³Ù… Ø§Ù„Ù…Ù†Ø¯ÙˆØ¨', request['name']),
