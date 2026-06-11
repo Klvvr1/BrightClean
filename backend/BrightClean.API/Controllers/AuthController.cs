@@ -534,8 +534,10 @@ namespace BrightClean.API.Controllers
             // Always return the same generic message regardless of whether user exists
             if (user != null)
             {
-                // Generate a 6-digit OTP code using cryptographically secure RNG
-                var otp = System.Security.Cryptography.RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
+                // Use a fixed OTP only in Development to simplify demos.
+                var otp = _environment.IsDevelopment()
+                    ? "123456"
+                    : System.Security.Cryptography.RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
 
                 // Store it with a 15-minute expiry
                 _resetTokens[dto.Email] = (otp, DateTime.UtcNow.AddMinutes(15));
@@ -543,11 +545,12 @@ namespace BrightClean.API.Controllers
                 // Stub email sending: log to console (without OTP value)
                 Console.WriteLine("Password reset OTP generated.");
 
-                if (_environment.IsDevelopment() && _config.GetValue<bool>("Auth:ExposeOtpInResponse"))
+                if (_environment.IsDevelopment())
                 {
                     return Ok(new {
                     message = "إذا كان الحساب موجوداً، سوف تستلم تعليمات إعادة تعيين كلمة المرور.",
-                        otp
+                        otp = otp,
+                        devOtp = otp
                     });
                 }
             }

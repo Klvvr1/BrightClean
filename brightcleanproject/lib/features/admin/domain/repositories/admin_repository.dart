@@ -2,6 +2,7 @@ import '../../data/models/pending_user_model.dart';
 import '../../data/models/admin_service_model.dart';
 import '../../data/models/activation_request_model.dart';
 import '../../data/models/admin_summary_model.dart';
+import '../../data/models/admin_offer_model.dart';
 
 abstract class AdminRepository {
   Future<List<PendingUserModel>> getPendingApprovals();
@@ -22,4 +23,9 @@ abstract class AdminRepository {
   Future<List<ActivationRequestModel>> getServiceActivationRequests();
   Future<void> approveServiceActivationRequest(int agentId, int serviceId);
   Future<void> rejectServiceActivationRequest(int agentId, int serviceId);
+  Future<void> sendNotification(Map<String, dynamic> notification);
+  Future<List<dynamic>> getNotificationHistory();
+  Future<List<AdminOfferModel>> getOffers();
+  Future<void> createOffer(Map<String, dynamic> offer);
+  Future<void> deleteOffer(int offerId);
 }

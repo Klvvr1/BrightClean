@@ -6,6 +6,7 @@ import '../models/pending_user_model.dart';
 import '../models/admin_service_model.dart';
 import '../models/activation_request_model.dart';
 import '../models/admin_summary_model.dart';
+import '../models/admin_offer_model.dart';
 
 class AdminProvider with ChangeNotifier {
   final AdminRepository adminRepository;
@@ -16,6 +17,8 @@ class AdminProvider with ChangeNotifier {
   List<dynamic> _laundryAgentsWithServices = [];
   List<AdminServiceModel> _services = [];
   List<ActivationRequestModel> _serviceActivationRequests = [];
+  List<AdminOfferModel> _offers = [];
+  List<dynamic> _notificationHistory = [];
   AdminSummaryModel _summary = AdminSummaryModel.empty();
   bool _isLoading = false;
   bool _isActionLoading = false;
@@ -31,6 +34,8 @@ class AdminProvider with ChangeNotifier {
   List<AdminServiceModel> get services => _services;
   List<ActivationRequestModel> get serviceActivationRequests =>
       _serviceActivationRequests;
+  List<AdminOfferModel> get offers => _offers;
+  List<dynamic> get notificationHistory => _notificationHistory;
   AdminSummaryModel get summary => _summary;
   bool get isLoading => _isLoading;
   bool get isActionLoading => _isActionLoading;
@@ -83,6 +88,113 @@ class AdminProvider with ChangeNotifier {
       _errorMessage = e.toString();
     } finally {
       _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> fetchOffers() async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      _offers = await adminRepository.getOffers();
+    } on ServerException catch (e) {
+      _errorMessage = e.message ?? 'حدث خطأ أثناء تحميل العروض';
+    } catch (e) {
+      _errorMessage = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> fetchNotificationHistory() async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      _notificationHistory = await adminRepository.getNotificationHistory();
+    } on ServerException catch (e) {
+      _errorMessage = e.message ?? 'حدث خطأ أثناء تحميل سجل الإشعارات';
+    } catch (e) {
+      _errorMessage = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> sendNotification(Map<String, dynamic> notification) async {
+    _isActionLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await adminRepository.sendNotification(notification);
+      _notificationHistory = await adminRepository.getNotificationHistory();
+    } on ServerException catch (e) {
+      _errorMessage = e.message ?? 'حدث خطأ أثناء إرسال الإشعار';
+      _isActionLoading = false;
+      notifyListeners();
+      rethrow;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _isActionLoading = false;
+      notifyListeners();
+      rethrow;
+    } finally {
+      _isActionLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> createOffer(Map<String, dynamic> offer) async {
+    _isActionLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await adminRepository.createOffer(offer);
+      _offers = await adminRepository.getOffers();
+      _notificationHistory = await adminRepository.getNotificationHistory();
+    } on ServerException catch (e) {
+      _errorMessage = e.message ?? 'حدث خطأ أثناء إنشاء العرض';
+      _isActionLoading = false;
+      notifyListeners();
+      rethrow;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _isActionLoading = false;
+      notifyListeners();
+      rethrow;
+    } finally {
+      _isActionLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> deleteOffer(int offerId) async {
+    _isActionLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await adminRepository.deleteOffer(offerId);
+      _offers = await adminRepository.getOffers();
+    } on ServerException catch (e) {
+      _errorMessage = e.message ?? 'حدث خطأ أثناء حذف العرض';
+      _isActionLoading = false;
+      notifyListeners();
+      rethrow;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _isActionLoading = false;
+      notifyListeners();
+      rethrow;
+    } finally {
+      _isActionLoading = false;
       notifyListeners();
     }
   }

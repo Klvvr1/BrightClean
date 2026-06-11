@@ -1,4 +1,3 @@
-using System;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -27,6 +26,11 @@ namespace BrightClean.API.Controllers
         [HttpPost("validate")]
         public async Task<IActionResult> ValidateOffer([FromBody] ValidateOfferDto dto)
         {
+            if (dto == null || string.IsNullOrWhiteSpace(dto.Code))
+            {
+                return BadRequest(new { message = "كود الكوبون مطلوب." });
+            }
+
             // Resolve the calling client's ID from JWT
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
             if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out var clientId))
@@ -35,8 +39,9 @@ namespace BrightClean.API.Controllers
             }
 
             // Look up the offer by code (case-insensitive)
+            var normalizedCode = dto.Code.Trim().ToUpperInvariant();
             var offer = await _context.Offers
-                .FirstOrDefaultAsync(o => o.OfferCode.ToLower() == dto.Code.ToLower());
+                .FirstOrDefaultAsync(o => o.OfferCode.ToUpperInvariant() == normalizedCode);
 
             if (offer == null || !offer.IsValid)
             {
@@ -65,6 +70,11 @@ namespace BrightClean.API.Controllers
                 return BadRequest(new { message = "لا يمكن تعديل الكوبون على حجز غير مسودة" });
             }
 
+            if (offer.Scope == OfferScope.SpecificAgent && offer.LaundryAgentID != booking.LaundryAgentID)
+            {
+                return BadRequest(new { message = "هذا الكوبون غير متاح للمغسلة المختارة" });
+            }
+
             // Compute order subtotal
             decimal subtotal = booking.BookingItems.Sum(bi => bi.SubTotal);
 
@@ -73,7 +83,7 @@ namespace BrightClean.API.Controllers
             {
                 return BadRequest(new
                 {
-                    message = $"هذا العرض يتطلب طلباً بقيمة لا تقل عن {offer.MinOrderValue.Value:F0} ريال. المبلغ الحالي هو {subtotal:F0} ريال."
+                    message = $"هذا العرض يتطلب طلبًا بقيمة لا تقل عن {offer.MinOrderValue.Value:F0} ريال. المبلغ الحالي هو {subtotal:F0} ريال."
                 });
             }
 

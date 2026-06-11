@@ -14,6 +14,7 @@ import 'package:provider/provider.dart';
 import '../data/providers/auth_provider.dart';
 import '../data/models/register_agent_model.dart';
 import '../../customer/data/providers/cart_provider.dart';
+import 'widgets/terms_agreement_label.dart';
 
 class AgentRegistrationScreen extends StatefulWidget {
   const AgentRegistrationScreen({super.key});
@@ -747,9 +748,8 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
                           setState(() => _isTermsAccepted = v ?? false),
                     ),
                     Expanded(
-                      child: Text(
-                        'أوافق على الشروط والأحكام',
-                        style: theme.textTheme.bodyMedium,
+                      child: const TermsAgreementLabel(
+                        role: TermsUserRole.laundryAgent,
                       ),
                     ),
                   ],

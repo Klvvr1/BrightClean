@@ -454,8 +454,18 @@ namespace BrightClean.API.Controllers
             }
 
             // Apply offer if valid
-            if (booking.Offer != null && booking.Offer.IsValid)
+            if (booking.Offer != null)
             {
+                if (!booking.Offer.IsValid)
+                {
+                    return BadRequest("The selected offer is no longer valid.");
+                }
+
+                if (booking.Offer.Scope == OfferScope.SpecificAgent && booking.Offer.LaundryAgentID != booking.LaundryAgentID)
+                {
+                    return BadRequest("The selected offer is not available for this laundry agent.");
+                }
+
                 if (booking.Offer.Type == OfferType.Percentage)
                 {
                     total -= total * (booking.Offer.DiscountValue / 100m);
@@ -466,6 +476,7 @@ namespace BrightClean.API.Controllers
                 }
 
                 if (total < 0m) total = 0m;
+                booking.Offer.UsageCount += 1;
             }
 
             booking.FinalTotal = total;
