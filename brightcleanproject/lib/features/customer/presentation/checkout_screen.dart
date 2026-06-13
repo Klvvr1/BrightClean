@@ -815,7 +815,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   bool _requiresServiceTime(List<CartItem> items) {
     if (items.isEmpty) return false;
 
-    return items.every((item) {
+    return items.any((item) {
       final serviceText = '${item.serviceName} ${item.selectedType}';
       return !serviceText.contains('ملابس') &&
           !serviceText.contains('لابس') &&
@@ -832,6 +832,46 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     final to = _serviceTimeToController.text.trim();
     if (from.isEmpty || to.isEmpty) return null;
     return 'وقت الخدمة: من $from $_serviceTimeFromPeriod إلى $to $_serviceTimeToPeriod';
+  }
+
+  bool _hasValidServiceTimeSlot() {
+    final fromText = _serviceTimeFromController.text.trim();
+    final toText = _serviceTimeToController.text.trim();
+
+    if (fromText.isEmpty || toText.isEmpty) return false;
+
+    // Parse hours
+    final fromHour = int.tryParse(fromText);
+    final toHour = int.tryParse(toText);
+
+    if (fromHour == null || toHour == null) return false;
+    if (fromHour < 1 || fromHour > 12 || toHour < 1 || toHour > 12) return false;
+
+    // Convert to 24-hour format
+    int from24 = fromHour;
+    if (_serviceTimeFromPeriod == 'م' && fromHour != 12) {
+      from24 = fromHour + 12;
+    } else if (_serviceTimeFromPeriod == 'ص' && fromHour == 12) {
+      from24 = 0;
+    }
+
+    int to24 = toHour;
+    if (_serviceTimeToPeriod == 'م' && toHour != 12) {
+      to24 = toHour + 12;
+    } else if (_serviceTimeToPeriod == 'ص' && toHour == 12) {
+      to24 = 0;
+    }
+
+    // Validate range: 8am (8) to 12am (0/24)
+    // Allow from 8 to 24 (midnight)
+    if (from24 < 8 || from24 > 24) return false;
+    if (to24 < 8 || to24 > 24) return false;
+
+    // Ensure from < to (handle midnight as 24)
+    if (to24 == 0) to24 = 24;
+    if (from24 >= to24) return false;
+
+    return true;
   }
 
   String _combinedSpecialInstructions(String locationDescription) {
@@ -995,20 +1035,18 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     final discountAmount = _calculateDiscount(totalAmount);
     final finalPrice = _calculateFinalPrice(totalAmount);
     final requiresServiceTime = _requiresServiceTime(itemsToCheckout);
-    final serviceTimeSelected =
-        _serviceTimeFromController.text.trim().isNotEmpty &&
-            _serviceTimeToController.text.trim().isNotEmpty;
+    final hasValidServiceTime = _hasValidServiceTimeSlot();
     final specialInstructions =
         _combinedSpecialInstructions(_locationDescriptionController.text);
-    final validationMessage = requiresServiceTime && !serviceTimeSelected
-        ? 'يرجى إدخال وقت الخدمة من وإلى لتأكيد الطلب'
+    final validationMessage = requiresServiceTime && !hasValidServiceTime
+        ? 'يرجى إدخال وقت خدمة صحيح (من 8 صباحا إلى 12 صباحا) لتأكيد الطلب'
         : 'الرجاء التحقق من الموقع واختيار موعد الاستلام لتأكيد الطلب';
 
     final canCompleteOrder = _isLocationVerified &&
         _selectedDate != null &&
         itemsToCheckout.isNotEmpty &&
         (widget.directItems == null || _selectedAgentId != null) &&
-        (!requiresServiceTime || serviceTimeSelected) &&
+        (!requiresServiceTime || hasValidServiceTime) &&
         (_selectedPaymentMethod != 'bank_transfer' ||
             _selectedDocumentName != null);
 
@@ -1658,9 +1696,9 @@ class _CheckoutBottomBarState extends State<_CheckoutBottomBar> {
             files: [file],
           );
 
-          // Extract proof URL from response
-          if (uploadResponse is Map && uploadResponse['proofUrl'] != null) {
-            receiptProofUrl = uploadResponse['proofUrl'].toString();
+          // Extract file identifier from response
+          if (uploadResponse is Map && uploadResponse['fileIdentifier'] != null) {
+            receiptProofUrl = uploadResponse['fileIdentifier'].toString();
           }
         } catch (e) {
           debugPrint('Receipt upload failed: $e');

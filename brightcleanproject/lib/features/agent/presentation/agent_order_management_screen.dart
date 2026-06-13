@@ -140,6 +140,18 @@ class _AgentOrderManagementScreenState
       return Uri.parse(proofUrl);
     }
 
+    // Handle new authenticated endpoint format: bookingId/fileName
+    // Convert to: /api/payments/receipt/bookingId/fileName
+    if (proofUrl.contains('/')) {
+      final parts = proofUrl.split('/');
+      if (parts.length >= 2) {
+        final bookingId = parts[0];
+        final fileName = parts.sublist(1).join('/');
+        return Uri.parse('${BaseApiClient.defaultBaseUrl}/api/payments/receipt/$bookingId/$fileName');
+      }
+    }
+
+    // Fallback for old format (direct path)
     final normalizedPath = proofUrl.startsWith('/') ? proofUrl : '/$proofUrl';
     return Uri.parse('${BaseApiClient.defaultBaseUrl}$normalizedPath');
   }
