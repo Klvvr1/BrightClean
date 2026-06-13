@@ -101,7 +101,7 @@ namespace BrightClean.API.Controllers
             else if (roleClaim?.Value == "Agent")
             {
                 hasAccess = await _context.Bookings.AnyAsync(b =>
-                    b.BookingID == bookingId && b.AgentID == userId);
+                    b.BookingID == bookingId && b.LaundryAgentID == userId);
             }
 
             if (!hasAccess)
