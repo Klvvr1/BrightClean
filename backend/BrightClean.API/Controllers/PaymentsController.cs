@@ -1,7 +1,11 @@
 using System;
+using System.IO;
+using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using BrightClean.Infrastructure;
@@ -16,10 +20,115 @@ namespace BrightClean.API.Controllers
     public class PaymentsController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly IWebHostEnvironment _environment;
+        private const long MAX_RECEIPT_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
 
-        public PaymentsController(AppDbContext context)
+        public PaymentsController(AppDbContext context, IWebHostEnvironment environment)
         {
             _context = context;
+            _environment = environment;
+        }
+
+        // POST: /api/payments/upload-receipt
+        [HttpPost("upload-receipt")]
+        public async Task<IActionResult> UploadReceipt([FromForm] int bookingID, [FromForm] IFormFile receipt)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out var clientId))
+            {
+                return Unauthorized();
+            }
+
+            if (receipt == null || receipt.Length == 0)
+            {
+                return BadRequest(new { message = "Receipt file is required." });
+            }
+
+            if (receipt.Length > MAX_RECEIPT_SIZE_BYTES)
+            {
+                return StatusCode(413, new { message = $"Receipt file too large. Max {MAX_RECEIPT_SIZE_BYTES} bytes." });
+            }
+
+            var extension = Path.GetExtension(receipt.FileName).ToLowerInvariant();
+            var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".pdf" };
+            if (!allowedExtensions.Contains(extension))
+            {
+                return BadRequest(new { message = "Only JPG, PNG, and PDF receipt files are allowed." });
+            }
+
+            var bookingExists = await _context.Bookings.AnyAsync(b =>
+                b.BookingID == bookingID && b.ClientID == clientId);
+            if (!bookingExists)
+            {
+                return NotFound(new { message = $"Booking {bookingID} was not found." });
+            }
+
+            var uploadDir = Path.Combine(_environment.ContentRootPath, "storage", "payment-receipts");
+            Directory.CreateDirectory(uploadDir);
+
+            var fileName = $"{bookingID}_{Guid.NewGuid():N}{extension}";
+            var filePath = Path.Combine(uploadDir, fileName);
+            await using (var stream = System.IO.File.Create(filePath))
+            {
+                await receipt.CopyToAsync(stream);
+            }
+
+            // Return file identifier instead of direct URL
+            return Ok(new { fileIdentifier = $"{bookingID}/{fileName}", fileName });
+        }
+
+        // GET: /api/payments/receipt/{bookingId}/{fileName}
+        [HttpGet("receipt/{bookingId}/{fileName}")]
+        [Authorize(Roles = "Client,Agent")]
+        public async Task<IActionResult> DownloadReceipt(int bookingId, string fileName)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+            var roleClaim = User.FindFirst(ClaimTypes.Role);
+
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out var userId))
+            {
+                return Unauthorized();
+            }
+
+            // Verify booking ownership or agent assignment
+            bool hasAccess = false;
+
+            if (roleClaim?.Value == "Client")
+            {
+                hasAccess = await _context.Bookings.AnyAsync(b =>
+                    b.BookingID == bookingId && b.ClientID == userId);
+            }
+            else if (roleClaim?.Value == "Agent")
+            {
+                hasAccess = await _context.Bookings.AnyAsync(b =>
+                    b.BookingID == bookingId && b.LaundryAgentID == userId);
+            }
+
+            if (!hasAccess)
+            {
+                return NotFound(new { message = $"Booking {bookingId} was not found or you don't have access." });
+            }
+
+            // Sanitize filename to prevent directory traversal
+            fileName = Path.GetFileName(fileName);
+            var filePath = Path.Combine(_environment.ContentRootPath, "storage", "payment-receipts", fileName);
+
+            if (!System.IO.File.Exists(filePath))
+            {
+                return NotFound(new { message = "Receipt file not found." });
+            }
+
+            var extension = Path.GetExtension(fileName).ToLowerInvariant();
+            var contentType = extension switch
+            {
+                ".pdf" => "application/pdf",
+                ".jpg" or ".jpeg" => "image/jpeg",
+                ".png" => "image/png",
+                _ => "application/octet-stream"
+            };
+
+            var fileStream = System.IO.File.OpenRead(filePath);
+            return File(fileStream, contentType, fileName);
         }
 
         // POST: /api/payments
