@@ -16,10 +16,55 @@ namespace BrightClean.API.Controllers
     public class PaymentsController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly IWebHostEnvironment _environment;
 
-        public PaymentsController(AppDbContext context)
+        public PaymentsController(AppDbContext context, IWebHostEnvironment environment)
         {
             _context = context;
+            _environment = environment;
+        }
+
+        // POST: /api/payments/upload-receipt
+        [HttpPost("upload-receipt")]
+        public async Task<IActionResult> UploadReceipt([FromForm] int bookingID, [FromForm] IFormFile receipt)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out var clientId))
+            {
+                return Unauthorized();
+            }
+
+            if (receipt == null || receipt.Length == 0)
+            {
+                return BadRequest(new { message = "Receipt file is required." });
+            }
+
+            var extension = Path.GetExtension(receipt.FileName).ToLowerInvariant();
+            var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".pdf" };
+            if (!allowedExtensions.Contains(extension))
+            {
+                return BadRequest(new { message = "Only JPG, PNG, and PDF receipt files are allowed." });
+            }
+
+            var bookingExists = await _context.Bookings.AnyAsync(b =>
+                b.BookingID == bookingID && b.ClientID == clientId);
+            if (!bookingExists)
+            {
+                return NotFound(new { message = $"Booking {bookingID} was not found." });
+            }
+
+            var uploadDir = Path.Combine(_environment.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"), "payment-receipts");
+            Directory.CreateDirectory(uploadDir);
+
+            var fileName = $"{bookingID}_{Guid.NewGuid():N}{extension}";
+            var filePath = Path.Combine(uploadDir, fileName);
+            await using (var stream = System.IO.File.Create(filePath))
+            {
+                await receipt.CopyToAsync(stream);
+            }
+
+            var proofUrl = $"/payment-receipts/{fileName}";
+            return Ok(new { proofUrl });
         }
 
         // POST: /api/payments

@@ -59,7 +59,8 @@ namespace BrightClean.API.Controllers
                     b.Payment.PaymentID,
                     b.Payment.Amount,
                     b.Payment.Method,
-                    b.Payment.Status
+                    b.Payment.Status,
+                    b.Payment.PaymentProofURL
                 },
                 bookingItems = b.BookingItems.Select(i => new
                 {

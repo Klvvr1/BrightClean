@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:brightcleanproject/core/theme/app_spacing.dart';
 
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:brightcleanproject/core/enums/order_status.dart';
+import 'package:brightcleanproject/core/network/api_client.dart';
 import 'package:brightcleanproject/core/theme/app_colors.dart';
 import 'package:brightcleanproject/core/controllers/language_controller.dart';
 import 'package:brightcleanproject/features/agent/presentation/widgets/agent_app_bar_actions.dart';
@@ -131,6 +133,35 @@ class _AgentOrderManagementScreenState
       ));
       context.pop(_currentStatus);
     }
+  }
+
+  Uri _paymentProofUri(String proofUrl) {
+    if (proofUrl.startsWith('http://') || proofUrl.startsWith('https://')) {
+      return Uri.parse(proofUrl);
+    }
+
+    final normalizedPath = proofUrl.startsWith('/') ? proofUrl : '/$proofUrl';
+    return Uri.parse('${BaseApiClient.defaultBaseUrl}$normalizedPath');
+  }
+
+  Future<void> _openPaymentProof(String proofUrl, bool isArabic) async {
+    final uri = _paymentProofUri(proofUrl);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+      return;
+    }
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          isArabic
+              ? 'تعذر فتح سند الدفع'
+              : 'Unable to open the payment receipt',
+        ),
+        backgroundColor: Theme.of(context).colorScheme.error,
+      ),
+    );
   }
 
   Future<void> _handleReject(bool isArabic) async {
@@ -474,6 +505,15 @@ class _AgentOrderManagementScreenState
                                                   item, isArabic, isDark)),
                                           _buildNotesRow(isArabic, isDark,
                                               widget.order.notes),
+                                          if (widget.order.paymentProofUrl !=
+                                                  null &&
+                                              widget.order.paymentProofUrl!
+                                                  .isNotEmpty)
+                                            _buildPaymentProofCard(
+                                              isArabic,
+                                              isDark,
+                                              widget.order.paymentProofUrl!,
+                                            ),
                                         ],
                                       ),
                                     ),
@@ -787,6 +827,57 @@ class _AgentOrderManagementScreenState
                   color:
                       isDark ? Colors.orange.shade200 : Colors.orange.shade800),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPaymentProofCard(
+      bool isArabic, bool isDark, String paymentProofUrl) {
+    return Container(
+      margin: const EdgeInsets.only(top: 12),
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.success.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.success.withValues(alpha: 0.28)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.receipt_long_rounded,
+              color: AppColors.success, size: 22),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  isArabic ? 'سند الدفع مرفق' : 'Payment receipt attached',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : AppColors.success,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  isArabic
+                      ? 'يمكنك مراجعة السند قبل قبول الطلب'
+                      : 'Review the receipt before accepting the order',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.75)
+                        : Colors.grey.shade700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          TextButton.icon(
+            onPressed: () => _openPaymentProof(paymentProofUrl, isArabic),
+            icon: const Icon(Icons.open_in_new_rounded, size: 18),
+            label: Text(isArabic ? 'عرض السند' : 'View'),
           ),
         ],
       ),

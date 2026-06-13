@@ -151,6 +151,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
   final TextEditingController _locationDescriptionController =
       TextEditingController();
+  final TextEditingController _serviceTimeFromController =
+      TextEditingController();
+  final TextEditingController _serviceTimeToController =
+      TextEditingController();
+  String _serviceTimeFromPeriod = 'ص';
+  String _serviceTimeToPeriod = 'ص';
 
   final BaseApiClient _apiClient = BaseApiClient();
   List<Map<String, dynamic>> _agents = [];
@@ -472,6 +478,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   @override
   void dispose() {
     _locationDescriptionController.dispose();
+    _serviceTimeFromController.dispose();
+    _serviceTimeToController.dispose();
     _couponController.dispose();
     super.dispose();
   }
@@ -568,7 +576,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: const Text('يرجى اختيار صورة (PNG/JPG) أو ملف PDF فقط.'),
+                content:
+                    const Text('يرجى اختيار صورة (PNG/JPG) أو ملف PDF فقط.'),
                 backgroundColor: Theme.of(context).colorScheme.error,
               ),
             );
@@ -648,7 +657,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   Widget _buildBankAccountsCard(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    
+
     final bankAccounts = [
       {'name': 'بنك أمجاد', 'account': '124587639'},
       {'name': 'بنك بن دول', 'account': '279547'},
@@ -661,7 +670,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       margin: const EdgeInsets.only(bottom: AppSpacing.sm),
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: isDark ? theme.colorScheme.surfaceContainerHighest : Colors.grey.shade50,
+        color: isDark
+            ? theme.colorScheme.surfaceContainerHighest
+            : Colors.grey.shade50,
         borderRadius: AppRadius.card,
         border: Border.all(
           color: theme.colorScheme.primary.withValues(alpha: 0.2),
@@ -673,7 +684,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         children: [
           Row(
             children: [
-              Icon(Icons.account_balance, color: theme.colorScheme.primary, size: 20),
+              Icon(Icons.account_balance,
+                  color: theme.colorScheme.primary, size: 20),
               const SizedBox(width: AppSpacing.sm),
               Text(
                 'الحسابات البنكية (باسم: برايت كلين)',
@@ -686,47 +698,49 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           ),
           const Divider(height: AppSpacing.lg),
           ...bankAccounts.map((bank) => Padding(
-            padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  bank['name']!,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Row(
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      bank['account']!,
+                      bank['name']!,
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        fontFamily: 'monospace',
                         fontWeight: FontWeight.bold,
-                        letterSpacing: 1.0,
                       ),
                     ),
-                    const SizedBox(width: AppSpacing.xs),
-                    IconButton(
-                      icon: const Icon(Icons.copy, size: 16),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                      onPressed: () {
-                        Clipboard.setData(ClipboardData(text: bank['account']!));
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('تم نسخ رقم حساب ${bank['name']}'),
-                            duration: const Duration(seconds: 1),
+                    Row(
+                      children: [
+                        Text(
+                          bank['account']!,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontFamily: 'monospace',
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.0,
                           ),
-                        );
-                      },
-                      tooltip: 'نسخ رقم الحساب',
+                        ),
+                        const SizedBox(width: AppSpacing.xs),
+                        IconButton(
+                          icon: const Icon(Icons.copy, size: 16),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          onPressed: () {
+                            Clipboard.setData(
+                                ClipboardData(text: bank['account']!));
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content:
+                                    Text('تم نسخ رقم حساب ${bank['name']}'),
+                                duration: const Duration(seconds: 1),
+                              ),
+                            );
+                          },
+                          tooltip: 'نسخ رقم الحساب',
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
-            ),
-          )),
+              )),
           const Divider(height: AppSpacing.lg),
           Text(
             'إرفاق سند الدفع',
@@ -768,7 +782,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 Expanded(
                   child: Row(
                     children: [
-                      const Icon(Icons.check_circle, color: AppColors.success, size: 18),
+                      const Icon(Icons.check_circle,
+                          color: AppColors.success, size: 18),
                       const SizedBox(width: AppSpacing.xs),
                       Expanded(
                         child: Text(
@@ -781,7 +796,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.close, color: AppColors.error, size: 18),
+                        icon: const Icon(Icons.close,
+                            color: AppColors.error, size: 18),
                         onPressed: _removeReceiptDocument,
                         tooltip: 'إزالة السند',
                       ),
@@ -790,6 +806,168 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 ),
               ],
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  bool _requiresServiceTime(List<CartItem> items) {
+    if (items.isEmpty) return false;
+
+    return items.every((item) {
+      final serviceText = '${item.serviceName} ${item.selectedType}';
+      return !serviceText.contains('ملابس') &&
+          !serviceText.contains('لابس') &&
+          !serviceText.contains('سجاد') &&
+          !serviceText.contains('مفروشات') &&
+          !serviceText.toLowerCase().contains('clothes') &&
+          !serviceText.toLowerCase().contains('carpet') &&
+          !serviceText.toLowerCase().contains('furniture');
+    });
+  }
+
+  String? _serviceTimeSlot() {
+    final from = _serviceTimeFromController.text.trim();
+    final to = _serviceTimeToController.text.trim();
+    if (from.isEmpty || to.isEmpty) return null;
+    return 'وقت الخدمة: من $from $_serviceTimeFromPeriod إلى $to $_serviceTimeToPeriod';
+  }
+
+  String _combinedSpecialInstructions(String locationDescription) {
+    final parts = <String>[
+      if (locationDescription.trim().isNotEmpty) locationDescription.trim(),
+      if (_serviceTimeSlot() != null) _serviceTimeSlot()!,
+    ];
+    return parts.join('\n');
+  }
+
+  Widget _buildServiceTimeInput({
+    required BuildContext context,
+    required String label,
+    required TextEditingController controller,
+    required String period,
+    required ValueChanged<String?> onPeriodChanged,
+  }) {
+    final theme = Theme.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: theme.textTheme.labelLarge?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: controller,
+                keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(2),
+                ],
+                onChanged: (_) => setState(() {}),
+                decoration: InputDecoration(
+                  hintText: 'الوقت',
+                  border: OutlineInputBorder(
+                    borderRadius: AppRadius.button,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm,
+                    vertical: AppSpacing.sm,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.xs),
+            SizedBox(
+              width: 70,
+              child: DropdownButtonFormField<String>(
+                initialValue: period,
+                items: const [
+                  DropdownMenuItem(value: 'ص', child: Text('ص')),
+                  DropdownMenuItem(value: 'م', child: Text('م')),
+                ],
+                onChanged: onPeriodChanged,
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(
+                    borderRadius: AppRadius.button,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.xs,
+                    vertical: AppSpacing.sm,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildServiceTimeSection(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: AppStyles.surface(context),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.access_time, color: theme.colorScheme.primary),
+              const SizedBox(width: AppSpacing.xs),
+              Text(
+                'وقت الخدمة',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            children: [
+              Expanded(
+                child: _buildServiceTimeInput(
+                  context: context,
+                  label: 'من',
+                  controller: _serviceTimeFromController,
+                  period: _serviceTimeFromPeriod,
+                  onPeriodChanged: (value) {
+                    if (value == null) return;
+                    setState(() => _serviceTimeFromPeriod = value);
+                  },
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: _buildServiceTimeInput(
+                  context: context,
+                  label: 'إلى',
+                  controller: _serviceTimeToController,
+                  period: _serviceTimeToPeriod,
+                  onPeriodChanged: (value) {
+                    if (value == null) return;
+                    setState(() => _serviceTimeToPeriod = value);
+                  },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            'ملاحظة: الوقت المتاح لهذه الخدمة من الساعة 8 صباحا الى الساعة 12 صباحا وعند ادخالك لموعد خارج الوقت المحدد فانه سوف يتم رفضه عن طريق الوكيل',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+            ),
           ),
         ],
       ),
@@ -816,12 +994,23 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         : cart.totalAmount;
     final discountAmount = _calculateDiscount(totalAmount);
     final finalPrice = _calculateFinalPrice(totalAmount);
+    final requiresServiceTime = _requiresServiceTime(itemsToCheckout);
+    final serviceTimeSelected =
+        _serviceTimeFromController.text.trim().isNotEmpty &&
+            _serviceTimeToController.text.trim().isNotEmpty;
+    final specialInstructions =
+        _combinedSpecialInstructions(_locationDescriptionController.text);
+    final validationMessage = requiresServiceTime && !serviceTimeSelected
+        ? 'يرجى إدخال وقت الخدمة من وإلى لتأكيد الطلب'
+        : 'الرجاء التحقق من الموقع واختيار موعد الاستلام لتأكيد الطلب';
 
     final canCompleteOrder = _isLocationVerified &&
         _selectedDate != null &&
         itemsToCheckout.isNotEmpty &&
         (widget.directItems == null || _selectedAgentId != null) &&
-        (_selectedPaymentMethod != 'bank_transfer' || _selectedDocumentName != null);
+        (!requiresServiceTime || serviceTimeSelected) &&
+        (_selectedPaymentMethod != 'bank_transfer' ||
+            _selectedDocumentName != null);
 
     return Scaffold(
       appBar: AppBar(title: const Text('إتمام الطلب')),
@@ -1032,8 +1221,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   Icon(
                     Icons.calendar_today,
                     color: _selectedDate == null
-                        ? theme.colorScheme.onSurface
-                            .withValues(alpha: 0.5)
+                        ? theme.colorScheme.onSurface.withValues(alpha: 0.5)
                         : theme.colorScheme.primary,
                     size: 20,
                   ),
@@ -1044,8 +1232,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         : DateFormat('yyyy/MM/dd').format(_selectedDate!),
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: _selectedDate == null
-                          ? theme.colorScheme.onSurface
-                              .withValues(alpha: 0.7)
+                          ? theme.colorScheme.onSurface.withValues(alpha: 0.7)
                           : theme.colorScheme.primary,
                       fontWeight: _selectedDate == null
                           ? FontWeight.normal
@@ -1056,6 +1243,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               ),
             ),
           ),
+          if (requiresServiceTime) ...[
+            const SizedBox(height: AppSpacing.md),
+            _buildServiceTimeSection(context),
+          ],
           const SizedBox(height: AppSpacing.xl),
           Text(
             'طريقة الدفع',
@@ -1288,11 +1479,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       ),
       bottomNavigationBar: _CheckoutBottomBar(
         canCompleteOrder: canCompleteOrder,
+        validationMessage: validationMessage,
         finalPrice: finalPrice,
         itemsToCheckout: itemsToCheckout,
         selectedPaymentMethod: _selectedPaymentMethod,
         selectedDate: _selectedDate,
         locationDescription: _locationDescriptionController.text,
+        specialInstructions: specialInstructions,
         selectedAgentId: _selectedAgentId,
         directItems: widget.directItems,
         apiClient: _apiClient,
@@ -1311,11 +1504,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 // ──────────────────────────────────────────────────────────────
 class _CheckoutBottomBar extends StatefulWidget {
   final bool canCompleteOrder;
+  final String validationMessage;
   final double finalPrice;
   final List<CartItem> itemsToCheckout;
   final String selectedPaymentMethod;
   final DateTime? selectedDate;
   final String locationDescription;
+  final String specialInstructions;
   final int? selectedAgentId;
   final List<CartItem>? directItems;
   final BaseApiClient apiClient;
@@ -1326,11 +1521,13 @@ class _CheckoutBottomBar extends StatefulWidget {
 
   const _CheckoutBottomBar({
     required this.canCompleteOrder,
+    required this.validationMessage,
     required this.finalPrice,
     required this.itemsToCheckout,
     required this.selectedPaymentMethod,
     required this.selectedDate,
     required this.locationDescription,
+    required this.specialInstructions,
     required this.selectedAgentId,
     required this.directItems,
     required this.apiClient,
@@ -1372,7 +1569,9 @@ class _CheckoutBottomBarState extends State<_CheckoutBottomBar> {
       locationDescription: widget.locationDescription,
       paymentMethod: capturedPaymentMethod,
       pickupDate: widget.selectedDate,
-      pickupTimeSlot: null,
+      pickupTimeSlot: widget.specialInstructions.isNotEmpty
+          ? widget.specialInstructions
+          : null,
     );
 
     setState(() => _isSubmitting = true);
@@ -1399,8 +1598,8 @@ class _CheckoutBottomBarState extends State<_CheckoutBottomBar> {
             itemsDto,
             addressID: addressId,
             scheduledAt: widget.selectedDate?.toUtc(),
-            specialInstructions: widget.locationDescription.isNotEmpty
-                ? widget.locationDescription
+            specialInstructions: widget.specialInstructions.isNotEmpty
+                ? widget.specialInstructions
                 : null,
             notifyOnStateChange: false,
           );
@@ -1413,8 +1612,8 @@ class _CheckoutBottomBarState extends State<_CheckoutBottomBar> {
         bookingId,
         // إرسال UTC صريح لتجنب خطأ 400 "تاريخ في الماضي" بسبب offset المنطقة الزمنية
         scheduledAt: widget.selectedDate?.toUtc(),
-        specialInstructions: widget.locationDescription.isNotEmpty
-            ? widget.locationDescription
+        specialInstructions: widget.specialInstructions.isNotEmpty
+            ? widget.specialInstructions
             : null,
         notifyOnStateChange: false,
       );
@@ -1437,8 +1636,10 @@ class _CheckoutBottomBarState extends State<_CheckoutBottomBar> {
           final http.MultipartFile file;
           if (widget.receiptPath != null) {
             // Native platforms: use file path
-            file = await http.MultipartFile.fromPath('receipt', widget.receiptPath!);
-          } else if (widget.receiptBytes != null && widget.receiptName != null) {
+            file = await http.MultipartFile.fromPath(
+                'receipt', widget.receiptPath!);
+          } else if (widget.receiptBytes != null &&
+              widget.receiptName != null) {
             // Web platform: use bytes
             file = http.MultipartFile.fromBytes(
               'receipt',
@@ -1482,7 +1683,8 @@ class _CheckoutBottomBarState extends State<_CheckoutBottomBar> {
                   TextButton(
                     onPressed: () => Navigator.of(dialogContext).pop(true),
                     style: TextButton.styleFrom(
-                      foregroundColor: Theme.of(dialogContext).colorScheme.error,
+                      foregroundColor:
+                          Theme.of(dialogContext).colorScheme.error,
                     ),
                     child: const Text('المتابعة بدون السند'),
                   ),
@@ -1503,7 +1705,7 @@ class _CheckoutBottomBarState extends State<_CheckoutBottomBar> {
         'bookingID': bookingId,
         'amount': paymentAmount,
         'method': methodMap[capturedPaymentMethod] ?? 'Cash',
-        if (receiptProofUrl != null) 'proofUrl': receiptProofUrl,
+        if (receiptProofUrl != null) 'PaymentProofURL': receiptProofUrl,
       });
 
       await orderProvider.completeCheckoutAfterPayment(
@@ -1550,8 +1752,9 @@ class _CheckoutBottomBarState extends State<_CheckoutBottomBar> {
 
     void showValidationMessage() {
       ScaffoldMessenger.of(context).clearSnackBars();
-      String msg = 'الرجاء التحقق من الموقع واختيار موعد الاستلام لتأكيد الطلب';
-      if (widget.selectedPaymentMethod == 'bank_transfer' && widget.receiptName == null) {
+      String msg = widget.validationMessage;
+      if (widget.selectedPaymentMethod == 'bank_transfer' &&
+          widget.receiptName == null) {
         msg = 'يرجى إرفاق سند الدفع لتأكيد الطلب';
       }
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(

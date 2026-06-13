@@ -26,6 +26,7 @@ class AgentOrderModel {
   final List<OrderItemMock> items;
   final String notes;
   final bool requiresDelivery;
+  final String? paymentProofUrl;
 
   AgentOrderModel({
     required this.id,
@@ -38,6 +39,7 @@ class AgentOrderModel {
     required this.items,
     required this.notes,
     required this.requiresDelivery,
+    this.paymentProofUrl,
   });
 }
 
@@ -488,6 +490,7 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
 
     final client = _readMap(json['client'] ?? json['Client']);
     final address = _readMap(json['address'] ?? json['Address']);
+    final payment = _readMap(json['payment'] ?? json['Payment']);
     final customerName = client != null
         ? '${client['firstName'] ?? client['FirstName'] ?? ''} ${client['lastName'] ?? client['LastName'] ?? ''}'
             .trim()
@@ -513,6 +516,8 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
           json['SpecialInstructions']?.toString() ??
           '',
       requiresDelivery: _hasTwoStageDelivery(itemMaps),
+      paymentProofUrl: payment?['paymentProofURL']?.toString() ??
+          payment?['PaymentProofURL']?.toString(),
     );
   }
 
