@@ -158,8 +158,12 @@ class _AgentOrderManagementScreenState
 
   Future<void> _openPaymentProof(String proofUrl, bool isArabic) async {
     final uri = _paymentProofUri(proofUrl);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    final headers = await BaseApiClient().getAuthenticatedHeaders();
+    if (await launchUrl(
+      uri,
+      mode: LaunchMode.inAppWebView,
+      webViewConfiguration: WebViewConfiguration(headers: headers),
+    )) {
       return;
     }
 

@@ -12,7 +12,6 @@ import '../data/models/register_client_model.dart';
 import '../../../../core/error/exceptions.dart';
 import '../../../../core/widgets/map_picker_screen.dart';
 import 'widgets/terms_agreement_label.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class CustomerRegistrationScreen extends StatefulWidget {
   const CustomerRegistrationScreen({super.key});
@@ -113,6 +112,11 @@ class _CustomerRegistrationScreenState
 
       try {
         final String mappedGender = _selectedGender == 'M' ? 'Male' : 'Female';
+        final addressParts = _selectedAddress!.split(',');
+        final area = addressParts.first.trim();
+        final street = addressParts.length > 1
+            ? addressParts.sublist(1).join(',').trim()
+            : _selectedAddress!.trim();
         final clientModel = RegisterClientModel(
           firstName: _firstNameController.text.trim(),
           lastName: _lastNameController.text.trim(),
@@ -121,20 +125,14 @@ class _CustomerRegistrationScreenState
           phoneNo: _phoneController.text.trim(),
           dateOfBirth: _dobController.text.trim(),
           gender: mappedGender,
+          area: area.isEmpty ? _selectedAddress!.trim() : area,
+          street: street.isEmpty ? _selectedAddress!.trim() : street,
+          latitude: _selectedCoordinates!.latitude,
+          longitude: _selectedCoordinates!.longitude,
         );
 
         final authProvider = Provider.of<AuthProvider>(context, listen: false);
         await authProvider.registerClient(clientModel);
-
-        // Save selected registration address to SharedPreferences (non-fatal)
-        try {
-          final prefs = await SharedPreferences.getInstance();
-          final emailKey = _emailController.text.trim().toLowerCase();
-          await prefs.setString('registration_address_$emailKey', _selectedAddress!);
-        } catch (e) {
-          debugPrint('Warning: Failed to save registration address to preferences: $e');
-          // Non-fatal: registration succeeded, just log the preference save failure
-        }
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

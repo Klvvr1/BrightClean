@@ -9,7 +9,6 @@ import '../../../../core/network/api_client.dart';
 import '../../../../core/error/exceptions.dart';
 import 'package:brightcleanproject/features/customer/domain/models/order.dart';
 import 'package:brightcleanproject/features/customer/data/providers/order_provider.dart';
-import 'package:brightcleanproject/features/customer/domain/models/review.dart';
 import 'package:brightcleanproject/features/customer/data/providers/review_provider.dart';
 import 'package:brightcleanproject/features/auth/data/providers/auth_provider.dart';
 
@@ -397,19 +396,6 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                 onPressed: () async {
                   Navigator.pop(dialogContext);
 
-                  final review = Review(
-                    userName: 'عميل برايت كلين',
-                    comment: reviewController.text.trim().isEmpty
-                        ? 'خدمة ممتازة! شكراً لكم.'
-                        : reviewController.text.trim(),
-                    rating: requiresDriverRating
-                        ? (serviceRating + driverRating) / 2.0
-                        : serviceRating,
-                    serviceRating: serviceRating,
-                    driverRating: requiresDriverRating ? driverRating : null,
-                    date: DateTime.now(),
-                  );
-
                   // Capture context-sensitive objects BEFORE the async gap
                   final reviewProvider =
                       Provider.of<ReviewProvider>(parentContext, listen: false);
@@ -445,7 +431,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                       },
                     );
 
-                    reviewProvider.addReview(review);
+                    await reviewProvider.fetchRecentReviews();
                     orderProvider.markOrderAsRated(orderId);
 
                     messenger.showSnackBar(

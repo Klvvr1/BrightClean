@@ -94,20 +94,6 @@ class AuthProvider with ChangeNotifier {
           'user_name', '${response.firstName} ${response.lastName}'.trim());
       await prefs.setString('user_phone', response.phoneNo);
 
-      // Migrate registration address if it exists
-      final emailKey = response.email.trim().toLowerCase();
-      final regAddr = prefs.getString('registration_address_$emailKey');
-      if (regAddr != null && regAddr.isNotEmpty) {
-        await prefs.setString(
-            'user_registration_address_${response.userId}', regAddr);
-        final savedKey = 'user_saved_addresses_${response.userId}';
-        List<String> saved = prefs.getStringList(savedKey) ?? [];
-        if (!saved.contains(regAddr)) {
-          saved.add(regAddr);
-          await prefs.setStringList(savedKey, saved);
-        }
-      }
-
       // Mutate variables only after successful persistence
       _token = response.token;
       _userId = response.userId;

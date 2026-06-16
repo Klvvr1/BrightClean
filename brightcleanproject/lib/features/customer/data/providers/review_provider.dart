@@ -1,72 +1,54 @@
 import 'package:flutter/foundation.dart';
-import '../../../../core/database/database_helper.dart';
+import '../../../../core/network/api_client.dart';
 import '../../domain/models/review.dart';
 
 class ReviewProvider with ChangeNotifier {
+  final BaseApiClient _apiClient;
   List<Review> _reviews = [];
+  bool _isLoading = false;
+  String? _errorMessage;
 
-  ReviewProvider() {
-    _loadReviews();
-  }
-
-  Future<void> _loadReviews() async {
-    try {
-      final db = await DatabaseHelper.instance.database;
-      final maps = await db.query('reviews', orderBy: 'id DESC');
-      
-      if (maps.isNotEmpty) {
-        _reviews = maps.map((map) => Review(
-          userName: map['userName'] as String,
-          comment: map['comment'] as String,
-          rating: map['rating'] as double,
-          serviceRating: map['serviceRating'] as double?,
-          driverRating: map['driverRating'] as double?,
-          date: DateTime.parse(map['date'] as String),
-        )).toList();
-      } else {
-        _reviews = [];
-      }
-      notifyListeners();
-    } catch (e) {
-      debugPrint('Error loading reviews: $e');
-    }
-  }
-
-  void seedDefaultReviews() {
-    _reviews = [
-      Review(
-        userName: 'أحمد محمد',
-        comment: 'خدمة ممتازة وتوصيل سريع! ملابسي عادت كأنها جديدة.',
-        rating: 5.0,
-        date: DateTime.now().subtract(const Duration(days: 2)),
-      ),
-    ];
-    for (var review in _reviews) {
-      _saveReviewToDb(review);
-    }
-  }
-
-  Future<void> _saveReviewToDb(Review review) async {
-    try {
-      final db = await DatabaseHelper.instance.database;
-      await db.insert('reviews', {
-        'userName': review.userName,
-        'comment': review.comment,
-        'rating': review.rating,
-        'serviceRating': review.serviceRating,
-        'driverRating': review.driverRating,
-        'date': review.date.toIso8601String(),
-      });
-    } catch (e) {
-      debugPrint('Error saving review: $e');
+  ReviewProvider({BaseApiClient? apiClient, bool autoLoad = true})
+      : _apiClient = apiClient ?? BaseApiClient() {
+    if (autoLoad) {
+      fetchRecentReviews();
     }
   }
 
   List<Review> get reviews => [..._reviews];
+  bool get isLoading => _isLoading;
+  String? get errorMessage => _errorMessage;
 
-  void addReview(Review review) {
-    _reviews.insert(0, review);
-    _saveReviewToDb(review);
+  Future<void> fetchRecentReviews() async {
+    _isLoading = true;
+    _errorMessage = null;
     notifyListeners();
+
+    try {
+      final response = await _apiClient.get('/api/bookings/reviews/recent');
+      _reviews = response is List
+          ? response
+              .whereType<Map>()
+              .map((item) => item.map(
+                    (key, value) => MapEntry(key.toString(), value),
+                  ))
+              .map((item) => Review(
+                    userName: item['userName']?.toString() ?? 'مستخدم',
+                    comment: item['comment']?.toString() ?? '',
+                    rating: (item['rating'] as num?)?.toDouble() ?? 0.0,
+                    date: DateTime.tryParse(item['date']?.toString() ?? '') ??
+                        DateTime.now(),
+                  ))
+              .where((review) => review.comment.trim().isNotEmpty)
+              .toList()
+          : [];
+    } catch (e) {
+      _errorMessage = e.toString();
+      debugPrint('Error loading reviews from API: $e');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
+
 }

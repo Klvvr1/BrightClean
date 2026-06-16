@@ -65,7 +65,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text(
-                'ÙŠØ±Ø¬Ù‰ ØªØ­Ø¯ÙŠØ¯ Ø¹Ù†ÙˆØ§Ù† ØªÙˆØµÙŠÙ„ ØµØ§Ù„Ø­'),
+                'يرجى تحديد عنوان توصيل صالح'),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
@@ -114,7 +114,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('ÙØ´Ù„ Ø­ÙØ¸ Ø¹Ù†ÙˆØ§Ù† Ø§Ù„ØªÙˆØµÙŠÙ„: $e'),
+            content: Text('فشل حفظ عنوان التوصيل: $e'),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
@@ -146,7 +146,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     }
 
     throw Exception(
-        'ÙŠØ±Ø¬Ù‰ Ø¥Ø¶Ø§ÙØ© Ø¹Ù†ÙˆØ§Ù† ØªÙˆØµÙŠÙ„ ØµØ§Ù„Ø­ Ù‚Ø¨Ù„ Ø¥ÙƒÙ…Ø§Ù„ Ø§Ù„Ø¯ÙØ¹');
+        'يرجى إضافة عنوان توصيل صالح قبل إكمال الدفع');
   }
 
   final TextEditingController _locationDescriptionController =

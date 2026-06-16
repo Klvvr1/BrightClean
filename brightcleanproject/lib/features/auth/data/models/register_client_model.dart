@@ -6,6 +6,10 @@ class RegisterClientModel {
   final String phoneNo;
   final String dateOfBirth;
   final String gender;
+  final String area;
+  final String street;
+  final double latitude;
+  final double longitude;
 
   RegisterClientModel({
     required this.firstName,
@@ -15,6 +19,10 @@ class RegisterClientModel {
     required this.phoneNo,
     required this.dateOfBirth,
     required this.gender,
+    required this.area,
+    required this.street,
+    required this.latitude,
+    required this.longitude,
   });
 
   Map<String, dynamic> toJson() {
@@ -26,6 +34,10 @@ class RegisterClientModel {
       'phoneNo': phoneNo,
       'dateOfBirth': dateOfBirth,
       'gender': gender,
+      'area': area,
+      'street': street,
+      'latitude': latitude,
+      'longitude': longitude,
     };
   }
 }

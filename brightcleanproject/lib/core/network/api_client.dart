@@ -48,6 +48,10 @@ class BaseApiClient {
     return headers;
   }
 
+  Future<Map<String, String>> getAuthenticatedHeaders() async {
+    return _getHeaders();
+  }
+
   void _logRequest(String method, Uri url, Map<String, String> headers,
       {String? body}) {
     debugPrint('--> $method ${url.toString()}');
