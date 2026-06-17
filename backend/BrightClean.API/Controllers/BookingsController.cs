@@ -827,12 +827,12 @@ namespace BrightClean.API.Controllers
                 .AsNoTracking()
                 .Include(r => r.Booking)
                     .ThenInclude(b => b.Client)
-                .Where(r => r.AgentRating.HasValue && r.AgentComment != null && r.AgentComment != "")
+                .Where(r => r.AgentRating.HasValue && r.AgentComment != null && !string.IsNullOrWhiteSpace(r.AgentComment))
                 .OrderByDescending(r => r.RatedAt)
                 .Take(5)
                 .Select(r => new
                 {
-                    userName = (r.Booking.Client.FirstName + " " + r.Booking.Client.LastName).Trim(),
+                    userName = r.Booking.Client.FirstName + (string.IsNullOrWhiteSpace(r.Booking.Client.LastName) ? "" : " " + r.Booking.Client.LastName.Substring(0, 1) + "."),
                     comment = r.AgentComment,
                     rating = r.AgentRating,
                     date = r.RatedAt

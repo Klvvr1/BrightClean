@@ -78,8 +78,13 @@ class _AddressesScreenState extends State<AddressesScreen> {
     final coordinates = result['coordinates'];
     final addressLabel = result['address']?.toString() ?? '';
 
-    final double lat = coordinates?.latitude ?? 0.0;
-    final double lng = coordinates?.longitude ?? 0.0;
+    // Handle both payload shapes: coordinates object with lat/lng properties, or direct lat/lng in result
+    final double lat = (coordinates != null && coordinates.latitude != null)
+        ? coordinates.latitude
+        : (result['latitude'] as num?)?.toDouble() ?? 0.0;
+    final double lng = (coordinates != null && coordinates.longitude != null)
+        ? coordinates.longitude
+        : (result['longitude'] as num?)?.toDouble() ?? 0.0;
 
     if (lat == 0.0 && lng == 0.0) {
       ScaffoldMessenger.of(context).showSnackBar(

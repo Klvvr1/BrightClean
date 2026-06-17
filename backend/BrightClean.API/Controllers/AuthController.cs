@@ -45,7 +45,7 @@ namespace BrightClean.API.Controllers
             if (string.IsNullOrWhiteSpace(dto.Area) || string.IsNullOrWhiteSpace(dto.Street))
                 return BadRequest(new { message = "عنوان العميل مطلوب." });
 
-            if (dto.Latitude == 0m && dto.Longitude == 0m)
+            if (dto.Latitude < -90m || dto.Latitude > 90m || dto.Longitude < -180m || dto.Longitude > 180m)
                 return BadRequest(new { message = "يجب تحديد موقع صالح للعنوان." });
 
             if (await _context.Users.AnyAsync(u => u.Email == dto.Email))
