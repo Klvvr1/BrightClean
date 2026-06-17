@@ -1,15 +1,22 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../../../core/error/user_error_message.dart';
 import '../../../../core/enums/service_activation_status.dart';
 import '../data/providers/admin_provider.dart';
 import '../data/models/admin_service_model.dart';
 import '../data/models/activation_request_model.dart';
 import '../data/models/admin_offer_model.dart';
+import '../data/models/admin_audit_log_model.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_styles.dart';
 import '../../../../core/network/api_client.dart';
+import '../../../../core/widgets/app_empty_state.dart';
+import '../../../../core/widgets/app_section_title.dart';
+import '../../../../core/widgets/app_stat_card.dart';
+import '../../../../core/widgets/app_status_badge.dart';
+import '../../../../core/widgets/app_surface_card.dart';
 import '../../../../core/widgets/custom_text_field.dart';
 import '../../../../core/controllers/system_status_provider.dart';
 import 'admin_profile_screen.dart';
@@ -85,6 +92,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       context.read<AdminProvider>().fetchServices();
       context.read<AdminProvider>().fetchServiceActivationRequests();
       context.read<AdminProvider>().fetchRecentOrders();
+      context.read<AdminProvider>().fetchAuditLogs();
       context.read<AdminProvider>().fetchOffers();
       context.read<AdminProvider>().fetchNotificationHistory();
     });
@@ -99,26 +107,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   // Dummy data for live orders
   final List<Map<String, dynamic>> _liveOrders = [];
 
-
-
   // Dummy data for pending requests
   final List<Map<String, dynamic>> _pendingRequests = [];
 
   // Dummy data for staff members
   final List<Map<String, dynamic>> _staffMembers = [];
 
-  final List<Map<String, dynamic>> _adminActivities = [];
-
   void _logActivity(String title, String type, IconData icon, Color color) {
-    setState(() {
-      _adminActivities.insert(0, {
-        'title': title,
-        'type': type,
-        'time': 'الآن',
-        'icon': icon,
-        'color': color,
-      });
-    });
+    debugPrint('Refreshing admin audit logs after $type: $title');
+    context.read<AdminProvider>().fetchAuditLogs();
   }
 
   final List<String> _titles = [
@@ -284,8 +281,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-
-
   Widget _buildLiveOrdersSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -368,54 +363,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ),
         );
       },
-      child: Container(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        decoration: AppStyles.surface(context).copyWith(
-          border: Border.all(color: color.withValues(alpha: 0.1), width: 1),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(AppSpacing.sm),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: color, size: 28),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              title,
-              style: TextStyle(
-                color: Theme.of(context).textTheme.bodySmall?.color ??
-                    AppColors.textLight,
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 4),
-            FittedBox(
-              child: Text(
-                value,
-                style: TextStyle(
-                  color: AppColors.primary,
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-            if (subValue != null)
-              Text(
-                subValue,
-                style: TextStyle(
-                  color: color,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-          ],
-        ),
+      child: AppStatCard(
+        title: title,
+        value: value,
+        icon: icon,
+        accentColor: color,
+        subtitle: subValue,
       ),
     );
   }
@@ -531,13 +484,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'نظرة عامة',
-            style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: AppColors.primary),
-          ),
+          const AppSectionTitle(title: 'نظرة عامة'),
           const SizedBox(height: AppSpacing.lg),
           GridView.count(
             shrinkWrap: true,
@@ -599,6 +546,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Widget _buildAdminActivitiesSection() {
+    final adminProvider = context.watch<AdminProvider>();
+    final activities = adminProvider.auditLogs;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -612,7 +562,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   fontWeight: FontWeight.bold,
                   color: AppColors.primary),
             ),
-            if (_adminActivities.length > 5)
+            if (activities.length > 5)
               TextButton(
                 onPressed: _showAllActivitiesBottomSheet,
                 child: const Text('عرض الكل',
@@ -622,7 +572,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ],
         ),
         const SizedBox(height: AppSpacing.sm),
-        if (_adminActivities.isEmpty)
+        if (adminProvider.isAuditLogsLoading && activities.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            width: double.infinity,
+            decoration: AppStyles.surface(context),
+            child: const Center(child: CircularProgressIndicator()),
+          )
+        else if (activities.isEmpty)
           Container(
             padding: const EdgeInsets.all(AppSpacing.lg),
             width: double.infinity,
@@ -638,61 +595,170 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ListView.separated(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: _adminActivities.take(5).length,
+            itemCount: activities.take(5).length,
             separatorBuilder: (context, index) =>
                 const SizedBox(height: AppSpacing.sm),
             itemBuilder: (context, index) {
-              final activity = _adminActivities[index];
-              return Container(
-                padding: const EdgeInsets.all(AppSpacing.sm),
-                decoration: AppStyles.surface(context).copyWith(
-                  border: Border.all(color: Colors.grey.shade100),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: activity['color'].withValues(alpha: 0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        activity['icon'],
-                        color: activity['color'],
-                        size: 20,
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            activity['title'],
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                              color: AppColors.textMain,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            activity['time'],
-                            style: const TextStyle(
-                              color: AppColors.textLight,
-                              fontSize: 11,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              );
+              return _buildAuditActivityTile(activities[index]);
             },
           ),
       ],
     );
+  }
+
+  Widget _buildAuditActivityTile(AdminAuditLogModel activity,
+      {bool compact = true}) {
+    final color = _auditActivityColor(activity.action);
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      decoration: AppStyles.surface(context).copyWith(
+        border: Border.all(color: Colors.grey.shade100),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              _auditActivityIcon(activity.action),
+              color: color,
+              size: compact ? 20 : 22,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _auditActivityTitle(activity),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: compact ? 13 : 14,
+                    color: AppColors.textMain,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${_formatAuditDateTime(activity.performedAt)} - ${activity.adminName}',
+                  style: const TextStyle(
+                    color: AppColors.textLight,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _auditActivityTitle(AdminAuditLogModel activity) {
+    final action = activity.action;
+    switch (action) {
+      case 'SEND_NOTIFICATION':
+        return 'تم إرسال إشعار';
+      case 'CREATE_OFFER':
+        return 'تم إنشاء عرض';
+      case 'DELETE_OFFER':
+        return 'تم حذف عرض';
+      case 'EXPIRE_OFFER':
+        return 'تم إيقاف عرض مستخدم';
+      case 'ACTIVATE_AGENT':
+        return 'تم قبول طلب مغسلة';
+      case 'ACTIVATE_DRIVER':
+        return 'تم قبول طلب سائق';
+      case 'UPDATE_AGENT_SERVICES':
+        return 'تم تعديل خدمات مغسلة';
+      case 'APPROVE_AGENT_SERVICE_ACTIVATION':
+        return 'تم قبول تفعيل خدمة لمغسلة';
+      case 'APPROVE_AGENT_SERVICE_DEACTIVATION':
+        return 'تم قبول إيقاف خدمة لمغسلة';
+      case 'REJECT_AGENT_SERVICE_ACTIVATION':
+        return 'تم رفض تفعيل خدمة لمغسلة';
+      case 'REJECT_AGENT_SERVICE_DEACTIVATION':
+        return 'تم رفض إيقاف خدمة لمغسلة';
+      case 'CREATE_SERVICE':
+        return 'تم إنشاء خدمة';
+      case 'UPDATE_SERVICE':
+        return 'تم تعديل خدمة';
+      case 'ENABLE_SERVICE':
+        return 'تم تفعيل خدمة';
+      case 'DISABLE_SERVICE':
+        return 'تم تعطيل خدمة';
+      case 'SOFT_DELETE_SERVICE':
+      case 'HARD_DELETE_SERVICE':
+        return 'تم حذف خدمة';
+      case 'RESTORE_SERVICE':
+        return 'تم استعادة خدمة';
+      case 'CONFIRM_PAYMENT':
+        return 'تم تأكيد دفعة';
+      case 'REJECT_PAYMENT':
+        return 'تم رفض دفعة';
+      case 'TOGGLE_MAINTENANCE':
+        return 'تم تغيير وضع صيانة النظام';
+      default:
+        return action.isEmpty ? 'عملية إدارية' : action;
+    }
+  }
+
+  IconData _auditActivityIcon(String action) {
+    switch (action) {
+      case 'SEND_NOTIFICATION':
+        return Icons.notifications_active;
+      case 'CREATE_OFFER':
+      case 'DELETE_OFFER':
+      case 'EXPIRE_OFFER':
+        return Icons.local_offer;
+      case 'ACTIVATE_AGENT':
+      case 'UPDATE_AGENT_SERVICES':
+        return Icons.business;
+      case 'ACTIVATE_DRIVER':
+        return Icons.person_add;
+      case 'CONFIRM_PAYMENT':
+      case 'REJECT_PAYMENT':
+        return Icons.payments;
+      case 'TOGGLE_MAINTENANCE':
+        return Icons.settings_suggest;
+      default:
+        return Icons.admin_panel_settings;
+    }
+  }
+
+  Color _auditActivityColor(String action) {
+    switch (action) {
+      case 'DELETE_OFFER':
+      case 'EXPIRE_OFFER':
+      case 'DISABLE_SERVICE':
+      case 'SOFT_DELETE_SERVICE':
+      case 'HARD_DELETE_SERVICE':
+      case 'REJECT_AGENT_SERVICE_ACTIVATION':
+      case 'REJECT_AGENT_SERVICE_DEACTIVATION':
+      case 'REJECT_PAYMENT':
+        return AppColors.error;
+      case 'CREATE_OFFER':
+      case 'ACTIVATE_AGENT':
+      case 'ACTIVATE_DRIVER':
+      case 'ENABLE_SERVICE':
+      case 'RESTORE_SERVICE':
+      case 'CONFIRM_PAYMENT':
+        return AppColors.success;
+      case 'TOGGLE_MAINTENANCE':
+        return AppColors.warning;
+      default:
+        return AppColors.primary;
+    }
+  }
+
+  String _formatAuditDateTime(DateTime date) {
+    final localDate = date.toLocal();
+    final hour = localDate.hour.toString().padLeft(2, '0');
+    final minute = localDate.minute.toString().padLeft(2, '0');
+    return '${_formatAdminDate(localDate)} $hour:$minute';
   }
 
   Widget _buildOperationControlPanel() {
@@ -761,8 +827,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       );
                     } catch (e) {
                       if (mounted) {
+                        final message = userMessageFromError(e);
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('حدث خطأ: $e')),
+                          SnackBar(content: Text('حدث خطأ: $message')),
                         );
                       }
                     }
@@ -828,8 +895,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                               );
                             } catch (e) {
                               if (mounted) {
+                                final message = userMessageFromError(e);
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('حدث خطأ: $e')),
+                                  SnackBar(content: Text('حدث خطأ: $message')),
                                 );
                               }
                             }
@@ -896,6 +964,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   void _showAllActivitiesBottomSheet() {
+    final activities = context.read<AdminProvider>().auditLogs;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -941,58 +1010,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             Expanded(
               child: ListView.separated(
                 physics: const BouncingScrollPhysics(),
-                itemCount: _adminActivities.length,
+                itemCount: activities.length,
                 separatorBuilder: (context, index) =>
                     const SizedBox(height: AppSpacing.sm),
                 itemBuilder: (context, index) {
-                  final activity = _adminActivities[index];
-                  return Container(
-                    padding: const EdgeInsets.all(AppSpacing.sm),
-                    decoration: BoxDecoration(
-                      color: AppColors.background,
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: activity['color'].withValues(alpha: 0.1),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            activity['icon'],
-                            color: activity['color'],
-                            size: 22,
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                activity['title'],
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                  color: AppColors.textMain,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                activity['time'],
-                                style: const TextStyle(
-                                  color: AppColors.textLight,
-                                  fontSize: 11,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
+                  return _buildAuditActivityTile(activities[index],
+                      compact: false);
                 },
               ),
             ),
@@ -1078,6 +1101,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             'licenseNumber': 'غير متوفر',
             'vehicleType': u.vehicleType ?? 'غير متوفر',
             'vehiclePlate': u.plateNumber ?? 'غير متوفر',
+            'requestedServices': u.requestedServices
+                .map((service) => service.serviceName)
+                .toList(),
             'commercialRegisterImage': documentUrl('CommercialRegistration'),
             'nationalIdImage': documentUrl('NationalID'),
             'licenseImage': documentUrl('DriverLicense'),
@@ -2100,17 +2126,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         : service.isAvailable
             ? AppColors.success
             : AppColors.warning;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Text(
-        text,
-        style:
-            TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold),
-      ),
+    return AppStatusBadge(
+      label: text,
+      color: color,
     );
   }
 
@@ -2170,8 +2188,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     }
 
     return _mapApprovedStaff(adminProvider.approvedStaff)
-        .where((staff) =>
-            staff['type'] == 'مغسلة')
+        .where((staff) => staff['type'] == 'مغسلة')
         .map((staff) => Map<dynamic, dynamic>.from(staff))
         .toList();
   }
@@ -2232,8 +2249,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _isLoadingLaundryServices = false);
+      final message = userMessageFromError(e);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('تعذر تحميل خدمات المغسلة: $e')),
+        SnackBar(content: Text('تعذر تحميل خدمات المغسلة: $message')),
       );
     }
   }
@@ -2259,8 +2277,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       );
     } catch (e) {
       if (!mounted) return;
+      final message = userMessageFromError(e);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('تعذر حفظ خدمات المغسلة: $e')),
+        SnackBar(content: Text('تعذر حفظ خدمات المغسلة: $message')),
       );
     }
   }
@@ -2390,7 +2409,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       final serviceIds = await provider.getAgentServiceIds(request.agentId);
       return serviceIds.toSet();
     } catch (e, s) {
-      debugPrint('Failed to fetch agent service IDs for agent ${request.agentId}: $e');
+      debugPrint(
+          'Failed to fetch agent service IDs for agent ${request.agentId}: $e');
       debugPrint('Stack trace: $s');
       rethrow;
     }
@@ -2464,8 +2484,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       );
     } catch (e) {
       if (!mounted) return;
+      final message = userMessageFromError(e);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('تعذر قبول طلب تعديل الخدمة: $e')),
+        SnackBar(content: Text('تعذر قبول طلب تعديل الخدمة: $message')),
       );
     }
   }
@@ -2483,8 +2504,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       );
     } catch (e) {
       if (!mounted) return;
+      final message = userMessageFromError(e);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('تعذر رفض طلب تعديل الخدمة: $e')),
+        SnackBar(content: Text('تعذر رفض طلب تعديل الخدمة: $message')),
       );
     }
   }
@@ -2502,8 +2524,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       );
     } catch (e) {
       if (!mounted) return;
+      final message = userMessageFromError(e);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('تعذر تغيير حالة الخدمة: $e')),
+        SnackBar(content: Text('تعذر تغيير حالة الخدمة: $message')),
       );
     }
   }
@@ -2518,8 +2541,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       );
     } catch (e) {
       if (!mounted) return;
+      final message = userMessageFromError(e);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('تعذر استرجاع الخدمة: $e')),
+        SnackBar(content: Text('تعذر استرجاع الخدمة: $message')),
       );
     }
   }
@@ -2553,8 +2577,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 );
               } catch (e) {
                 if (!mounted) return;
+                final message = userMessageFromError(e);
                 ScaffoldMessenger.of(this.context).showSnackBar(
-                  SnackBar(content: Text('تعذر حذف الخدمة: $e')),
+                  SnackBar(content: Text('تعذر حذف الخدمة: $message')),
                 );
               }
             },
@@ -2697,8 +2722,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   );
                 } catch (e) {
                   if (!mounted) return;
+                  final message = userMessageFromError(e);
                   ScaffoldMessenger.of(this.context).showSnackBar(
-                    SnackBar(content: Text('تعذر حفظ الخدمة: $e')),
+                    SnackBar(content: Text('تعذر حفظ الخدمة: $message')),
                   );
                 }
               },
@@ -2857,11 +2883,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Widget _buildRegistrationItem(Map<String, dynamic> request) {
+    final requestedServices = request['requestedServices'];
+    final requestedServicesText =
+        requestedServices is List && requestedServices.isNotEmpty
+            ? requestedServices.join('، ')
+            : 'غير محددة';
+
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ListTile(
         onTap: () => _showRegistrationDetails(request),
+        isThreeLine: request['type'] == 'مغسلة',
         leading: CircleAvatar(
           backgroundColor: AppColors.tertiary.withValues(alpha: 0.1),
           child: Icon(
@@ -2873,7 +2906,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         ),
         title: Text(request['name'],
             style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text('الهاتف: ${request['phone']}'),
+        subtitle: request['type'] == 'مغسلة'
+            ? Text(
+                'الهاتف: ${request['phone']}\nالخدمات: $requestedServicesText',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              )
+            : Text('الهاتف: ${request['phone']}'),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -3187,7 +3226,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   Flexible(
                     child: ElevatedButton.icon(
                       onPressed: _showCreateOfferDialog,
-                      icon: const Icon(Icons.add, color: Colors.white, size: 18),
+                      icon:
+                          const Icon(Icons.add, color: Colors.white, size: 18),
                       label: const Text(
                         'إضافة عرض',
                         style: TextStyle(color: Colors.white),
@@ -3212,25 +3252,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 onTap: _showNotificationDialog,
               ),
               const SizedBox(height: AppSpacing.xl),
-              const Text(
-                'العروض النشطة حالياً',
-                style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textMain),
-              ),
+              const AppSectionTitle(title: 'العروض النشطة حالياً'),
               const SizedBox(height: AppSpacing.sm),
               if (adminProvider.isLoading && adminProvider.offers.isEmpty)
                 const Center(child: CircularProgressIndicator())
               else if (activeOffers.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 24),
-                  child: Center(
-                    child: Text(
-                      'لا توجد عروض نشطة حالياً',
-                      style: TextStyle(color: AppColors.textLight, fontSize: 13),
-                    ),
-                  ),
+                const AppEmptyState(
+                  icon: Icons.local_offer_outlined,
+                  title: 'لا توجد عروض نشطة حالياً',
                 )
               else
                 ...activeOffers.map((offer) => _buildOfferCard(offer)),
@@ -3258,25 +3287,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   Widget _buildOfferCard(AdminOfferModel offer) {
     final isGlobal = offer.scope != 'SpecificAgent';
-    return Container(
+    return AppSurfaceCard(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 5,
-            offset: const Offset(0, 2),
-          ),
-        ],
-        border: Border.all(
-          color: isGlobal
-              ? AppColors.primary.withValues(alpha: 0.1)
-              : AppColors.warning.withValues(alpha: 0.2),
-        ),
-      ),
+      shadow: true,
+      borderColor: isGlobal
+          ? AppColors.primary.withValues(alpha: 0.1)
+          : AppColors.warning.withValues(alpha: 0.2),
       child: Row(
         children: [
           Container(
@@ -3354,8 +3371,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 );
               } catch (e) {
                 if (!mounted) return;
+                final message = userMessageFromError(e);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('فشل حذف العرض: $e')),
+                  SnackBar(content: Text('فشل حذف العرض: $message')),
                 );
               }
             },
@@ -3389,8 +3407,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 const SizedBox(height: AppSpacing.sm),
             itemBuilder: (context, index) {
               final note = history[index] as Map;
-              final date =
-                  DateTime.tryParse((note['date'] ?? '').toString());
+              final date = DateTime.tryParse((note['date'] ?? '').toString());
               return Card(
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(15)),
@@ -3508,15 +3525,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   );
                 } catch (e) {
                   if (!mounted) return;
+                  final message = userMessageFromError(e);
                   messenger.showSnackBar(
-                    SnackBar(content: Text('فشل إرسال الإشعار: $e')),
+                    SnackBar(content: Text('فشل إرسال الإشعار: $message')),
                   );
                 }
               },
               style:
                   ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-              child:
-                  const Text('إرسال الآن', style: TextStyle(color: Colors.white)),
+              child: const Text('إرسال الآن',
+                  style: TextStyle(color: Colors.white)),
             ),
           ],
         );
@@ -3764,8 +3782,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   );
                   return;
                 }
-                if (selectedOfferType == 'Percentage' &&
-                    discountValue > 100) {
+                if (selectedOfferType == 'Percentage' && discountValue > 100) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                         content:
@@ -3799,14 +3816,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     (maxUsage == null || maxUsage <= 0)) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                        content:
-                            Text('عدد مرات الاستخدام يجب أن يكون رقماً صالحاً')),
+                        content: Text(
+                            'عدد مرات الاستخدام يجب أن يكون رقماً صالحاً')),
                   );
                   return;
                 }
 
-                final laundryAgentId =
-                    selectedTarget == 'all' ? null : int.tryParse(selectedTarget);
+                final laundryAgentId = selectedTarget == 'all'
+                    ? null
+                    : int.tryParse(selectedTarget);
                 final adminProvider = context.read<AdminProvider>();
                 final navigator = Navigator.of(context);
                 final messenger = ScaffoldMessenger.of(context);
@@ -3844,8 +3862,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   );
                 } catch (e) {
                   if (!mounted) return;
+                  final message = userMessageFromError(e);
                   messenger.showSnackBar(
-                    SnackBar(content: Text('فشل إنشاء العرض: $e')),
+                    SnackBar(content: Text('فشل إنشاء العرض: $message')),
                   );
                 }
               },
@@ -3876,7 +3895,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               label,
               style: TextStyle(
                 fontSize: 11,
-                color: hasValue ? theme.colorScheme.onSurface : Colors.grey.shade600,
+                color: hasValue
+                    ? theme.colorScheme.onSurface
+                    : Colors.grey.shade600,
               ),
               overflow: TextOverflow.ellipsis,
             ),
@@ -3893,6 +3914,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   bool _isOfferExpired(AdminOfferModel offer) {
     return DateTime.now().isAfter(offer.endDate);
   }
+
   Widget _buildOfferActionCard(
       String title, String subtitle, IconData icon, Color color,
       {required VoidCallback onTap}) {
@@ -4002,4 +4024,3 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 }
-

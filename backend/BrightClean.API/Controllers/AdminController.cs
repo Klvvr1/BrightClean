@@ -398,6 +398,15 @@ namespace BrightClean.API.Controllers
                         .Where(d => d.UserID == u.UserID)
                         .Select(d => d.PlateNumber)
                         .FirstOrDefault(),
+                    RequestedServices = _context.AgentServices
+                        .Where(service => service.LaundryAgentID == u.UserID && service.PendingActivation)
+                        .OrderBy(service => service.ServiceCatalogItem.ServiceName)
+                        .Select(service => new
+                        {
+                            service.ServiceID,
+                            service.ServiceCatalogItem.ServiceName
+                        })
+                        .ToList(),
                     Documents = u.Documents.Select(d => new
                     {
                         d.DocumentID,
@@ -411,6 +420,8 @@ namespace BrightClean.API.Controllers
                     })
                 })
                 .ToListAsync();
+
+            _logger.LogInformation("Loaded {PendingApprovalCount} pending approvals with requested laundry services.", pendingUsers.Count);
 
             return Ok(pendingUsers);
         }

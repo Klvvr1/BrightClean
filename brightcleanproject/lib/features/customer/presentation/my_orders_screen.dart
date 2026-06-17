@@ -7,6 +7,7 @@ import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_styles.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/error/exceptions.dart';
+import '../../../../core/error/user_error_message.dart';
 import 'package:brightcleanproject/features/customer/domain/models/order.dart';
 import 'package:brightcleanproject/features/customer/data/providers/order_provider.dart';
 import 'package:brightcleanproject/features/customer/data/providers/review_provider.dart';
@@ -445,17 +446,18 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                     messenger.showSnackBar(
                       SnackBar(
                         content: Text(
-                            'فشل إرسال التقييم: ${e.message ?? "خطأ في الخادم"}'),
+                            'فشل إرسال التقييم: ${userMessageFromError(e, fallback: "خطأ في الخادم")}'),
                         backgroundColor: AppColors.error,
                         behavior: SnackBarBehavior.floating,
                       ),
                     );
                   } catch (e) {
                     debugPrint('Rating submission error: $e');
+                    final message = userMessageFromError(e);
                     messenger.showSnackBar(
                       SnackBar(
-                        content:
-                            Text('حدث خطأ غير متوقع أثناء إرسال التقييم: $e'),
+                        content: Text(
+                            'حدث خطأ غير متوقع أثناء إرسال التقييم: $message'),
                         backgroundColor: AppColors.error,
                         behavior: SnackBarBehavior.floating,
                       ),

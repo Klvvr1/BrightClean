@@ -4,6 +4,7 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_styles.dart';
 import 'package:file_picker/file_picker.dart';
+import 'customer_bank_accounts.dart';
 
 class WalletDetailsScreen extends StatelessWidget {
   final String balance;
@@ -41,6 +42,15 @@ class WalletDetailsScreen extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxl, horizontal: AppSpacing.md),
                 child: Column(
                   children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.asset(
+                        'assets/images/wallet_realistic_16x9.png',
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
                     Text(
                       'الرصيد الحالي',
                       style: theme.textTheme.titleMedium?.copyWith(
@@ -74,29 +84,17 @@ class WalletDetailsScreen extends StatelessWidget {
             const SizedBox(height: AppSpacing.xl),
 
             // Deposit Methods
-            _buildDepositMethod(
-              context,
-              title: 'ايداع عن طريق العمقي',
-              icon: Icons.account_balance,
-              onTap: () => _showDepositDialog(context, 'العمقي'),
-            ),
-            _buildDepositMethod(
-              context,
-              title: 'ايداع عن طريق الكريمي ',
-              icon: Icons.payments,
-              onTap: () => _showDepositDialog(context, 'الكريمي'),
-            ),
-            _buildDepositMethod(
-              context,
-              title: 'ايداع عن طريق القطيبي',
-              icon: Icons.account_balance_wallet,
-              onTap: () => _showDepositDialog(context, 'القطيبي'),
-            ),
-            _buildDepositMethod(
-              context,
-              title: 'ايداع عن طريق البسيري',
-              icon: Icons.money,
-              onTap: () => _showDepositDialog(context, 'البسيري'),
+            ...customerBankAccounts.map(
+              (bank) => _buildDepositMethod(
+                context,
+                title: 'ايداع عن طريق ${bank['name']}',
+                icon: Icons.account_balance,
+                onTap: () => _showDepositDialog(
+                  context,
+                  bank['name']!,
+                  bank['account']!,
+                ),
+              ),
             ),
           ],
         ),
@@ -128,7 +126,8 @@ class WalletDetailsScreen extends StatelessWidget {
     );
   }
 
-  void _showDepositDialog(BuildContext context, String method) {
+  void _showDepositDialog(
+      BuildContext context, String method, String accountNumber) {
     String? selectedFileName;
     String? selectedFilePath;
     List<int>? selectedFileBytes;
@@ -153,7 +152,7 @@ class WalletDetailsScreen extends StatelessWidget {
                     Text('يرجى تحويل المبلغ إلى الحساب التالي:', style: theme.textTheme.bodyMedium),
                     const SizedBox(height: AppSpacing.sm),
                     SelectableText(
-                      '123456789',
+                      accountNumber,
                       style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: AppSpacing.md),

@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
+
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/theme/app_spacing.dart';
-import '../../../../core/theme/app_radius.dart';
 import '../../../../core/widgets/custom_text_field.dart';
 import '../data/providers/auth_provider.dart';
 
@@ -85,54 +84,6 @@ class _LoginScreenState extends State<LoginScreen> {
     } else {
       _loginInProgress = false;
     }
-  }
-
-  Widget _buildDebugLoginSection() {
-    final theme = Theme.of(context);
-    return Column(
-      children: [
-        const Divider(),
-        const SizedBox(height: AppSpacing.md),
-        Text(
-          'حسابات تجريبية (للتطوير فقط)',
-          style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                fontWeight: FontWeight.bold,
-              ),
-        ),
-        const SizedBox(height: AppSpacing.md),
-        Wrap(
-          spacing: AppSpacing.sm,
-          runSpacing: AppSpacing.sm,
-          alignment: WrapAlignment.center,
-          children: [
-            _debugLoginButton('مدير النظام', 'admin@brightclean.com', 'Password123'),
-            _debugLoginButton('المدير', 'agent@brightclean.com', 'Password123'),
-            _debugLoginButton('عميل', 'client@brightclean.com', 'Password123'),
-            _debugLoginButton('مندوب التوصيل', 'driver@brightclean.com', 'Password123'),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _debugLoginButton(String role, String email, String password) {
-    final theme = Theme.of(context);
-    return ActionChip(
-      label: Text(role, style: theme.textTheme.labelMedium?.copyWith(color: theme.colorScheme.primary)),
-      onPressed: () {
-        _emailController.text = email;
-        _passwordController.text = password;
-        // Small delay to ensure UI updates fields before logging in
-        Future.delayed(const Duration(milliseconds: 100), () {
-          if (!mounted || _loginInProgress) return;
-          _handleLogin();
-        });
-      },
-      backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
-      side: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.5)),
-      shape: RoundedRectangleBorder(borderRadius: AppRadius.button),
-    );
   }
 
   @override
@@ -255,10 +206,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ],
                     ),
-                    if (kDebugMode) ...[
-                      const SizedBox(height: AppSpacing.lg),
-                      _buildDebugLoginSection(),
-                    ],
                   ],
                 ),
               ),

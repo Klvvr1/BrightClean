@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../error/exceptions.dart';
+import '../error/user_error_message.dart';
 
 class BaseApiClient {
   static String get defaultBaseUrl {
@@ -136,8 +137,7 @@ class BaseApiClient {
         );
       }
 
-      String errorMessage =
-          'Server responded with status code ${response.statusCode}';
+      String errorMessage = 'تعذر تنفيذ الطلب. يرجى المحاولة مرة أخرى.';
       try {
         if (response.body.isNotEmpty) {
           final decodedBody = json.decode(response.body);
@@ -177,7 +177,8 @@ class BaseApiClient {
           message: 'انتهت مهلة الاتصال بالخادم. يرجى المحاولة مرة أخرى.',
         );
       }
-      throw ServerException(message: e.toString());
+      debugPrint('GET request failed: $e');
+      throw ServerException(message: userMessageFromError(e));
     }
   }
 
@@ -202,7 +203,8 @@ class BaseApiClient {
           message: 'انتهت مهلة الاتصال بالخادم. يرجى المحاولة مرة أخرى.',
         );
       }
-      throw ServerException(message: e.toString());
+      debugPrint('POST request failed: $e');
+      throw ServerException(message: userMessageFromError(e));
     }
   }
 
@@ -227,7 +229,8 @@ class BaseApiClient {
           message: 'انتهت مهلة الاتصال بالخادم. يرجى المحاولة مرة أخرى.',
         );
       }
-      throw ServerException(message: e.toString());
+      debugPrint('PATCH request failed: $e');
+      throw ServerException(message: userMessageFromError(e));
     }
   }
 
@@ -274,7 +277,8 @@ class BaseApiClient {
           message: 'انتهت مهلة الاتصال بالخادم. يرجى المحاولة مرة أخرى.',
         );
       }
-      throw ServerException(message: e.toString());
+      debugPrint('POST multipart request failed: $e');
+      throw ServerException(message: userMessageFromError(e));
     }
   }
 
@@ -299,7 +303,8 @@ class BaseApiClient {
           message: 'انتهت مهلة الاتصال بالخادم. يرجى المحاولة مرة أخرى.',
         );
       }
-      throw ServerException(message: e.toString());
+      debugPrint('PUT request failed: $e');
+      throw ServerException(message: userMessageFromError(e));
     }
   }
 
@@ -319,7 +324,8 @@ class BaseApiClient {
           message: 'انتهت مهلة الاتصال بالخادم. يرجى المحاولة مرة أخرى.',
         );
       }
-      throw ServerException(message: e.toString());
+      debugPrint('DELETE request failed: $e');
+      throw ServerException(message: userMessageFromError(e));
     }
   }
 }

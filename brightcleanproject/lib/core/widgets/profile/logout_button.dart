@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:go_router/go_router.dart';
 
+import '../app_surface_card.dart';
+
 class LogoutButton extends StatelessWidget {
   final VoidCallback? onLogout;
 
@@ -13,13 +15,18 @@ class LogoutButton extends StatelessWidget {
       builder: (BuildContext context) {
         final theme = Theme.of(context);
         return AlertDialog(
-          title: Text('تسجيل الخروج', style: TextStyle(color: theme.colorScheme.error)),
+          title: Text('تسجيل الخروج',
+              style: TextStyle(color: theme.colorScheme.error)),
           content: const Text('هل أنت متأكد أنك تريد تسجيل الخروج من التطبيق؟'),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: Text('إلغاء', style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.6))),
+              child: Text('إلغاء',
+                  style: TextStyle(
+                      color:
+                          theme.colorScheme.onSurface.withValues(alpha: 0.6))),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
@@ -65,18 +72,8 @@ class LogoutButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Container(
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: theme.brightness == Brightness.dark
-              ? Colors.white12
-              : Colors.grey.shade200,
-          width: 1,
-        ),
-      ),
-      clipBehavior: Clip.hardEdge,
+    return AppSurfaceCard(
+      padding: EdgeInsets.zero,
       child: ListTile(
         leading: Icon(Icons.logout, color: theme.colorScheme.error),
         title: Text(
@@ -87,7 +84,8 @@ class LogoutButton extends StatelessWidget {
           ),
         ),
         trailing: Icon(Icons.arrow_forward_ios,
-            size: 16, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
+            size: 16,
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
         onTap: () => _showLogoutConfirmation(context),
       ),
     );

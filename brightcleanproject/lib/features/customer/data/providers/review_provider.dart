@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import '../../../../core/error/user_error_message.dart';
 import '../../../../core/network/api_client.dart';
 import '../../domain/models/review.dart';
 
@@ -43,7 +44,7 @@ class ReviewProvider with ChangeNotifier {
               .toList()
           : [];
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = userMessageFromError(e);
       debugPrint('Error loading reviews from API: $e');
     } finally {
       _isLoading = false;

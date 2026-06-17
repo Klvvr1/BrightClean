@@ -7,6 +7,9 @@ import 'package:brightcleanproject/core/enums/order_status.dart';
 import 'package:brightcleanproject/core/network/api_client.dart';
 import 'package:brightcleanproject/core/theme/app_colors.dart';
 import 'package:brightcleanproject/core/controllers/language_controller.dart';
+import 'package:brightcleanproject/core/widgets/app_section_title.dart';
+import 'package:brightcleanproject/core/widgets/app_status_badge.dart';
+import 'package:brightcleanproject/core/widgets/app_surface_card.dart';
 import 'package:brightcleanproject/features/agent/presentation/widgets/agent_app_bar_actions.dart';
 import 'package:brightcleanproject/features/agent/presentation/agent_dashboard_screen.dart';
 import 'package:brightcleanproject/features/agent/data/repositories/agent_booking_repository.dart';
@@ -147,7 +150,8 @@ class _AgentOrderManagementScreenState
       if (parts.length >= 2) {
         final bookingId = parts[0];
         final fileName = parts.sublist(1).join('/');
-        return Uri.parse('${BaseApiClient.defaultBaseUrl}/api/payments/receipt/$bookingId/$fileName');
+        return Uri.parse(
+            '${BaseApiClient.defaultBaseUrl}/api/payments/receipt/$bookingId/$fileName');
       }
     }
 
@@ -406,24 +410,13 @@ class _AgentOrderManagementScreenState
                                   theme),
                               const SizedBox(height: AppSpacing.md),
                               // Order Card showing simplified operational data
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: theme.cardTheme.color,
-                                  borderRadius: BorderRadius.circular(24),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withValues(
-                                          alpha: isDark ? 0.4 : 0.06),
-                                      blurRadius: 20,
-                                      offset: const Offset(0, 10),
-                                    ),
-                                  ],
-                                  border: Border.all(
-                                      color: isDark
-                                          ? Colors.white10
-                                          : Colors.black
-                                              .withValues(alpha: 0.05)),
-                                ),
+                              AppSurfaceCard(
+                                padding: EdgeInsets.zero,
+                                backgroundColor: theme.cardTheme.color,
+                                borderColor: isDark
+                                    ? Colors.white10
+                                    : Colors.black.withValues(alpha: 0.05),
+                                shadow: true,
                                 child: Column(
                                   children: [
                                     Container(
@@ -729,38 +722,16 @@ class _AgentOrderManagementScreenState
         });
   }
 
-  Widget _buildSectionHeader(String title, ThemeData theme) {
-    final isDark = theme.brightness == Brightness.dark;
-    return Row(
-      children: [
-        Container(
-            width: 4,
-            height: 18,
-            decoration: BoxDecoration(
-                color: isDark ? Colors.white : AppColors.primary,
-                borderRadius: BorderRadius.circular(2))),
-        const SizedBox(width: 10),
-        Text(title,
-            style: const TextStyle(
-                fontSize: 16, fontWeight: FontWeight.w800, letterSpacing: 0.5)),
-      ],
+  Widget _buildSectionHeader(String title, ThemeData _) {
+    return AppSectionTitle(
+      title: title,
     );
   }
 
   Widget _buildStatusBadge(OrderStatus status, bool isArabic) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: status.color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(30),
-        border:
-            Border.all(color: status.color.withValues(alpha: 0.3), width: 1),
-      ),
-      child: Text(
-        isArabic ? status.title : status.englishTitle,
-        style: TextStyle(
-            color: status.color, fontWeight: FontWeight.bold, fontSize: 11),
-      ),
+    return AppStatusBadge(
+      label: isArabic ? status.title : status.englishTitle,
+      color: status.color,
     );
   }
 

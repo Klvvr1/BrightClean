@@ -13,6 +13,7 @@ import '../../../../core/widgets/map_picker_screen.dart';
 import 'package:provider/provider.dart';
 import '../data/providers/auth_provider.dart';
 import '../data/models/register_agent_model.dart';
+import '../data/utils/service_catalog_parser.dart';
 import '../../customer/data/providers/cart_provider.dart';
 import 'widgets/terms_agreement_label.dart';
 
@@ -42,7 +43,8 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
       TextEditingController();
   final TextEditingController _dobController = TextEditingController();
   final TextEditingController _nationalIdController = TextEditingController();
-  final TextEditingController _commercialRegisterController = TextEditingController();
+  final TextEditingController _commercialRegisterController =
+      TextEditingController();
   final TextEditingController _bankAccountController = TextEditingController();
 
   XFile? _commercialRegImage;
@@ -92,21 +94,10 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
 
     try {
       final response = await _apiClient.get('/api/services');
-      if (response is! List) {
-        throw Exception('Invalid services response');
-      }
-
-      final services = <int, bool>{};
-      final labels = <int, String>{};
-      for (final item in response.whereType<Map>()) {
-        final idValue = item['serviceID'] ?? item['serviceId'] ?? item['ServiceID'];
-        final nameValue = item['serviceName'] ?? item['ServiceName'];
-        final id = idValue is int ? idValue : int.tryParse(idValue?.toString() ?? '');
-        final name = nameValue?.toString().trim() ?? '';
-        if (id == null || id <= 0 || name.isEmpty) continue;
-        services[id] = _availableServices[id] ?? false;
-        labels[id] = name;
-      }
+      final labels = parseServiceCatalogItems(response);
+      final services = {
+        for (final id in labels.keys) id: _availableServices[id] ?? false,
+      };
 
       if (services.isEmpty) {
         throw Exception('No services in catalog');
@@ -120,13 +111,15 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
           ..addAll(labels);
         _isLoadingServices = false;
       });
-    } catch (_) {
+    } catch (e) {
+      debugPrint('Failed to load registration catalog services: $e');
       if (!mounted) return;
       setState(() {
         _availableServices = {};
         _serviceLabelsById.clear();
         _isLoadingServices = false;
-        _servicesLoadError = 'تعذر تحميل خدمات الكتالوج. أعد المحاولة قبل التسجيل.';
+        _servicesLoadError =
+            'تعذر تحميل خدمات الكتالوج. أعد المحاولة قبل التسجيل.';
       });
     }
   }
@@ -249,7 +242,8 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 250),
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 12),
+        padding:
+            const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 12),
         decoration: BoxDecoration(
           color: isSelected
               ? theme.colorScheme.primary.withValues(alpha: 0.1)
@@ -289,7 +283,9 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
   }
 
   String? _validateNationalId(String? value) {
-    if (value == null || value.trim().isEmpty) return 'رقم الهوية الوطنية مطلوب';
+    if (value == null || value.trim().isEmpty) {
+      return 'رقم الهوية الوطنية مطلوب';
+    }
     if (!RegExp(r'^[0-9]{11}$').hasMatch(value.trim())) {
       return 'يجب أن يتكون رقم الهوية من 11 رقماً';
     }
@@ -342,7 +338,12 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
     if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
       return 'الرجاء إدخال بريد إلكتروني صحيح';
     }
-    final allowedDomains = ['gmail.com', 'hotmail.com', 'yahoo.com', 'outlook.com'];
+    final allowedDomains = [
+      'gmail.com',
+      'hotmail.com',
+      'yahoo.com',
+      'outlook.com'
+    ];
     final parts = email.split('@');
     if (parts.length != 2 || !allowedDomains.contains(parts[1])) {
       return 'البريد الإلكتروني يجب أن يكون من النطاقات المسموحة فقط (gmail.com, hotmail.com, yahoo.com, outlook.com)';
@@ -423,10 +424,10 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
 
   Future<void> _performRegistration(List<int> selectedServiceIds) async {
     setState(() => _isSubmitting = true);
-    
+
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      
+
       final agentModel = RegisterAgentModel(
         firstName: _firstNameController.text.trim(),
         lastName: _lastNameController.text.trim(),
@@ -460,7 +461,8 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('تم تسجيل المغسلة بنجاح وهي قيد المراجعة من الإدارة!'),
+            content:
+                Text('تم تسجيل المغسلة بنجاح وهي قيد المراجعة من الإدارة!'),
             backgroundColor: AppColors.success,
           ),
         );
@@ -552,7 +554,6 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
                       v == null || v.isEmpty ? 'يرجى إدخال اسم المغسلة' : null,
                 ),
                 const SizedBox(height: AppSpacing.xl),
-
                 Text(
                   'الخدمات المتوفرة:',
                   style: theme.textTheme.titleMedium,
@@ -597,10 +598,10 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
                     padding: const EdgeInsets.only(top: AppSpacing.xs),
                     child: Text(
                       'يرجى اختيار خدمة واحدة على الأقل',
-                      style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.error),
+                      style: theme.textTheme.labelSmall
+                          ?.copyWith(color: theme.colorScheme.error),
                     ),
                   ),
-
                 const SizedBox(height: AppSpacing.xl),
                 CustomTextField(
                   controller: _phoneController,
@@ -681,7 +682,6 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
                   validator: _validateBankAccount,
                 ),
                 const SizedBox(height: AppSpacing.xl),
-
                 _buildFileUploadPlaceholder(
                   title: 'السجل التجاري',
                   imageFile: _commercialRegImage,
@@ -692,7 +692,6 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
                   imageFile: _idImage,
                   onTap: () => _pickImage(false),
                 ),
-
                 const SizedBox(height: AppSpacing.md),
                 GestureDetector(
                   onTap: _selectLocation,
@@ -713,7 +712,8 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
                         Icon(
                           Icons.map,
                           color: _selectedAddress == null
-                              ? theme.colorScheme.onSurface.withValues(alpha: 0.4)
+                              ? theme.colorScheme.onSurface
+                                  .withValues(alpha: 0.4)
                               : theme.colorScheme.primary,
                         ),
                         const SizedBox(height: AppSpacing.sm),
@@ -721,7 +721,8 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
                           _selectedAddress ?? 'حدد الموقع على الخريطة',
                           style: theme.textTheme.bodyMedium?.copyWith(
                             color: _selectedAddress == null
-                                ? theme.colorScheme.onSurface.withValues(alpha: 0.8)
+                                ? theme.colorScheme.onSurface
+                                    .withValues(alpha: 0.8)
                                 : theme.colorScheme.onSurface,
                           ),
                           textAlign: TextAlign.center,
@@ -732,13 +733,14 @@ class _AgentRegistrationScreenState extends State<AgentRegistrationScreen> {
                 ),
                 if (_hasAttemptedSubmit && _selectedAddress == null)
                   Padding(
-                    padding: const EdgeInsets.only(top: AppSpacing.xs, right: AppSpacing.sm),
+                    padding: const EdgeInsets.only(
+                        top: AppSpacing.xs, right: AppSpacing.sm),
                     child: Text(
                       'يرجى تحديد الموقع',
-                      style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.error),
+                      style: theme.textTheme.labelSmall
+                          ?.copyWith(color: theme.colorScheme.error),
                     ),
                   ),
-
                 const SizedBox(height: AppSpacing.xl),
                 Row(
                   children: [

@@ -4,10 +4,14 @@ import 'package:brightcleanproject/core/theme/app_spacing.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
+import '../../../core/error/user_error_message.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/controllers/theme_controller.dart';
 import '../../../core/controllers/language_controller.dart';
+import '../../../core/widgets/app_stat_card.dart';
+import '../../../core/widgets/app_status_badge.dart';
+import '../../../core/widgets/app_surface_card.dart';
 import '../data/providers/driver_provider.dart';
 import '../data/models/delivery_task_model.dart';
 import '../../auth/data/providers/auth_provider.dart';
@@ -248,59 +252,14 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                   ],
                 ),
               ),
-              // Status Badge
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                decoration: BoxDecoration(
-                  color: _isOnline
-                      ? AppColors.success.withValues(alpha: 0.1)
-                      : (isDark
-                          ? Colors.white.withValues(alpha: 0.05)
-                          : Colors.grey.withValues(alpha: 0.1)),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: _isOnline
-                        ? AppColors.success.withValues(alpha: 0.2)
-                        : (isDark
-                            ? Colors.white.withValues(alpha: 0.1)
-                            : Colors.grey.withValues(alpha: 0.2)),
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 10,
-                      height: 10,
-                      decoration: BoxDecoration(
-                        color: _isOnline
-                            ? AppColors.success
-                            : (isDark ? Colors.white : Colors.grey),
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          if (_isOnline)
-                            BoxShadow(
-                                color: AppColors.success.withValues(alpha: 0.5),
-                                blurRadius: 4),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.xs),
-                    Text(
-                      isAr
-                          ? (_isOnline ? 'نشط' : 'غير نشط')
-                          : (_isOnline ? 'Active' : 'Offline'),
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        color: _isOnline
-                            ? AppColors.success
-                            : (isDark ? Colors.white : Colors.grey),
-                      ),
-                    ),
-                  ],
-                ),
+              AppStatusBadge(
+                label: isAr
+                    ? (_isOnline ? 'نشط' : 'غير نشط')
+                    : (_isOnline ? 'Active' : 'Offline'),
+                color: _isOnline
+                    ? AppColors.success
+                    : theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                icon: _isOnline ? Icons.radio_button_checked : Icons.circle,
               ),
             ],
           ),
@@ -308,12 +267,9 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
         // Work Status Toggle
         Padding(
           padding: const EdgeInsets.all(16.0),
-          child: Container(
+          child: AppSurfaceCard(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.primary.withValues(alpha: 0.05),
-              borderRadius: BorderRadius.circular(15),
-            ),
+            backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.05),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -578,9 +534,10 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                               }
                             } catch (e) {
                               if (mounted) {
+                                final message = userMessageFromError(e);
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                    content: Text('فشل قبول المهمة: $e'),
+                                    content: Text('فشل قبول المهمة: $message'),
                                     backgroundColor: AppColors.error,
                                   ),
                                 );
@@ -626,9 +583,11 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                               }
                             } catch (e) {
                               if (mounted) {
+                                final message = userMessageFromError(e);
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                    content: Text('فشل إكمال المهمة: $e'),
+                                    content:
+                                        Text('فشل إكمال المهمة: $message'),
                                     backgroundColor: AppColors.error,
                                   ),
                                 );
@@ -807,69 +766,15 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
         .length;
     final completedCount =
         provider.tasks.where((task) => task.status == 3).length;
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [AppColors.primary, AppColors.primary.withValues(alpha: 0.8)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.3),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  isAr ? 'إحصائيات المهام' : 'Task Stats',
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500),
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  isAr ? '$completedCount مكتملة' : '$completedCount completed',
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  isAr
-                      ? '$activeCount حالية • $availableCount متاحة'
-                      : '$activeCount active • $availableCount available',
-                  style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500),
-                ),
-              ],
-            ),
-            Container(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(15),
-              ),
-              child: const Icon(Icons.assignment_turned_in_outlined,
-                  color: Colors.white, size: 35),
-            ),
-          ],
-        ),
-      ),
+    return AppStatCard(
+      title: isAr ? 'إحصائيات المهام' : 'Task Stats',
+      value: isAr ? '$completedCount مكتملة' : '$completedCount completed',
+      subtitle: isAr
+          ? '$activeCount حالية • $availableCount متاحة'
+          : '$activeCount active • $availableCount available',
+      icon: Icons.assignment_turned_in_outlined,
+      accentColor: AppColors.primary,
+      emphasis: true,
     );
   }
 
@@ -1149,20 +1054,11 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return Container(
+    return AppSurfaceCard(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: theme.cardColor,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+      backgroundColor: theme.cardColor,
+      shadow: true,
       child: Row(
         children: [
           Icon(icon, color: isDark ? Colors.white : theme.colorScheme.primary),
@@ -1171,14 +1067,16 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(title,
-                  style: TextStyle(
-                      color: isDark ? Colors.white : Colors.grey,
-                      fontSize: 12)),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                      color: isDark
+                          ? Colors.white
+                          : theme.colorScheme.onSurface
+                              .withValues(alpha: 0.6))),
               Text(value,
-                  style: TextStyle(
+                  style: theme.textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: isDark ? Colors.white : Colors.black87)),
+                      color:
+                          isDark ? Colors.white : theme.colorScheme.onSurface)),
             ],
           ),
         ],

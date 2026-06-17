@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import '../../../../core/database/database_helper.dart';
 import '../../../../core/error/exceptions.dart';
+import '../../../../core/error/user_error_message.dart';
 import '../../../../core/network/api_client.dart';
 import '../../domain/repositories/booking_repository.dart';
 import '../repositories/booking_repository_impl.dart';
@@ -69,10 +70,11 @@ class OrderProvider extends ChangeNotifier {
       await _replaceOrdersCache(_orders);
       _isLoading = false;
     } on ServerException catch (e) {
-      _errorMessage = e.message ?? 'حدث خطأ أثناء تحميل الطلبات';
+      _errorMessage =
+          userMessageFromError(e, fallback: 'حدث خطأ أثناء تحميل الطلبات');
       _isLoading = false;
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = userMessageFromError(e);
       _isLoading = false;
     } finally {
       notifyListeners();
@@ -207,10 +209,10 @@ class OrderProvider extends ChangeNotifier {
       _orders = bookingModels.map(_mapBookingToOrder).toList();
       _isLoading = false;
     } on ServerException catch (e) {
-      _errorMessage = e.message ?? 'حدث خطأ في الخادم';
+      _errorMessage = userMessageFromError(e, fallback: 'حدث خطأ في الخادم');
       _isLoading = false;
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = userMessageFromError(e);
       _isLoading = false;
     } finally {
       notifyListeners();
@@ -323,9 +325,9 @@ class OrderProvider extends ChangeNotifier {
       await bookingRepository.acceptBooking(bookingId);
       await fetchPendingBookings(agentId);
     } on ServerException catch (e) {
-      _errorMessage = e.message ?? 'حدث خطأ في الخادم';
+      _errorMessage = userMessageFromError(e, fallback: 'حدث خطأ في الخادم');
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = userMessageFromError(e);
     } finally {
       _isActionLoading = false;
       notifyListeners();
@@ -340,9 +342,9 @@ class OrderProvider extends ChangeNotifier {
       await bookingRepository.markBookingReady(bookingId);
       await fetchPendingBookings(agentId);
     } on ServerException catch (e) {
-      _errorMessage = e.message ?? 'حدث خطأ في الخادم';
+      _errorMessage = userMessageFromError(e, fallback: 'حدث خطأ في الخادم');
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = userMessageFromError(e);
     } finally {
       _isActionLoading = false;
       notifyListeners();
@@ -396,7 +398,7 @@ class OrderProvider extends ChangeNotifier {
 
       return serverFinalTotal;
     } on ServerException catch (e) {
-      _errorMessage = e.message ?? 'حدث خطأ في الخادم';
+      _errorMessage = userMessageFromError(e, fallback: 'حدث خطأ في الخادم');
       // ✅ عند الفشل: notify مقبول، الصفحة ستبقى وتعرض الخطأ
       _isCheckoutLoading = false;
       if (notifyOnStateChange) {
@@ -404,7 +406,7 @@ class OrderProvider extends ChangeNotifier {
       }
       rethrow;
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = userMessageFromError(e);
       _isCheckoutLoading = false;
       if (notifyOnStateChange) {
         notifyListeners();
@@ -442,14 +444,15 @@ class OrderProvider extends ChangeNotifier {
       }
       return bookingId;
     } on ServerException catch (e) {
-      _errorMessage = e.message ?? 'حدث خطأ أثناء إنشاء الحجز';
+      _errorMessage =
+          userMessageFromError(e, fallback: 'حدث خطأ أثناء إنشاء الحجز');
       _isCheckoutLoading = false;
       if (notifyOnStateChange) {
         notifyListeners();
       }
       rethrow;
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = userMessageFromError(e);
       _isCheckoutLoading = false;
       if (notifyOnStateChange) {
         notifyListeners();

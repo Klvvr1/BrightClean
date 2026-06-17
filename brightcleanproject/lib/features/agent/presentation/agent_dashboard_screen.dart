@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:brightcleanproject/core/error/user_error_message.dart';
 import 'package:brightcleanproject/core/theme/app_spacing.dart';
 
 import 'package:brightcleanproject/core/theme/app_colors.dart';
@@ -7,6 +8,11 @@ import 'package:brightcleanproject/core/enums/laundry_type.dart';
 import 'package:brightcleanproject/core/enums/order_status.dart';
 import 'package:brightcleanproject/core/controllers/language_controller.dart';
 import 'package:brightcleanproject/core/controllers/theme_controller.dart';
+import 'package:brightcleanproject/core/widgets/app_empty_state.dart';
+import 'package:brightcleanproject/core/widgets/app_section_title.dart';
+import 'package:brightcleanproject/core/widgets/app_stat_card.dart';
+import 'package:brightcleanproject/core/widgets/app_status_badge.dart';
+import 'package:brightcleanproject/core/widgets/app_surface_card.dart';
 import 'package:provider/provider.dart';
 import '../../auth/data/providers/auth_provider.dart';
 import '../../customer/data/providers/cart_provider.dart';
@@ -107,7 +113,7 @@ class _AgentServiceEditScreenState extends State<AgentServiceEditScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = e.toString();
+        _errorMessage = userMessageFromError(e);
         _isSubmitting = false;
       });
     }
@@ -429,10 +435,10 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
         final bookings = await _bookingRepository.getMyBookings();
         _allOrders = bookings.map(_mapBookingToAgentOrder).toList();
       } catch (e) {
-        _ordersError = e.toString();
+        _ordersError = userMessageFromError(e);
       }
     } catch (e) {
-      _ordersError = e.toString();
+      _ordersError = userMessageFromError(e);
     } finally {
       if (mounted) {
         setState(() => _isLoadingOrders = false);
@@ -630,41 +636,12 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
   Widget _buildStatCard(
       String title, String count, Color color, IconData icon) {
     return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [color.withValues(alpha: 0.8), color],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-                color: color.withValues(alpha: 0.3),
-                blurRadius: 10,
-                offset: const Offset(0, 4)),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, color: Colors.white.withValues(alpha: 0.8), size: 20),
-            const SizedBox(height: AppSpacing.sm),
-            Text(count,
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold)),
-            Text(title,
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 11),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis),
-          ],
-        ),
+      child: AppStatCard(
+        title: title,
+        value: count,
+        icon: icon,
+        accentColor: color,
+        emphasis: true,
       ),
     );
   }
@@ -681,76 +658,33 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            const Icon(Icons.star_outline, size: 20, color: AppColors.tertiary),
-            const SizedBox(width: AppSpacing.xs),
-            Expanded(
-              child: Text(
-                isArabic ? 'الخدمات التي تقدمها' : 'Your Services',
-                style:
-                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-            ),
-            TextButton.icon(
-              onPressed: _agentServices.isEmpty ? null : _openServiceEditPage,
-              icon: const Icon(Icons.edit_outlined, size: 18),
-              label: Text(isArabic ? 'طلب تعديل خدمة' : 'Request service edit'),
-            ),
-          ],
+        AppSectionTitle(
+          title: isArabic ? 'الخدمات التي تقدمها' : 'Your Services',
+          leadingIcon: Icons.star_outline,
+          action: TextButton.icon(
+            onPressed: _agentServices.isEmpty ? null : _openServiceEditPage,
+            icon: const Icon(Icons.edit_outlined, size: 18),
+            label: Text(isArabic ? 'طلب تعديل خدمة' : 'Request service edit'),
+          ),
         ),
         const SizedBox(height: AppSpacing.sm),
         if (activeServices.isEmpty)
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: isDark
-                  ? Colors.white.withValues(alpha: 0.05)
-                  : Colors.grey.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: isDark
-                    ? Colors.white10
-                    : Colors.grey.withValues(alpha: 0.2),
-              ),
-            ),
-            child: Text(
-              isArabic ? 'لا توجد خدمات مفعلة حاليا' : 'No active services yet',
-              style: TextStyle(
-                color: isDark ? Colors.white70 : Colors.grey.shade700,
-                fontWeight: FontWeight.w600,
-                fontSize: 13,
-              ),
-            ),
+          AppEmptyState(
+            icon: Icons.star_border_outlined,
+            title: isArabic
+                ? 'لا توجد خدمات مفعلة حاليا'
+                : 'No active services yet',
           )
         else
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
               children: activeServices.map((service) {
-                return Container(
-                  margin: const EdgeInsets.only(right: 8),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? Colors.white.withValues(alpha: 0.05)
-                        : AppColors.primary.withValues(alpha: 0.05),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: isDark
-                          ? Colors.white10
-                          : AppColors.primary.withValues(alpha: 0.1),
-                    ),
-                  ),
-                  child: Text(
-                    service.serviceName,
-                    style: TextStyle(
-                      color: isDark ? Colors.white : AppColors.primary,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
-                    ),
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: AppStatusBadge(
+                    label: service.serviceName,
+                    color: isDark ? Colors.white : AppColors.primary,
                   ),
                 );
               }).toList(),
@@ -766,22 +700,13 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return Container(
+    return AppSurfaceCard(
       margin: const EdgeInsets.only(bottom: 20),
-      decoration: BoxDecoration(
-        color: theme.cardTheme.color,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.4 : 0.06),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-        border: Border.all(
-            color:
-                isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05)),
-      ),
+      padding: EdgeInsets.zero,
+      backgroundColor: theme.cardTheme.color,
+      borderColor:
+          isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+      shadow: true,
       child: Column(
         children: [
           Container(
@@ -1394,25 +1319,9 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
   }
 
   Widget _buildEmptyState(String message) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(40),
-      decoration: BoxDecoration(
-          color: Colors.grey.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(20)),
-      child: Column(
-        children: [
-          const Icon(Icons.inbox_outlined, size: 60, color: Colors.grey),
-          const SizedBox(height: AppSpacing.md),
-          Text(message,
-              style: TextStyle(
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? Colors.white70
-                      : Colors.grey,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold)),
-        ],
-      ),
+    return AppEmptyState(
+      icon: Icons.inbox_outlined,
+      title: message,
     );
   }
 

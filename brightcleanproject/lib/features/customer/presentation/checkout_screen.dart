@@ -10,6 +10,7 @@ import '../../../../core/theme/app_shadows.dart';
 import '../../../../core/theme/app_styles.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/error/exceptions.dart';
+import '../../../../core/error/user_error_message.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:uuid/uuid.dart';
@@ -20,6 +21,7 @@ import 'package:brightcleanproject/features/customer/data/providers/order_provid
 import '../data/providers/cart_provider.dart';
 import '../../../../core/widgets/map_picker_screen.dart';
 import '../data/models/customer_address_model.dart';
+import 'customer_bank_accounts.dart';
 
 class CheckoutScreen extends StatefulWidget {
   final List<CartItem>? directItems;
@@ -112,9 +114,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         });
       } catch (e) {
         if (!mounted) return;
+        final message = userMessageFromError(e);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('فشل حفظ عنوان التوصيل: $e'),
+            content: Text('فشل حفظ عنوان التوصيل: $message'),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
@@ -367,8 +370,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           if (mounted) {
             Navigator.of(context).pop(); // pop progress dialog
           }
+          final message = userMessageFromError(e);
           setState(() {
-            _couponErrorMessage = 'فشل إنشاء الحجز لتطبيق الكوبون: $e';
+            _couponErrorMessage =
+                'فشل إنشاء الحجز لتطبيق الكوبون: $message';
             _appliedCoupon = null;
             _isCouponApplied = false;
             _couponEnteredButConditionNotMet = false;
@@ -422,14 +427,16 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       }
     } on ServerException catch (e) {
       setState(() {
-        _couponErrorMessage = e.message ?? 'فشل التحقق من الكوبون';
+        _couponErrorMessage =
+            userMessageFromError(e, fallback: 'فشل التحقق من الكوبون');
         _appliedCoupon = null;
         _isCouponApplied = false;
         _couponEnteredButConditionNotMet = false;
       });
     } catch (e) {
+      final message = userMessageFromError(e);
       setState(() {
-        _couponErrorMessage = 'حدث خطأ غير متوقع: $e';
+        _couponErrorMessage = 'حدث خطأ غير متوقع: $message';
         _appliedCoupon = null;
         _isCouponApplied = false;
         _couponEnteredButConditionNotMet = false;
@@ -658,14 +665,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    final bankAccounts = [
-      {'name': 'بنك أمجاد', 'account': '124587639'},
-      {'name': 'بنك بن دول', 'account': '279547'},
-      {'name': 'بنك الكريمي', 'account': '3165478256'},
-      {'name': 'بنك البسيري', 'account': '23458'},
-      {'name': 'بنك القطيبي', 'account': '479251347'},
-    ];
-
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.sm),
       padding: const EdgeInsets.all(AppSpacing.md),
@@ -697,7 +696,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             ],
           ),
           const Divider(height: AppSpacing.lg),
-          ...bankAccounts.map((bank) => Padding(
+          ...customerBankAccounts.map((bank) => Padding(
                 padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1702,6 +1701,7 @@ class _CheckoutBottomBarState extends State<_CheckoutBottomBar> {
           }
         } catch (e) {
           debugPrint('Receipt upload failed: $e');
+          final message = userMessageFromError(e);
 
           // Show error dialog and require user confirmation
           if (mounted) {
@@ -1711,7 +1711,7 @@ class _CheckoutBottomBarState extends State<_CheckoutBottomBar> {
               builder: (dialogContext) => AlertDialog(
                 title: const Text('فشل رفع سند الدفع'),
                 content: Text(
-                  'حدث خطأ أثناء رفع سند الدفع:\n\n$e\n\nهل تريد المتابعة بدون إرفاق السند؟',
+                  'حدث خطأ أثناء رفع سند الدفع:\n\n$message\n\nهل تريد المتابعة بدون إرفاق السند؟',
                 ),
                 actions: [
                   TextButton(
@@ -1758,10 +1758,7 @@ class _CheckoutBottomBarState extends State<_CheckoutBottomBar> {
       });
     } catch (e) {
       debugPrint('❌ Checkout error: $e');
-      final errorText = e
-          .toString()
-          .replaceAll('Exception: ', '')
-          .replaceAll('ServerException: ', '');
+      final errorText = userMessageFromError(e);
       if (mounted) {
         messenger.clearSnackBars();
         messenger.showSnackBar(SnackBar(

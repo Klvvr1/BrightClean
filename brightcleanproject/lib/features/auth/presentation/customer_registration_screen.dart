@@ -10,6 +10,7 @@ import 'package:provider/provider.dart';
 import '../data/providers/auth_provider.dart';
 import '../data/models/register_client_model.dart';
 import '../../../../core/error/exceptions.dart';
+import '../../../../core/error/user_error_message.dart';
 import '../../../../core/widgets/map_picker_screen.dart';
 import 'widgets/terms_agreement_label.dart';
 
@@ -150,9 +151,9 @@ class _CustomerRegistrationScreenState
         if (mounted) {
           String errorMessage = 'حدث خطأ أثناء التسجيل';
           if (e is ServerException) {
-            errorMessage = e.message ?? errorMessage;
+            errorMessage = userMessageFromError(e, fallback: errorMessage);
           } else {
-            errorMessage = '$errorMessage: $e';
+            errorMessage = '$errorMessage: ${userMessageFromError(e)}';
           }
 
           ScaffoldMessenger.of(context).showSnackBar(

@@ -78,6 +78,21 @@ namespace BrightClean.API.Controllers
 
             await _context.SaveChangesAsync();
 
+            _context.AuditLogs.Add(new AuditLog
+            {
+                AdminID = adminId,
+                Action = "TOGGLE_MAINTENANCE",
+                TargetEntity = "SystemStatus",
+                TargetID = newStatus.StatusID,
+                Details = dto.LoginEnabled
+                    ? "Maintenance mode was disabled."
+                    : "Maintenance mode was enabled.",
+                IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                PerformedAt = DateTime.UtcNow
+            });
+
+            await _context.SaveChangesAsync();
+
             return Ok(new SystemStatusDto
             {
                 LoginEnabled = newStatus.LoginEnabled,
