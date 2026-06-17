@@ -539,6 +539,11 @@ namespace BrightClean.API.Controllers
                 return BadRequest(new { message = "تم رفض هذا الحساب مسبقاً." });
             }
 
+            if (user.AccountStatus != AccountStatus.PendingVerification)
+            {
+                return BadRequest(new { message = "يمكن رفض الحسابات في حالة الانتظار للتحقق فقط." });
+            }
+
             user.IsApproved = false;
             user.AccountStatus = AccountStatus.Deactivated;
             user.VerifiedAt = null;
