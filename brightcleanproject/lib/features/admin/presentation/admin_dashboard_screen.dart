@@ -107,9 +107,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   // Dummy data for live orders
   final List<Map<String, dynamic>> _liveOrders = [];
 
-  // Dummy data for pending requests
-  final List<Map<String, dynamic>> _pendingRequests = [];
-
   // Dummy data for staff members
   final List<Map<String, dynamic>> _staffMembers = [];
 
@@ -206,19 +203,37 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     }
   }
 
-  void _rejectStaff(String name) {
-    setState(() {
-      _pendingRequests.removeWhere((r) => r['name'] == name);
-    });
-    _logActivity(
-      'تم رفض طلب انضمام "$name"',
-      'reject_staff',
-      Icons.highlight_off,
-      AppColors.error,
-    );
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('تم رفض طلب $name')),
-    );
+  void _rejectStaff(Map<String, dynamic> request) async {
+    final adminProvider = Provider.of<AdminProvider>(context, listen: false);
+    if (adminProvider.isActionLoading) return;
+    final userId = request['id'] as int?;
+    final name = request['name'];
+    if (userId != null) {
+      try {
+        await adminProvider.rejectUser(userId);
+        if (mounted) {
+          _logActivity(
+            'تم رفض طلب انضمام "$name"',
+            'reject_staff',
+            Icons.highlight_off,
+            AppColors.error,
+          );
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('تم رفض طلب $name')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content:
+                  Text(adminProvider.errorMessage ?? 'حدث خطأ أثناء رفض الطلب'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      }
+    }
   }
 
   void _dismissStaff(String name, String type) {
@@ -672,6 +687,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         return 'تم قبول طلب مغسلة';
       case 'ACTIVATE_DRIVER':
         return 'تم قبول طلب سائق';
+      case 'REJECT_AGENT':
+        return 'تم رفض طلب مغسلة';
+      case 'REJECT_DRIVER':
+        return 'تم رفض طلب سائق';
       case 'UPDATE_AGENT_SERVICES':
         return 'تم تعديل خدمات مغسلة';
       case 'APPROVE_AGENT_SERVICE_ACTIVATION':
@@ -716,8 +735,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         return Icons.local_offer;
       case 'ACTIVATE_AGENT':
       case 'UPDATE_AGENT_SERVICES':
+      case 'REJECT_AGENT':
         return Icons.business;
       case 'ACTIVATE_DRIVER':
+      case 'REJECT_DRIVER':
         return Icons.person_add;
       case 'CONFIRM_PAYMENT':
       case 'REJECT_PAYMENT':
@@ -739,6 +760,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       case 'REJECT_AGENT_SERVICE_ACTIVATION':
       case 'REJECT_AGENT_SERVICE_DEACTIVATION':
       case 'REJECT_PAYMENT':
+      case 'REJECT_AGENT':
+      case 'REJECT_DRIVER':
         return AppColors.error;
       case 'CREATE_OFFER':
       case 'ACTIVATE_AGENT':
@@ -2883,6 +2906,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Widget _buildRegistrationItem(Map<String, dynamic> request) {
+    final isActionLoading = context.watch<AdminProvider>().isActionLoading;
     final requestedServices = request['requestedServices'];
     final requestedServicesText =
         requestedServices is List && requestedServices.isNotEmpty
@@ -2919,11 +2943,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             IconButton(
               icon: const Icon(Icons.check_circle_outline,
                   color: AppColors.success),
-              onPressed: () => _acceptStaff(request),
+              onPressed: isActionLoading ? null : () => _acceptStaff(request),
             ),
             IconButton(
               icon: const Icon(Icons.highlight_off, color: AppColors.error),
-              onPressed: () => _rejectStaff(request['name']),
+              onPressed: isActionLoading ? null : () => _rejectStaff(request),
             ),
           ],
         ),
@@ -3074,47 +3098,58 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               ),
             ),
             const SizedBox(height: AppSpacing.lg),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      _acceptStaff(request);
-                    },
-                    icon: const Icon(Icons.check_circle_outline,
-                        color: Colors.white),
-                    label: const Text('قبول الطلب وتفعيل الحساب',
-                        style: TextStyle(
-                            color: Colors.white, fontWeight: FontWeight.bold)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.success,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
+            Consumer<AdminProvider>(
+              builder: (context, adminProvider, child) {
+                return Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: adminProvider.isActionLoading
+                            ? null
+                            : () {
+                                Navigator.pop(context);
+                                _acceptStaff(request);
+                              },
+                        icon: const Icon(Icons.check_circle_outline,
+                            color: Colors.white),
+                        label: const Text('قبول الطلب وتفعيل الحساب',
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.success,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      _rejectStaff(request['name']);
-                    },
-                    icon: const Icon(Icons.highlight_off, color: Colors.white),
-                    label: const Text('رفض الطلب',
-                        style: TextStyle(
-                            color: Colors.white, fontWeight: FontWeight.bold)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.error,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: adminProvider.isActionLoading
+                            ? null
+                            : () {
+                                Navigator.pop(context);
+                                _rejectStaff(request);
+                              },
+                        icon:
+                            const Icon(Icons.highlight_off, color: Colors.white),
+                        label: const Text('رفض الطلب',
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.error,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-              ],
+                  ],
+                );
+              },
             ),
           ],
         ),

@@ -27,6 +27,7 @@ class AdminProvider with ChangeNotifier {
   bool _isAuditLogsLoading = false;
   bool _isActionLoading = false;
   String? _errorMessage;
+  String? _refreshErrorMessage;
 
   AdminProvider({AdminRepository? adminRepository})
       : adminRepository = adminRepository ?? AdminRepositoryImpl();
@@ -46,6 +47,7 @@ class AdminProvider with ChangeNotifier {
   bool get isAuditLogsLoading => _isAuditLogsLoading;
   bool get isActionLoading => _isActionLoading;
   String? get errorMessage => _errorMessage;
+  String? get refreshErrorMessage => _refreshErrorMessage;
 
   Future<void> fetchApprovedStaff() async {
     _isLoading = true;
@@ -252,6 +254,7 @@ class AdminProvider with ChangeNotifier {
   Future<void> approveUser(int userId) async {
     _isActionLoading = true;
     _errorMessage = null;
+    _refreshErrorMessage = null;
     notifyListeners();
 
     try {
@@ -271,8 +274,48 @@ class AdminProvider with ChangeNotifier {
 
     try {
       await fetchPendingUsers();
+      await fetchApprovedStaff();
+      await fetchAuditLogs();
     } catch (e) {
-      debugPrint('Error refreshing pending users after approval: $e');
+      debugPrint('Error refreshing admin data after approval: $e');
+      _refreshErrorMessage = userMessageFromError(e,
+          fallback: 'حدث خطأ أثناء تحديث البيانات بعد الموافقة');
+      notifyListeners();
+    } finally {
+      _isActionLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> rejectUser(int userId) async {
+    _isActionLoading = true;
+    _errorMessage = null;
+    _refreshErrorMessage = null;
+    notifyListeners();
+
+    try {
+      await adminRepository.rejectUser(userId);
+    } on ServerException catch (e) {
+      _errorMessage = userMessageFromError(e,
+          fallback: 'حدث خطأ أثناء رفض المستخدم');
+      _isActionLoading = false;
+      notifyListeners();
+      rethrow;
+    } catch (e) {
+      _errorMessage = userMessageFromError(e);
+      _isActionLoading = false;
+      notifyListeners();
+      rethrow;
+    }
+
+    try {
+      await fetchPendingUsers();
+      await fetchAuditLogs();
+    } catch (e) {
+      debugPrint('Error refreshing admin data after rejection: $e');
+      _refreshErrorMessage = userMessageFromError(e,
+          fallback: 'حدث خطأ أثناء تحديث البيانات بعد الرفض');
+      notifyListeners();
     } finally {
       _isActionLoading = false;
       notifyListeners();

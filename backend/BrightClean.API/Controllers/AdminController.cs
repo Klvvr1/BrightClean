@@ -365,7 +365,9 @@ namespace BrightClean.API.Controllers
         public async Task<IActionResult> GetPendingApprovals()
         {
             var pendingUsers = await _context.Users
-                .Where(u => !u.IsApproved && (u.Role == UserRole.LaundryAgent || u.Role == UserRole.DeliveryStaff))
+                .Where(u => !u.IsApproved
+                    && u.AccountStatus == AccountStatus.PendingVerification
+                    && (u.Role == UserRole.LaundryAgent || u.Role == UserRole.DeliveryStaff))
                 .Select(u => new
                 {
                     u.UserID,
@@ -501,6 +503,89 @@ namespace BrightClean.API.Controllers
             await _context.SaveChangesAsync();
 
             return Ok(new { message = "تم تفعيل الحساب بنجاح.", userId = user.UserID, isApproved = user.IsApproved });
+        }
+
+        // POST: /api/admin/reject/{userId}
+        [HttpPost("reject/{userId}")]
+        public async Task<IActionResult> RejectUser(int userId)
+        {
+            var adminIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+            if (adminIdClaim == null || !int.TryParse(adminIdClaim.Value, out var adminId))
+            {
+                return Unauthorized(new { message = UnauthorizedAdminMessage });
+            }
+
+            var user = await _context.Users
+                .Include(u => u.Documents)
+                .FirstOrDefaultAsync(u => u.UserID == userId);
+
+            if (user == null)
+            {
+                return NotFound(new { message = $"مستخدم بالمعرف {userId} غير موجود." });
+            }
+
+            if (user.IsApproved)
+            {
+                return BadRequest(new { message = "لا يمكن رفض حساب مفعل بالفعل." });
+            }
+
+            if (user.Role != UserRole.LaundryAgent && user.Role != UserRole.DeliveryStaff)
+            {
+                return BadRequest(new { message = "لا يمكن رفض هذا النوع من الحسابات من هنا." });
+            }
+
+            if (user.AccountStatus == AccountStatus.Deactivated)
+            {
+                return BadRequest(new { message = "تم رفض هذا الحساب مسبقاً." });
+            }
+
+            if (user.AccountStatus != AccountStatus.PendingVerification)
+            {
+                return BadRequest(new { message = "يمكن رفض الحسابات في حالة الانتظار للتحقق فقط." });
+            }
+
+            user.IsApproved = false;
+            user.AccountStatus = AccountStatus.Deactivated;
+            user.VerifiedAt = null;
+
+            foreach (var document in user.Documents)
+            {
+                document.ReviewStatus = DocumentReviewStatus.Rejected;
+                document.ReviewedAt = DateTime.UtcNow;
+                document.ReviewedByAdminID = adminId;
+                document.ReviewNotes = "Rejected as part of account registration review.";
+            }
+
+            if (user.Role == UserRole.LaundryAgent)
+            {
+                var pendingAgentServices = await _context.AgentServices
+                    .Where(service => service.LaundryAgentID == user.UserID && service.PendingActivation)
+                    .ToListAsync();
+
+                foreach (var service in pendingAgentServices)
+                {
+                    service.IsActive = false;
+                    service.PendingActivation = false;
+                    service.RequestedAction = AgentServiceRequestedAction.None;
+                    service.Notes = "Rejected as part of account registration review.";
+                }
+            }
+
+            string action = user.Role == UserRole.LaundryAgent ? "REJECT_AGENT" : "REJECT_DRIVER";
+            _context.AuditLogs.Add(new AuditLog
+            {
+                AdminID = adminId,
+                Action = action,
+                TargetEntity = "User",
+                TargetID = user.UserID,
+                Details = $"Rejected {user.Role} account and {user.Documents.Count} attached document(s).",
+                IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                PerformedAt = DateTime.UtcNow
+            });
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "تم رفض الحساب بنجاح.", userId = user.UserID, accountStatus = user.AccountStatus.ToString() });
         }
 
         // POST: /api/admin/agents/{agentId}/services
