@@ -8,6 +8,7 @@ import '../../data/models/admin_audit_log_model.dart';
 abstract class AdminRepository {
   Future<List<PendingUserModel>> getPendingApprovals();
   Future<void> approveUser(int userId);
+  Future<void> rejectUser(int userId);
   Future<List<dynamic>> getApprovedStaff();
   Future<AdminSummaryModel> getSummary();
   Future<List<dynamic>> getRecentOrders();

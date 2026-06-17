@@ -34,6 +34,11 @@ class AdminRepositoryImpl implements AdminRepository {
   }
 
   @override
+  Future<void> rejectUser(int userId) async {
+    await _apiClient.post('/api/admin/reject/$userId');
+  }
+
+  @override
   Future<List<dynamic>> getApprovedStaff() async {
     final response = await _apiClient.get('/api/admin/staff');
     if (response is List) {

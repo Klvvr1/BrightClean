@@ -271,8 +271,41 @@ class AdminProvider with ChangeNotifier {
 
     try {
       await fetchPendingUsers();
+      await fetchApprovedStaff();
+      await fetchAuditLogs();
     } catch (e) {
-      debugPrint('Error refreshing pending users after approval: $e');
+      debugPrint('Error refreshing admin data after approval: $e');
+    } finally {
+      _isActionLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> rejectUser(int userId) async {
+    _isActionLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await adminRepository.rejectUser(userId);
+    } on ServerException catch (e) {
+      _errorMessage = userMessageFromError(e,
+          fallback: 'حدث خطأ أثناء رفض المستخدم');
+      _isActionLoading = false;
+      notifyListeners();
+      rethrow;
+    } catch (e) {
+      _errorMessage = userMessageFromError(e);
+      _isActionLoading = false;
+      notifyListeners();
+      rethrow;
+    }
+
+    try {
+      await fetchPendingUsers();
+      await fetchAuditLogs();
+    } catch (e) {
+      debugPrint('Error refreshing admin data after rejection: $e');
     } finally {
       _isActionLoading = false;
       notifyListeners();
