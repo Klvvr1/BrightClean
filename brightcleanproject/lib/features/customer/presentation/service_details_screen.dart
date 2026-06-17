@@ -6,6 +6,7 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_styles.dart';
 import '../../../../core/network/api_client.dart';
+import '../../../../core/widgets/app_snack_bars.dart';
 import '../data/models/booking_model.dart';
 import '../data/providers/cart_provider.dart';
 import 'package:brightcleanproject/features/customer/domain/models/service_option.dart';
@@ -87,8 +88,8 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
   List<ServiceCatalogItemModel> _catalogServices = [];
   String? _catalogLoadError;
 
-  int maidHours = 1;
-  int maidPersons = 1;
+  int maidHours = 0;
+  int maidPersons = 0;
 
   // List of clothing items for the 'الملابس' service
   final List<String> _clothingItems = [
@@ -925,7 +926,7 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
                 unitPrice:
                     basePrice * selectedOption.priceMultiplier * maidPersons,
                 onDecrement: () {
-                  if (maidHours > 1) {
+                  if (maidHours > 0) {
                     setState(() {
                       maidHours--;
                     });
@@ -945,7 +946,7 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
                 unitPrice:
                     basePrice * selectedOption.priceMultiplier * maidHours,
                 onDecrement: () {
-                  if (maidPersons > 1) {
+                  if (maidPersons > 0) {
                     setState(() {
                       maidPersons--;
                     });
@@ -1236,24 +1237,9 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
                     }
                   });
 
-                  messenger.clearSnackBars();
-                  messenger.showSnackBar(
-                    SnackBar(
-                      content: const Text('تم إضافة الخدمات إلى السلة بنجاح'),
-                      backgroundColor: AppColors.success,
-                      duration: const Duration(seconds: 4),
-                      behavior: SnackBarBehavior.floating,
-                      showCloseIcon: true,
-                      closeIconColor: Colors.white,
-                      action: SnackBarAction(
-                        label: 'عرض السلة',
-                        textColor: Colors.white,
-                        onPressed: () {
-                          messenger.clearSnackBars();
-                          router.push('/cart');
-                        },
-                      ),
-                    ),
+                  AppSnackBars.showCartSuccess(
+                    messenger,
+                    onViewCart: () => router.push('/cart'),
                   );
                 } else if (widget.serviceType.contains('سجاد') ||
                     widget.serviceType.contains('مفروشات')) {
@@ -1310,29 +1296,26 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
                     }
                   });
 
-                  messenger.clearSnackBars();
-                  messenger.showSnackBar(
-                    SnackBar(
-                      content: const Text('تم إضافة الخدمات إلى السلة بنجاح'),
-                      backgroundColor: AppColors.success,
-                      duration: const Duration(seconds: 4),
-                      behavior: SnackBarBehavior.floating,
-                      showCloseIcon: true,
-                      closeIconColor: Colors.white,
-                      action: SnackBarAction(
-                        label: 'عرض السلة',
-                        textColor: Colors.white,
-                        onPressed: () {
-                          messenger.clearSnackBars();
-                          router.push('/cart');
-                        },
-                      ),
-                    ),
+                  AppSnackBars.showCartSuccess(
+                    messenger,
+                    onViewCart: () => router.push('/cart'),
                   );
                 }
               } else {
                 // Direct Checkout Flow
                 final messenger2 = ScaffoldMessenger.of(context);
+                if (widget.serviceType.contains('عاملات') &&
+                    (maidHours == 0 || maidPersons == 0)) {
+                  debugPrint(
+                      'Maid service checkout blocked because hours or persons were not selected.');
+                  messenger2.clearSnackBars();
+                  messenger2.showSnackBar(
+                    const SnackBar(
+                        content: Text('يرجى تحديد عدد الساعات وعدد العاملات'),
+                        backgroundColor: AppColors.error),
+                  );
+                  return;
+                }
                 final router2 = GoRouter.of(context);
                 if (_catalogServices.isEmpty) {
                   await _loadCatalogServices();

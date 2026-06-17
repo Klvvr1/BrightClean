@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import '../../../../core/error/user_error_message.dart';
 import '../../../../core/network/api_client.dart';
 import '../../domain/models/app_notification.dart';
 
@@ -28,7 +29,7 @@ class NotificationProvider with ChangeNotifier {
             .toList();
       }
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = userMessageFromError(e);
       debugPrint('Error fetching notifications: $e');
     } finally {
       _isLoading = false;

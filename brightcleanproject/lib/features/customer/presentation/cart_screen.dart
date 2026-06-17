@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/error/user_error_message.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_styles.dart';
@@ -142,9 +143,10 @@ class _CartScreenState extends State<CartScreen> {
         });
       } catch (e) {
         if (!mounted) return;
+        final message = userMessageFromError(e);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('فشل حفظ عنوان التوصيل: $e'),
+            content: Text('فشل حفظ عنوان التوصيل: $message'),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
@@ -580,11 +582,12 @@ class _CartScreenState extends State<CartScreen> {
                                       Navigator.of(context, rootNavigator: true)
                                           .pop();
                                     }
+                                    final message = userMessageFromError(e);
                                     scaffoldMessenger.clearSnackBars();
                                     scaffoldMessenger.showSnackBar(
                                       SnackBar(
                                         content: Text(
-                                            'حدث خطأ أثناء الانتقال للدفع: $e'),
+                                            'حدث خطأ أثناء الانتقال للدفع: $message'),
                                         backgroundColor:
                                             theme.colorScheme.error,
                                       ),

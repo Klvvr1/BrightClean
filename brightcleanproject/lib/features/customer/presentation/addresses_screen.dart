@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_styles.dart';
+import '../../../../core/error/user_error_message.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/error/exceptions.dart';
 import '../../../../core/widgets/map_picker_screen.dart';
@@ -56,9 +57,10 @@ class _AddressesScreenState extends State<AddressesScreen> {
       await _loadSavedAddresses();
     } catch (e) {
       if (!mounted) return;
+      final message = userMessageFromError(e);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('فشل حذف العنوان: $e'),
+          content: Text('فشل حذف العنوان: $message'),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
@@ -128,18 +130,21 @@ class _AddressesScreenState extends State<AddressesScreen> {
       );
     } on ServerException catch (e) {
       if (mounted) {
+        final message = userMessageFromError(e,
+            fallback: 'فشل حفظ العنوان. يرجى المحاولة مرة أخرى.');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('فشل حفظ العنوان: ${e.message ?? "خطأ في الخادم"}'),
+            content: Text('فشل حفظ العنوان: $message'),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
     } catch (e) {
       if (mounted) {
+        final message = userMessageFromError(e);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('حدث خطأ غير متوقع: $e'),
+            content: Text('حدث خطأ غير متوقع: $message'),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );

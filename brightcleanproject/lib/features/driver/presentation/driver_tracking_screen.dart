@@ -7,6 +7,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../../core/error/user_error_message.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/controllers/language_controller.dart';
 import '../../../../core/controllers/theme_controller.dart';
@@ -78,7 +79,7 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _detailsError = e.toString();
+        _detailsError = userMessageFromError(e);
         _isLoadingDetails = false;
       });
     }
@@ -241,10 +242,11 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
       context.pop('claimed');
     } catch (e) {
       if (!mounted) return;
+      final message = userMessageFromError(e);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content:
-              Text(isAr ? 'فشل قبول الطلب: $e' : 'Failed to claim order: $e'),
+          content: Text(
+              isAr ? 'فشل قبول الطلب: $message' : 'Failed to claim order'),
           backgroundColor: AppColors.error,
         ),
       );
@@ -276,10 +278,11 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
       context.pop();
     } catch (e) {
       if (!mounted) return;
+      final message = userMessageFromError(e);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-              isAr ? 'فشل إكمال المهمة: $e' : 'Failed to complete task: $e'),
+              isAr ? 'فشل إكمال المهمة: $message' : 'Failed to complete task'),
           backgroundColor: AppColors.error,
         ),
       );
@@ -297,11 +300,12 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
       setState(() => _currentStep = newStep);
     } catch (e) {
       if (!mounted) return;
+      final message = userMessageFromError(e);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(isAr
-              ? 'فشل تحديث حالة المهمة: $e'
-              : 'Failed to update task progress: $e'),
+              ? 'فشل تحديث حالة المهمة: $message'
+              : 'Failed to update task progress'),
           backgroundColor: AppColors.error,
         ),
       );

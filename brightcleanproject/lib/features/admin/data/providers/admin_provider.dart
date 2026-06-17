@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../../../../core/error/exceptions.dart';
+import '../../../../core/error/user_error_message.dart';
 import '../../domain/repositories/admin_repository.dart';
 import '../../data/repositories/admin_repository_impl.dart';
 import '../models/pending_user_model.dart';
@@ -7,6 +8,7 @@ import '../models/admin_service_model.dart';
 import '../models/activation_request_model.dart';
 import '../models/admin_summary_model.dart';
 import '../models/admin_offer_model.dart';
+import '../models/admin_audit_log_model.dart';
 
 class AdminProvider with ChangeNotifier {
   final AdminRepository adminRepository;
@@ -18,9 +20,11 @@ class AdminProvider with ChangeNotifier {
   List<AdminServiceModel> _services = [];
   List<ActivationRequestModel> _serviceActivationRequests = [];
   List<AdminOfferModel> _offers = [];
+  List<AdminAuditLogModel> _auditLogs = [];
   List<dynamic> _notificationHistory = [];
   AdminSummaryModel _summary = AdminSummaryModel.empty();
   bool _isLoading = false;
+  bool _isAuditLogsLoading = false;
   bool _isActionLoading = false;
   String? _errorMessage;
 
@@ -35,9 +39,11 @@ class AdminProvider with ChangeNotifier {
   List<ActivationRequestModel> get serviceActivationRequests =>
       _serviceActivationRequests;
   List<AdminOfferModel> get offers => _offers;
+  List<AdminAuditLogModel> get auditLogs => _auditLogs;
   List<dynamic> get notificationHistory => _notificationHistory;
   AdminSummaryModel get summary => _summary;
   bool get isLoading => _isLoading;
+  bool get isAuditLogsLoading => _isAuditLogsLoading;
   bool get isActionLoading => _isActionLoading;
   String? get errorMessage => _errorMessage;
 
@@ -49,9 +55,10 @@ class AdminProvider with ChangeNotifier {
     try {
       _approvedStaff = await adminRepository.getApprovedStaff();
     } on ServerException catch (e) {
-      _errorMessage = e.message ?? 'حدث خطأ أثناء تحميل الموظفين المعتمدين';
+      _errorMessage = userMessageFromError(e,
+          fallback: 'حدث خطأ أثناء تحميل الموظفين المعتمدين');
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = userMessageFromError(e);
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -66,9 +73,10 @@ class AdminProvider with ChangeNotifier {
     try {
       _summary = await adminRepository.getSummary();
     } on ServerException catch (e) {
-      _errorMessage = e.message ?? 'حدث خطأ أثناء تحميل ملخص لوحة المشرف';
+      _errorMessage = userMessageFromError(e,
+          fallback: 'حدث خطأ أثناء تحميل ملخص لوحة المشرف');
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = userMessageFromError(e);
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -83,11 +91,30 @@ class AdminProvider with ChangeNotifier {
     try {
       _recentOrders = await adminRepository.getRecentOrders();
     } on ServerException catch (e) {
-      _errorMessage = e.message ?? 'حدث خطأ أثناء تحميل الطلبات الأخيرة';
+      _errorMessage = userMessageFromError(e,
+          fallback: 'حدث خطأ أثناء تحميل الطلبات الأخيرة');
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = userMessageFromError(e);
     } finally {
       _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> fetchAuditLogs() async {
+    _isAuditLogsLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      _auditLogs = await adminRepository.getAuditLogs();
+    } on ServerException catch (e) {
+      _errorMessage = userMessageFromError(e,
+          fallback: 'حدث خطأ أثناء تحميل سجل عمليات المشرف');
+    } catch (e) {
+      _errorMessage = userMessageFromError(e);
+    } finally {
+      _isAuditLogsLoading = false;
       notifyListeners();
     }
   }
@@ -100,9 +127,10 @@ class AdminProvider with ChangeNotifier {
     try {
       _offers = await adminRepository.getOffers();
     } on ServerException catch (e) {
-      _errorMessage = e.message ?? 'حدث خطأ أثناء تحميل العروض';
+      _errorMessage =
+          userMessageFromError(e, fallback: 'حدث خطأ أثناء تحميل العروض');
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = userMessageFromError(e);
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -117,9 +145,10 @@ class AdminProvider with ChangeNotifier {
     try {
       _notificationHistory = await adminRepository.getNotificationHistory();
     } on ServerException catch (e) {
-      _errorMessage = e.message ?? 'حدث خطأ أثناء تحميل سجل الإشعارات';
+      _errorMessage = userMessageFromError(e,
+          fallback: 'حدث خطأ أثناء تحميل سجل الإشعارات');
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = userMessageFromError(e);
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -135,12 +164,13 @@ class AdminProvider with ChangeNotifier {
       await adminRepository.sendNotification(notification);
       _notificationHistory = await adminRepository.getNotificationHistory();
     } on ServerException catch (e) {
-      _errorMessage = e.message ?? 'حدث خطأ أثناء إرسال الإشعار';
+      _errorMessage =
+          userMessageFromError(e, fallback: 'حدث خطأ أثناء إرسال الإشعار');
       _isActionLoading = false;
       notifyListeners();
       rethrow;
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = userMessageFromError(e);
       _isActionLoading = false;
       notifyListeners();
       rethrow;
@@ -160,12 +190,13 @@ class AdminProvider with ChangeNotifier {
       _offers = await adminRepository.getOffers();
       _notificationHistory = await adminRepository.getNotificationHistory();
     } on ServerException catch (e) {
-      _errorMessage = e.message ?? 'حدث خطأ أثناء إنشاء العرض';
+      _errorMessage =
+          userMessageFromError(e, fallback: 'حدث خطأ أثناء إنشاء العرض');
       _isActionLoading = false;
       notifyListeners();
       rethrow;
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = userMessageFromError(e);
       _isActionLoading = false;
       notifyListeners();
       rethrow;
@@ -184,12 +215,13 @@ class AdminProvider with ChangeNotifier {
       await adminRepository.deleteOffer(offerId);
       _offers = await adminRepository.getOffers();
     } on ServerException catch (e) {
-      _errorMessage = e.message ?? 'حدث خطأ أثناء حذف العرض';
+      _errorMessage =
+          userMessageFromError(e, fallback: 'حدث خطأ أثناء حذف العرض');
       _isActionLoading = false;
       notifyListeners();
       rethrow;
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = userMessageFromError(e);
       _isActionLoading = false;
       notifyListeners();
       rethrow;
@@ -207,9 +239,10 @@ class AdminProvider with ChangeNotifier {
     try {
       _pendingUsers = await adminRepository.getPendingApprovals();
     } on ServerException catch (e) {
-      _errorMessage = e.message ?? 'حدث خطأ أثناء تحميل الطلبات المعلقة';
+      _errorMessage = userMessageFromError(e,
+          fallback: 'حدث خطأ أثناء تحميل الطلبات المعلقة');
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = userMessageFromError(e);
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -224,12 +257,13 @@ class AdminProvider with ChangeNotifier {
     try {
       await adminRepository.approveUser(userId);
     } on ServerException catch (e) {
-      _errorMessage = e.message ?? 'حدث خطأ أثناء الموافقة على المستخدم';
+      _errorMessage = userMessageFromError(e,
+          fallback: 'حدث خطأ أثناء الموافقة على المستخدم');
       _isActionLoading = false;
       notifyListeners();
       rethrow;
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = userMessageFromError(e);
       _isActionLoading = false;
       notifyListeners();
       rethrow;
@@ -253,12 +287,13 @@ class AdminProvider with ChangeNotifier {
     try {
       await adminRepository.toggleSystemStatus(loginEnabled, message);
     } on ServerException catch (e) {
-      _errorMessage = e.message ?? 'حدث خطأ أثناء تغيير حالة الصيانة';
+      _errorMessage = userMessageFromError(e,
+          fallback: 'حدث خطأ أثناء تغيير حالة الصيانة');
       _isActionLoading = false;
       notifyListeners();
       rethrow;
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = userMessageFromError(e);
       _isActionLoading = false;
       notifyListeners();
       rethrow;
@@ -282,9 +317,10 @@ class AdminProvider with ChangeNotifier {
         debugPrint('Error refreshing laundry agents with services: $e');
       }
     } on ServerException catch (e) {
-      _errorMessage = e.message ?? 'حدث خطأ أثناء تحميل الخدمات';
+      _errorMessage =
+          userMessageFromError(e, fallback: 'حدث خطأ أثناء تحميل الخدمات');
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = userMessageFromError(e);
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -300,9 +336,10 @@ class AdminProvider with ChangeNotifier {
       _serviceActivationRequests =
           await adminRepository.getServiceActivationRequests();
     } on ServerException catch (e) {
-      _errorMessage = e.message ?? 'حدث خطأ أثناء تحميل طلبات تعديل الخدمات';
+      _errorMessage = userMessageFromError(e,
+          fallback: 'حدث خطأ أثناء تحميل طلبات تعديل الخدمات');
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = userMessageFromError(e);
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -376,12 +413,13 @@ class AdminProvider with ChangeNotifier {
         debugPrint('Error refreshing approved staff after service action: $e');
       }
     } on ServerException catch (e) {
-      _errorMessage = e.message ?? 'حدث خطأ أثناء تنفيذ العملية';
+      _errorMessage =
+          userMessageFromError(e, fallback: 'حدث خطأ أثناء تنفيذ العملية');
       _isActionLoading = false;
       notifyListeners();
       rethrow;
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = userMessageFromError(e);
       _isActionLoading = false;
       notifyListeners();
       rethrow;
@@ -409,12 +447,13 @@ class AdminProvider with ChangeNotifier {
         debugPrint('Error refreshing laundry agents after service request: $e');
       }
     } on ServerException catch (e) {
-      _errorMessage = e.message ?? 'حدث خطأ أثناء تنفيذ طلب تعديل الخدمة';
+      _errorMessage = userMessageFromError(e,
+          fallback: 'حدث خطأ أثناء تنفيذ طلب تعديل الخدمة');
       _isActionLoading = false;
       notifyListeners();
       rethrow;
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = userMessageFromError(e);
       _isActionLoading = false;
       notifyListeners();
       rethrow;

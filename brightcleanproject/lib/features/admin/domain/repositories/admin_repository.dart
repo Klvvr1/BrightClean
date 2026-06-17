@@ -3,6 +3,7 @@ import '../../data/models/admin_service_model.dart';
 import '../../data/models/activation_request_model.dart';
 import '../../data/models/admin_summary_model.dart';
 import '../../data/models/admin_offer_model.dart';
+import '../../data/models/admin_audit_log_model.dart';
 
 abstract class AdminRepository {
   Future<List<PendingUserModel>> getPendingApprovals();
@@ -10,6 +11,7 @@ abstract class AdminRepository {
   Future<List<dynamic>> getApprovedStaff();
   Future<AdminSummaryModel> getSummary();
   Future<List<dynamic>> getRecentOrders();
+  Future<List<AdminAuditLogModel>> getAuditLogs();
   Future<void> toggleSystemStatus(bool loginEnabled, String? message);
   Future<List<AdminServiceModel>> getServices();
   Future<void> createService(Map<String, dynamic> service);

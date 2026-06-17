@@ -2,14 +2,13 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:latlong2/latlong.dart';
 import '../../../../core/widgets/custom_text_field.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_radius.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../core/widgets/map_picker_screen.dart';
 import 'package:http/http.dart' as http;
+import '../../../../core/error/user_error_message.dart';
 import '../../../../core/network/api_client.dart';
 import 'widgets/terms_agreement_label.dart';
 
@@ -45,13 +44,8 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
   XFile? _licenseImage;
   XFile? _carImage;
 
-  String? _selectedAddress;
-  // ignore: unused_field
-  LatLng? _selectedCoordinates;
-
   String? _selectedVehicleType;
   bool _isTermsAccepted = false;
-  bool _hasAttemptedSubmit = false;
   bool _isSubmitting = false;
 
   @override
@@ -110,19 +104,6 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
     }
   }
 
-  Future<void> _selectLocation() async {
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const MapPickerScreen()),
-    );
-    if (result != null && result is Map<String, dynamic>) {
-      setState(() {
-        _selectedCoordinates = result['coordinates'] as LatLng;
-        _selectedAddress = result['address'] as String;
-      });
-    }
-  }
-
   String? _validateName(String? value) {
     if (value == null || value.trim().isEmpty) return 'هذا الحقل مطلوب';
     if (!RegExp(r'^[a-zA-Z\u0600-\u06FF\s]+$').hasMatch(value)) {
@@ -145,7 +126,9 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
   }
 
   String? _validateNationalId(String? value) {
-    if (value == null || value.trim().isEmpty) return 'رقم الهوية الوطنية مطلوب';
+    if (value == null || value.trim().isEmpty) {
+      return 'رقم الهوية الوطنية مطلوب';
+    }
     if (!RegExp(r'^[0-9]{11}$').hasMatch(value.trim())) {
       return 'يجب أن يتكون رقم الهوية من 11 رقماً';
     }
@@ -179,7 +162,9 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
   String? _validatePassword(String? value) {
     if (value == null || value.isEmpty) return 'كلمة المرور مطلوبة';
     if (value.length < 8) return 'يجب أن لا تقل عن 8 رموز';
-    if (!RegExp(r'[A-Z]').hasMatch(value)) return 'أدخل حرفاً كبيراً واحداً على الأقل';
+    if (!RegExp(r'[A-Z]').hasMatch(value)) {
+      return 'أدخل حرفاً كبيراً واحداً على الأقل';
+    }
     if (!RegExp(r'[0-9]').hasMatch(value)) return 'أدخل رقماً واحداً على الأقل';
     return null;
   }
@@ -191,8 +176,6 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
   }
 
   Future<void> _submitForm() async {
-    setState(() => _hasAttemptedSubmit = true);
-
     if (!_isTermsAccepted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -224,19 +207,10 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
         return;
       }
 
-      if (_selectedAddress == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('يرجى تحديد الموقع'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
-        return;
-      }
-
       setState(() => _isSubmitting = true);
 
       try {
+        debugPrint('Submitting driver registration without location selection');
         int vehicleTypeVal = 0;
         if (_selectedVehicleType == 'دراجة نارية') {
           vehicleTypeVal = 1;
@@ -288,9 +262,10 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
         }
       } catch (e) {
         if (mounted) {
+          final message = userMessageFromError(e);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('حدث خطأ أثناء الاتصال بالخادم: $e'),
+              content: Text('حدث خطأ أثناء الاتصال بالخادم: $message'),
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
           );
@@ -549,52 +524,6 @@ class _DriverRegistrationScreenState extends State<DriverRegistrationScreen> {
                   imageFile: _carImage,
                   onTap: () => _pickImage('CAR'),
                 ),
-
-                const SizedBox(height: AppSpacing.md),
-                GestureDetector(
-                  onTap: _selectLocation,
-                  child: Container(
-                    padding: const EdgeInsets.all(AppSpacing.md),
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surface,
-                      border: Border.all(
-                        color: _selectedAddress == null
-                            ? theme.colorScheme.onSurface.withValues(alpha: 0.2)
-                            : theme.colorScheme.primary,
-                      ),
-                      borderRadius: AppRadius.button,
-                    ),
-                    child: Column(
-                      children: [
-                        Icon(
-                          Icons.map,
-                          color: _selectedAddress == null
-                              ? theme.colorScheme.onSurface.withValues(alpha: 0.4)
-                              : theme.colorScheme.primary,
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                        Text(
-                          _selectedAddress ?? 'حدد الموقع على الخريطة',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: _selectedAddress == null
-                                ? theme.colorScheme.onSurface.withValues(alpha: 0.8)
-                                : theme.colorScheme.onSurface,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                if (_hasAttemptedSubmit && _selectedAddress == null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: AppSpacing.xs, right: AppSpacing.sm),
-                    child: Text(
-                      'يرجى تحديد الموقع',
-                      style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.error),
-                    ),
-                  ),
 
                 const SizedBox(height: AppSpacing.md),
                 Row(

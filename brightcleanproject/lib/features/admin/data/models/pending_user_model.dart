@@ -10,6 +10,7 @@ class PendingUserModel {
   final String? nationalIdNumber;
   final String? vehicleType;
   final String? plateNumber;
+  final List<PendingRequestedServiceModel> requestedServices;
   final List<UserDocumentModel> documents;
 
   PendingUserModel({
@@ -24,6 +25,7 @@ class PendingUserModel {
     this.nationalIdNumber,
     this.vehicleType,
     this.plateNumber,
+    this.requestedServices = const [],
     this.documents = const [],
   });
 
@@ -71,6 +73,13 @@ class PendingUserModel {
             .map(UserDocumentModel.fromJson)
             .toList()
         : <UserDocumentModel>[];
+    final rawRequestedServices =
+        json['requestedServices'] ?? json['RequestedServices'];
+    final requestedServices = rawRequestedServices is List
+        ? rawRequestedServices
+            .map(PendingRequestedServiceModel.fromJsonValue)
+            .toList()
+        : <PendingRequestedServiceModel>[];
 
     return PendingUserModel(
       id: parsedId,
@@ -85,6 +94,7 @@ class PendingUserModel {
           json['nationalIdNumber'] as String?,
       vehicleType: json['vehicleType']?.toString(),
       plateNumber: json['plateNumber'] as String?,
+      requestedServices: requestedServices,
       documents: documents,
     );
   }
@@ -102,8 +112,75 @@ class PendingUserModel {
       'nationalIdNumber': nationalIdNumber,
       'vehicleType': vehicleType,
       'plateNumber': plateNumber,
+      'requestedServices':
+          requestedServices.map((service) => service.toJson()).toList(),
       'documents': documents.map((document) => document.toJson()).toList(),
     };
+  }
+}
+
+class PendingRequestedServiceModel {
+  final int serviceID;
+  final String serviceName;
+
+  const PendingRequestedServiceModel({
+    required this.serviceID,
+    required this.serviceName,
+  });
+
+  factory PendingRequestedServiceModel.fromJsonValue(dynamic value) {
+    if (value is String) {
+      throw const FormatException('PendingRequestedServiceModel requires a valid serviceID > 0');
+    }
+    if (value is Map<String, dynamic>) {
+      final serviceID = _readInt(value, ['serviceID', 'serviceId', 'ServiceID']);
+      if (serviceID <= 0) {
+        throw const FormatException('PendingRequestedServiceModel serviceID must be > 0');
+      }
+      return PendingRequestedServiceModel(
+        serviceID: serviceID,
+        serviceName: _readString(value, ['serviceName', 'ServiceName', 'name']),
+      );
+    }
+    if (value is Map) {
+      final json = value.map((key, value) => MapEntry(key.toString(), value));
+      final serviceID = _readInt(json, ['serviceID', 'serviceId', 'ServiceID']);
+      if (serviceID <= 0) {
+        throw const FormatException('PendingRequestedServiceModel serviceID must be > 0');
+      }
+      return PendingRequestedServiceModel(
+        serviceID: serviceID,
+        serviceName: _readString(json, ['serviceName', 'ServiceName', 'name']),
+      );
+    }
+    throw const FormatException('Invalid value type for PendingRequestedServiceModel');
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'serviceID': serviceID,
+      'serviceName': serviceName,
+    };
+  }
+
+  static int _readInt(Map<String, dynamic> json, List<String> keys) {
+    for (final key in keys) {
+      final value = json[key];
+      if (value is int) return value;
+      if (value is num) return value.toInt();
+      if (value is String) return int.tryParse(value) ?? 0;
+    }
+    return 0;
+  }
+
+  static String _readString(Map<String, dynamic> json, List<String> keys) {
+    for (final key in keys) {
+      final value = json[key];
+      if (value != null && value.toString().trim().isNotEmpty) {
+        return value.toString().trim();
+      }
+    }
+    return '';
   }
 }
 

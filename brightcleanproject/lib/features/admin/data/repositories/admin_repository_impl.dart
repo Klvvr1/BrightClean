@@ -1,11 +1,13 @@
 import '../../../../core/network/api_client.dart';
 import '../../../../core/error/exceptions.dart';
+import '../../../../core/error/user_error_message.dart';
 import '../../domain/repositories/admin_repository.dart';
 import '../models/pending_user_model.dart';
 import '../models/admin_service_model.dart';
 import '../models/activation_request_model.dart';
 import '../models/admin_summary_model.dart';
 import '../models/admin_offer_model.dart';
+import '../models/admin_audit_log_model.dart';
 
 class AdminRepositoryImpl implements AdminRepository {
   final BaseApiClient _apiClient;
@@ -23,7 +25,7 @@ class AdminRepositoryImpl implements AdminRepository {
           .toList();
     }
     throw ServerException(
-        message: 'Invalid API response format for pending approvals');
+        message: invalidResponseUserMessage);
   }
 
   @override
@@ -38,7 +40,7 @@ class AdminRepositoryImpl implements AdminRepository {
       return response;
     }
     throw ServerException(
-        message: 'Invalid API response format for approved staff');
+        message: invalidResponseUserMessage);
   }
 
   @override
@@ -48,7 +50,7 @@ class AdminRepositoryImpl implements AdminRepository {
       return AdminSummaryModel.fromJson(response);
     }
     throw ServerException(
-        message: 'Invalid API response format for admin summary');
+        message: invalidResponseUserMessage);
   }
 
   @override
@@ -58,7 +60,19 @@ class AdminRepositoryImpl implements AdminRepository {
       return response;
     }
     throw ServerException(
-        message: 'Invalid API response format for recent orders');
+        message: invalidResponseUserMessage);
+  }
+
+  @override
+  Future<List<AdminAuditLogModel>> getAuditLogs() async {
+    final response = await _apiClient.get('/api/admin/audit-logs');
+    if (response is Map<String, dynamic> && response['data'] is List) {
+      return (response['data'] as List)
+          .map((json) =>
+              AdminAuditLogModel.fromJson(json as Map<String, dynamic>))
+          .toList();
+    }
+    throw ServerException(message: invalidResponseUserMessage);
   }
 
   @override
@@ -81,7 +95,7 @@ class AdminRepositoryImpl implements AdminRepository {
               AdminServiceModel.fromJson(json as Map<String, dynamic>))
           .toList();
     }
-    throw ServerException(message: 'Invalid API response format for services');
+    throw ServerException(message: invalidResponseUserMessage);
   }
 
   @override
@@ -120,7 +134,7 @@ class AdminRepositoryImpl implements AdminRepository {
       return response;
     }
     throw ServerException(
-        message: 'Invalid API response format for laundry agents');
+        message: invalidResponseUserMessage);
   }
 
   @override
@@ -148,7 +162,7 @@ class AdminRepositoryImpl implements AdminRepository {
       }
     }
     throw ServerException(
-        message: 'Invalid API response format for agent services');
+        message: invalidResponseUserMessage);
   }
 
   @override
@@ -179,7 +193,7 @@ class AdminRepositoryImpl implements AdminRepository {
       return result;
     }
     throw ServerException(
-        message: 'Invalid API response format for service activation requests');
+        message: invalidResponseUserMessage);
   }
 
   @override
@@ -208,7 +222,7 @@ class AdminRepositoryImpl implements AdminRepository {
       return response;
     }
     throw ServerException(
-        message: 'Invalid API response format for notification history');
+        message: invalidResponseUserMessage);
   }
 
   @override
@@ -227,7 +241,7 @@ class AdminRepositoryImpl implements AdminRepository {
       }
       return result;
     }
-    throw ServerException(message: 'Invalid API response format for offers');
+    throw ServerException(message: invalidResponseUserMessage);
   }
 
   @override

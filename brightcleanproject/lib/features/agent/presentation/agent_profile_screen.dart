@@ -8,6 +8,7 @@ import '../../../../core/theme/app_styles.dart';
 import '../../../../core/controllers/theme_controller.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/error/exceptions.dart';
+import '../../../../core/error/user_error_message.dart';
 
 class AgentProfileScreen extends StatefulWidget {
   const AgentProfileScreen({super.key});
@@ -184,16 +185,18 @@ class _AgentProfileScreenState extends State<AgentProfileScreen> {
                           setDialogState(() => isSubmitting = false);
                           messenger.showSnackBar(
                             SnackBar(
-                              content: Text('فشل الاشتراك: ${e.message ?? "خطأ في الخادم"}'),
+                              content: Text(
+                                  'فشل الاشتراك: ${userMessageFromError(e, fallback: "خطأ في الخادم")}'),
                               backgroundColor: AppColors.error,
                               behavior: SnackBarBehavior.floating,
                             ),
                           );
                         } catch (e) {
                           setDialogState(() => isSubmitting = false);
+                          final message = userMessageFromError(e);
                           messenger.showSnackBar(
                             SnackBar(
-                              content: Text('حدث خطأ: $e'),
+                              content: Text('حدث خطأ: $message'),
                               backgroundColor: AppColors.error,
                               behavior: SnackBarBehavior.floating,
                             ),

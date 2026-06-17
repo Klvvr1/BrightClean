@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import '../../../../core/error/user_error_message.dart';
 import '../../../../core/network/api_client.dart';
 import '../../domain/repositories/delivery_task_repository.dart';
 import '../repositories/delivery_task_repository_impl.dart';
@@ -40,7 +41,7 @@ class DriverProvider extends ChangeNotifier {
       }
       _tasks = merged.values.toList();
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = userMessageFromError(e);
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -52,7 +53,7 @@ class DriverProvider extends ChangeNotifier {
       _isAvailable = await deliveryTaskRepository.getAvailability();
       notifyListeners();
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = userMessageFromError(e);
       notifyListeners();
     }
   }
@@ -65,7 +66,7 @@ class DriverProvider extends ChangeNotifier {
     try {
       _isAvailable = await deliveryTaskRepository.setAvailability(isAvailable);
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = userMessageFromError(e);
       rethrow;
     } finally {
       _isActionLoading = false;
@@ -88,7 +89,7 @@ class DriverProvider extends ChangeNotifier {
       }
       return task;
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = userMessageFromError(e);
       rethrow;
     } finally {
       _isActionLoading = false;
@@ -105,7 +106,7 @@ class DriverProvider extends ChangeNotifier {
       await deliveryTaskRepository.claimTask(taskId, driverId);
       await fetchTaskPool();
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = userMessageFromError(e);
       rethrow;
     } finally {
       _isActionLoading = false;
@@ -122,7 +123,7 @@ class DriverProvider extends ChangeNotifier {
       await deliveryTaskRepository.startTask(taskId);
       await fetchTaskPool();
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = userMessageFromError(e);
       rethrow;
     } finally {
       _isActionLoading = false;
@@ -139,7 +140,7 @@ class DriverProvider extends ChangeNotifier {
       await deliveryTaskRepository.updateTaskProgress(taskId, currentStep);
       await fetchTaskPool();
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = userMessageFromError(e);
       rethrow;
     } finally {
       _isActionLoading = false;
@@ -156,7 +157,7 @@ class DriverProvider extends ChangeNotifier {
       await deliveryTaskRepository.completeTask(taskId);
       await fetchTaskPool();
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = userMessageFromError(e);
       rethrow;
     } finally {
       _isActionLoading = false;

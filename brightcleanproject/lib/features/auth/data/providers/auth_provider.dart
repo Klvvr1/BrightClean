@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../../core/error/exceptions.dart';
+import '../../../../core/error/user_error_message.dart';
 import '../../data/models/register_agent_model.dart';
 import '../../data/models/register_client_model.dart';
 import '../../domain/repositories/auth_repository.dart';
@@ -102,15 +103,16 @@ class AuthProvider with ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     } on ServerException catch (e) {
-      _errorMessage = e.message;
+      _errorMessage = userMessageFromError(e);
       _isLoading = false;
       notifyListeners();
       rethrow;
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = userMessageFromError(e);
       _isLoading = false;
       notifyListeners();
-      throw ServerException(message: e.toString());
+      debugPrint('Login failed: $e');
+      throw ServerException(message: _errorMessage);
     }
   }
 
@@ -132,15 +134,16 @@ class AuthProvider with ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     } on ServerException catch (e) {
-      _errorMessage = e.message;
+      _errorMessage = userMessageFromError(e);
       _isLoading = false;
       notifyListeners();
       rethrow;
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = userMessageFromError(e);
       _isLoading = false;
       notifyListeners();
-      throw ServerException(message: e.toString());
+      debugPrint('Agent registration failed: $e');
+      throw ServerException(message: _errorMessage);
     }
   }
 
@@ -154,15 +157,16 @@ class AuthProvider with ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     } on ServerException catch (e) {
-      _errorMessage = e.message;
+      _errorMessage = userMessageFromError(e);
       _isLoading = false;
       notifyListeners();
       rethrow;
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = userMessageFromError(e);
       _isLoading = false;
       notifyListeners();
-      throw ServerException(message: e.toString());
+      debugPrint('Client registration failed: $e');
+      throw ServerException(message: _errorMessage);
     }
   }
 
@@ -217,15 +221,16 @@ class AuthProvider with ChangeNotifier {
       notifyListeners();
       return otp;
     } on ServerException catch (e) {
-      _errorMessage = e.message;
+      _errorMessage = userMessageFromError(e);
       _isLoading = false;
       notifyListeners();
       rethrow;
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = userMessageFromError(e);
       _isLoading = false;
       notifyListeners();
-      throw ServerException(message: e.toString());
+      debugPrint('Forgot password failed: $e');
+      throw ServerException(message: _errorMessage);
     }
   }
 
@@ -240,15 +245,16 @@ class AuthProvider with ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     } on ServerException catch (e) {
-      _errorMessage = e.message;
+      _errorMessage = userMessageFromError(e);
       _isLoading = false;
       notifyListeners();
       rethrow;
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = userMessageFromError(e);
       _isLoading = false;
       notifyListeners();
-      throw ServerException(message: e.toString());
+      debugPrint('Reset password failed: $e');
+      throw ServerException(message: _errorMessage);
     }
   }
 
@@ -271,15 +277,16 @@ class AuthProvider with ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     } on ServerException catch (e) {
-      _errorMessage = e.message;
+      _errorMessage = userMessageFromError(e);
       _isLoading = false;
       notifyListeners();
       rethrow;
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = userMessageFromError(e);
       _isLoading = false;
       notifyListeners();
-      throw ServerException(message: e.toString());
+      debugPrint('Profile update failed: $e');
+      throw ServerException(message: _errorMessage);
     }
   }
 }
