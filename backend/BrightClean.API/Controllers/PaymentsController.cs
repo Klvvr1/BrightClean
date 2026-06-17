@@ -79,7 +79,7 @@ namespace BrightClean.API.Controllers
 
         // GET: /api/payments/receipt/{bookingId}/{fileName}
         [HttpGet("receipt/{bookingId}/{fileName}")]
-        [Authorize(Roles = "Client,Agent")]
+        [Authorize(Roles = "Client,LaundryAgent")]
         public async Task<IActionResult> DownloadReceipt(int bookingId, string fileName)
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
@@ -98,7 +98,7 @@ namespace BrightClean.API.Controllers
                 hasAccess = await _context.Bookings.AnyAsync(b =>
                     b.BookingID == bookingId && b.ClientID == userId);
             }
-            else if (roleClaim?.Value == "Agent")
+            else if (roleClaim?.Value == "LaundryAgent")
             {
                 hasAccess = await _context.Bookings.AnyAsync(b =>
                     b.BookingID == bookingId && b.LaundryAgentID == userId);

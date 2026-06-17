@@ -42,6 +42,12 @@ namespace BrightClean.API.Controllers
         [HttpPost("register/client")]
         public async Task<IActionResult> RegisterClient([FromBody] RegisterClientDto dto)
         {
+            if (string.IsNullOrWhiteSpace(dto.Area) || string.IsNullOrWhiteSpace(dto.Street))
+                return BadRequest(new { message = "عنوان العميل مطلوب." });
+
+            if (dto.Latitude < -90m || dto.Latitude > 90m || dto.Longitude < -180m || dto.Longitude > 180m)
+                return BadRequest(new { message = "يجب تحديد موقع صالح للعنوان." });
+
             if (await _context.Users.AnyAsync(u => u.Email == dto.Email))
                 return BadRequest(new { message = "البريد الإلكتروني مسجل بالفعل." });
 
@@ -62,8 +68,26 @@ namespace BrightClean.API.Controllers
                 IsApproved = true // Clients are auto-approved
             };
 
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+
             _context.Clients.Add(client);
             await _context.SaveChangesAsync();
+
+            var address = new Address
+            {
+                ClientID = client.UserID,
+                Area = dto.Area.Trim(),
+                Street = dto.Street.Trim(),
+                Latitude = dto.Latitude,
+                Longitude = dto.Longitude,
+                IsArchived = false
+            };
+
+            _context.Addresses.Add(address);
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            _logger.LogInformation("Registered client {ClientId} with address {AddressId}.", client.UserID, address.AddressID);
 
             return Ok(new { message = "تم تسجيل العميل بنجاح." });
         }

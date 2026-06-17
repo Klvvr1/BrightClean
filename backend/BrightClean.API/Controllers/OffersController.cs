@@ -39,9 +39,9 @@ namespace BrightClean.API.Controllers
             }
 
             // Look up the offer by code (case-insensitive)
-            var normalizedCode = dto.Code.Trim().ToUpperInvariant();
+            var normalizedCode = dto.Code.Trim().ToUpper();
             var offer = await _context.Offers
-                .FirstOrDefaultAsync(o => o.OfferCode.ToUpperInvariant() == normalizedCode);
+                .FirstOrDefaultAsync(o => o.OfferCode.ToUpper() == normalizedCode);
 
             if (offer == null || !offer.IsValid)
             {
@@ -83,7 +83,7 @@ namespace BrightClean.API.Controllers
             {
                 return BadRequest(new
                 {
-                    message = $"هذا العرض يتطلب طلبًا بقيمة لا تقل عن {offer.MinOrderValue.Value:F0} ريال. المبلغ الحالي هو {subtotal:F0} ريال."
+                    message = $"هذا العرض يتطلب طلبا بقيمة لا تقل عن {offer.MinOrderValue.Value:F0} ريال. المبلغ الحالي هو {subtotal:F0} ريال."
                 });
             }
 

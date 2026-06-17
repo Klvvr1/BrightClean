@@ -818,6 +818,30 @@ namespace BrightClean.API.Controllers
             return Ok(new { isStoreClosed = agent.IsStoreClosed });
         }
 
+        // GET: /api/bookings/reviews/recent
+        [HttpGet("reviews/recent")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetRecentReviews()
+        {
+            var reviews = await _context.BookingRatings
+                .AsNoTracking()
+                .Include(r => r.Booking)
+                    .ThenInclude(b => b.Client)
+                .Where(r => r.AgentRating.HasValue && r.AgentComment != null && !string.IsNullOrWhiteSpace(r.AgentComment))
+                .OrderByDescending(r => r.RatedAt)
+                .Take(5)
+                .Select(r => new
+                {
+                    userName = r.Booking.Client.FirstName + (string.IsNullOrWhiteSpace(r.Booking.Client.LastName) ? "" : " " + r.Booking.Client.LastName.Substring(0, 1) + "."),
+                    comment = r.AgentComment,
+                    rating = r.AgentRating,
+                    date = r.RatedAt
+                })
+                .ToListAsync();
+
+            return Ok(reviews);
+        }
+
         // POST: /api/bookings/{id}/rate
         [HttpPost("{id}/rate")]
         [Authorize(Roles = "Client")]

@@ -3,8 +3,8 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_styles.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/error/exceptions.dart';
+import '../../../../core/widgets/map_picker_screen.dart';
 import '../data/models/customer_address_model.dart';
-import 'map_picker_screen.dart';
 
 class AddressesScreen extends StatefulWidget {
   const AddressesScreen({super.key});
@@ -58,7 +58,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('ÙØ´Ù„ Ø­Ø°Ù Ø§Ù„Ø¹Ù†ÙˆØ§Ù†: $e'),
+          content: Text('فشل حذف العنوان: $e'),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
@@ -66,32 +66,31 @@ class _AddressesScreenState extends State<AddressesScreen> {
   }
 
   Future<void> _navigateAndAddNewAddress() async {
-    final result = await Navigator.of(context).push<String>(
+    final result = await Navigator.of(context).push<Map<String, dynamic>>(
       MaterialPageRoute(
         builder: (context) => const MapPickerScreen(),
       ),
     );
 
-    // MapPickerScreen returns a plain String like 'موقع محدد (lat, lng)'
-    if (result == null || result.isEmpty) return;
+    if (result == null) return;
     if (!mounted) return;
 
-    final addressLabel = result;
+    final coordinates = result['coordinates'];
+    final addressLabel = result['address']?.toString() ?? '';
 
-    // Parse coordinates from the label string if available (format: 'label (lat, lng)')
-    double lat = 0.0;
-    double lng = 0.0;
-    final coordMatch = RegExp(r'\(([-\d.]+),\s*([-\d.]+)\)').firstMatch(result);
-    if (coordMatch != null) {
-      lat = double.tryParse(coordMatch.group(1) ?? '0') ?? 0.0;
-      lng = double.tryParse(coordMatch.group(2) ?? '0') ?? 0.0;
-    }
+    // Handle both payload shapes: coordinates object with lat/lng properties, or direct lat/lng in result
+    final double lat = (coordinates != null && coordinates.latitude != null)
+        ? coordinates.latitude
+        : (result['latitude'] as num?)?.toDouble() ?? 0.0;
+    final double lng = (coordinates != null && coordinates.longitude != null)
+        ? coordinates.longitude
+        : (result['longitude'] as num?)?.toDouble() ?? 0.0;
 
     if (lat == 0.0 && lng == 0.0) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text(
-              'ÙŠØ±Ø¬Ù‰ ØªØ­Ø¯ÙŠØ¯ Ù…ÙˆÙ‚Ø¹ ØµØ§Ù„Ø­ Ø¹Ù„Ù‰ Ø§Ù„Ø®Ø±ÙŠØ·Ø©'),
+              'يرجى تحديد موقع صالح على الخريطة'),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );

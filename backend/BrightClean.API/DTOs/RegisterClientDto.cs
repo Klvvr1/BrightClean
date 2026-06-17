@@ -32,5 +32,21 @@ namespace BrightClean.API.DTOs
 
         [Required]
         public Gender Gender { get; set; }
+
+        [Required]
+        [MinLength(1, ErrorMessage = "Address area cannot be empty or whitespace.")]
+        public string Area { get; set; } = string.Empty;
+
+        [Required]
+        [MinLength(1, ErrorMessage = "Address street cannot be empty or whitespace.")]
+        public string Street { get; set; } = string.Empty;
+
+        [Required]
+        [Range(-90, 90, ErrorMessage = "Latitude must be between -90 and 90.")]
+        public decimal Latitude { get; set; }
+
+        [Required]
+        [Range(-180, 180, ErrorMessage = "Longitude must be between -180 and 180.")]
+        public decimal Longitude { get; set; }
     }
 }
