@@ -34,7 +34,7 @@ class AdminAuditLogModel {
       performedAt: DateTime.tryParse(
             _readString(json, ['performedAt', 'PerformedAt']),
           ) ??
-          DateTime.fromMillisecondsSinceEpoch(0),
+          (throw FormatException('Invalid or missing performedAt timestamp in AdminAuditLogModel')),
     );
   }
 

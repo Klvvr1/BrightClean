@@ -260,17 +260,6 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                 ],
               ),
             ),
-            // Ripple Effect Overlay
-            Positioned.fill(
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: () {
-                    // Navigate or trigger action
-                  },
-                ),
-              ),
-            ),
           ],
         ),
       ),

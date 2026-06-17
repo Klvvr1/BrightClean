@@ -71,27 +71,37 @@ namespace BrightClean.API.Controllers
                 AdminID = adminId
             };
 
-            _context.SystemStatuses.Add(newStatus);
-            
-            // Optionally: keep only the latest status to avoid table bloat over time
-            // Or just let it act as a history log. We'll leave it as a log.
-
-            await _context.SaveChangesAsync();
-
-            _context.AuditLogs.Add(new AuditLog
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+            try
             {
-                AdminID = adminId,
-                Action = "TOGGLE_MAINTENANCE",
-                TargetEntity = "SystemStatus",
-                TargetID = newStatus.StatusID,
-                Details = dto.LoginEnabled
-                    ? "Maintenance mode was disabled."
-                    : "Maintenance mode was enabled.",
-                IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
-                PerformedAt = DateTime.UtcNow
-            });
+                _context.SystemStatuses.Add(newStatus);
 
-            await _context.SaveChangesAsync();
+                // Optionally: keep only the latest status to avoid table bloat over time
+                // Or just let it act as a history log. We'll leave it as a log.
+
+                await _context.SaveChangesAsync();
+
+                _context.AuditLogs.Add(new AuditLog
+                {
+                    AdminID = adminId,
+                    Action = "TOGGLE_MAINTENANCE",
+                    TargetEntity = "SystemStatus",
+                    TargetID = newStatus.StatusID,
+                    Details = dto.LoginEnabled
+                        ? "Maintenance mode was disabled."
+                        : "Maintenance mode was enabled.",
+                    IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    PerformedAt = DateTime.UtcNow
+                });
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
 
             return Ok(new SystemStatusDto
             {

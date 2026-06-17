@@ -78,7 +78,6 @@ class PendingUserModel {
     final requestedServices = rawRequestedServices is List
         ? rawRequestedServices
             .map(PendingRequestedServiceModel.fromJsonValue)
-            .where((service) => service.serviceName.isNotEmpty)
             .toList()
         : <PendingRequestedServiceModel>[];
 
@@ -131,22 +130,30 @@ class PendingRequestedServiceModel {
 
   factory PendingRequestedServiceModel.fromJsonValue(dynamic value) {
     if (value is String) {
-      return PendingRequestedServiceModel(serviceID: 0, serviceName: value);
+      throw const FormatException('PendingRequestedServiceModel requires a valid serviceID > 0');
     }
     if (value is Map<String, dynamic>) {
+      final serviceID = _readInt(value, ['serviceID', 'serviceId', 'ServiceID']);
+      if (serviceID <= 0) {
+        throw const FormatException('PendingRequestedServiceModel serviceID must be > 0');
+      }
       return PendingRequestedServiceModel(
-        serviceID: _readInt(value, ['serviceID', 'serviceId', 'ServiceID']),
+        serviceID: serviceID,
         serviceName: _readString(value, ['serviceName', 'ServiceName', 'name']),
       );
     }
     if (value is Map) {
       final json = value.map((key, value) => MapEntry(key.toString(), value));
+      final serviceID = _readInt(json, ['serviceID', 'serviceId', 'ServiceID']);
+      if (serviceID <= 0) {
+        throw const FormatException('PendingRequestedServiceModel serviceID must be > 0');
+      }
       return PendingRequestedServiceModel(
-        serviceID: _readInt(json, ['serviceID', 'serviceId', 'ServiceID']),
+        serviceID: serviceID,
         serviceName: _readString(json, ['serviceName', 'ServiceName', 'name']),
       );
     }
-    return const PendingRequestedServiceModel(serviceID: 0, serviceName: '');
+    throw const FormatException('Invalid value type for PendingRequestedServiceModel');
   }
 
   Map<String, dynamic> toJson() {

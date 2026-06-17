@@ -537,7 +537,9 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                                 final message = userMessageFromError(e);
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                    content: Text('فشل قبول المهمة: $message'),
+                                    content: Text(isAr
+                                        ? 'فشل قبول المهمة: $message'
+                                        : 'Failed to claim task: $message'),
                                     backgroundColor: AppColors.error,
                                   ),
                                 );
@@ -586,8 +588,9 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                                 final message = userMessageFromError(e);
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                    content:
-                                        Text('فشل إكمال المهمة: $message'),
+                                    content: Text(isAr
+                                        ? 'فشل إكمال المهمة: $message'
+                                        : 'Failed to complete task: $message'),
                                     backgroundColor: AppColors.error,
                                   ),
                                 );
