@@ -102,6 +102,8 @@ class OrderProvider extends ChangeNotifier {
                       : null,
                   pickupTimeSlot: map['pickupTimeSlot'] as String?,
                   category: map['category'] as String?,
+                  requiresDriverRating:
+                      (map['requiresDriverRating'] as int? ?? 0) == 1,
                 ))
             .toList();
       } else {
@@ -133,6 +135,7 @@ class OrderProvider extends ChangeNotifier {
               'pickupDate': order.pickupDate?.toIso8601String(),
               'pickupTimeSlot': order.pickupTimeSlot,
               'category': order.category,
+              'requiresDriverRating': order.requiresDriverRating ? 1 : 0,
             },
             conflictAlgorithm: ConflictAlgorithm.replace,
           );
@@ -160,6 +163,7 @@ class OrderProvider extends ChangeNotifier {
             'pickupDate': order.pickupDate?.toIso8601String(),
             'pickupTimeSlot': order.pickupTimeSlot,
             'category': order.category,
+            'requiresDriverRating': order.requiresDriverRating ? 1 : 0,
           },
           conflictAlgorithm: ConflictAlgorithm.replace);
     } catch (e) {
@@ -193,6 +197,7 @@ class OrderProvider extends ChangeNotifier {
         pickupDate: oldOrder.pickupDate,
         pickupTimeSlot: oldOrder.pickupTimeSlot,
         category: oldOrder.category,
+        requiresDriverRating: oldOrder.requiresDriverRating,
       );
       _saveOrderToDb(_orders[index]);
       notifyListeners();
@@ -259,6 +264,7 @@ class OrderProvider extends ChangeNotifier {
       pickupTimeSlot: booking.specialInstructions,
       paymentMethod: booking.paymentMethod,
       isRated: booking.isRated,
+      requiresDriverRating: booking.hasDeliveryTasks,
     );
   }
 

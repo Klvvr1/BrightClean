@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:brightcleanproject/core/error/user_error_message.dart';
 import 'package:brightcleanproject/core/theme/app_spacing.dart';
 
 import 'package:go_router/go_router.dart';
@@ -122,19 +123,31 @@ class _AgentOrderManagementScreenState
 
     if (confirm == true) {
       setState(() => _isLoading = true);
-      await _bookingRepository.acceptBooking(int.parse(widget.orderId));
-      if (!mounted) return;
-      setState(() {
-        _isLoading = false;
-        _currentStatus = OrderStatus.received;
-        _hasChanges = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(
-            isArabic ? 'تم قبول الطلب بنجاح' : 'Order accepted successfully'),
-        backgroundColor: AppColors.success,
-      ));
-      context.pop(_currentStatus);
+      try {
+        await _bookingRepository.acceptBooking(int.parse(widget.orderId));
+        if (!mounted) return;
+        setState(() {
+          _isLoading = false;
+          _currentStatus = OrderStatus.received;
+          _hasChanges = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(
+              isArabic ? 'تم قبول الطلب بنجاح' : 'Order accepted successfully'),
+          backgroundColor: AppColors.success,
+        ));
+        context.pop(_currentStatus);
+      } catch (e) {
+        if (!mounted) return;
+        setState(() => _isLoading = false);
+        final message = userMessageFromError(e);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(isArabic
+              ? 'فشل قبول الطلب: $message'
+              : 'Failed to accept order: $message'),
+          backgroundColor: AppColors.error,
+        ));
+      }
     }
   }
 
@@ -241,35 +254,95 @@ class _AgentOrderManagementScreenState
 
     if (confirm == true) {
       setState(() => _isLoading = true);
-      await _bookingRepository.rejectBooking(
-        int.parse(widget.orderId),
-        _rejectReasonController.text.trim(),
-      );
-      if (!mounted) return;
-      setState(() {
-        _isLoading = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(
-            isArabic ? 'تم رفض الطلب بنجاح' : 'Order rejected successfully'),
-        backgroundColor: Colors.red,
-      ));
-      context.pop(OrderStatus.rejected);
+      try {
+        await _bookingRepository.rejectBooking(
+          int.parse(widget.orderId),
+          _rejectReasonController.text.trim(),
+        );
+        if (!mounted) return;
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(
+              isArabic ? 'تم رفض الطلب بنجاح' : 'Order rejected successfully'),
+          backgroundColor: Colors.red,
+        ));
+        context.pop(OrderStatus.rejected);
+      } catch (e) {
+        if (!mounted) return;
+        setState(() => _isLoading = false);
+        final message = userMessageFromError(e);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(isArabic
+              ? 'فشل رفض الطلب: $message'
+              : 'Failed to reject order: $message'),
+          backgroundColor: AppColors.error,
+        ));
+      }
     }
   }
 
-  Future<void> _handleSaveChanges(bool isArabic) async {
-    if (!_hasChanges) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content:
-            Text(isArabic ? 'لا توجد تغييرات لحفظها' : 'No changes to save'),
-      ));
-      return;
+  OrderStatus? _nextStrictStatus() {
+    switch (_currentStatus) {
+      case OrderStatus.received:
+        return OrderStatus.washing;
+      case OrderStatus.washing:
+        return widget.order.requiresDelivery
+            ? OrderStatus.ready
+            : OrderStatus.completed;
+      default:
+        return null;
     }
+  }
 
-    // Guard: if the new status is rejected, route to the explicit rejection handler
-    if (_currentStatus == OrderStatus.rejected) {
-      await _handleReject(isArabic);
+  String _strictActionLabel(bool isArabic) {
+    final nextStatus = _nextStrictStatus();
+    if (nextStatus == OrderStatus.washing) {
+      return isArabic ? 'بدء المعالجة' : 'Start Processing';
+    }
+    if (nextStatus == OrderStatus.ready) {
+      return isArabic ? 'تجهيز للتسليم' : 'Mark Ready for Delivery';
+    }
+    if (nextStatus == OrderStatus.completed) {
+      return isArabic ? 'إكمال الطلب' : 'Complete Order';
+    }
+    return isArabic ? 'لا يوجد إجراء متاح' : 'No Action Available';
+  }
+
+  String _strictActionHint(bool isArabic) {
+    final nextStatus = _nextStrictStatus();
+    if (nextStatus == OrderStatus.washing) {
+      return isArabic
+          ? 'سيتم نقل الطلب إلى قيد المعالجة بعد تأكيد وصوله للمغسلة.'
+          : 'The order will move to processing after laundry receipt is confirmed.';
+    }
+    if (nextStatus == OrderStatus.ready) {
+      return isArabic
+          ? 'سيصبح الطلب جاهزاً ليستلمه المندوب من المغسلة.'
+          : 'The order will become ready for driver pickup from the laundry.';
+    }
+    if (nextStatus == OrderStatus.completed) {
+      return isArabic
+          ? 'هذا الإجراء مخصص لخدمات الزيارة التي لا تحتاج توصيل مرحلتين.'
+          : 'This action is for technician dispatch orders without two-stage delivery.';
+    }
+    if (_currentStatus == OrderStatus.ready && widget.order.requiresDelivery) {
+      return isArabic
+          ? 'بانتظار المندوب لتسليم الطلب إلى العميل.'
+          : 'Waiting for the driver to deliver the order to the customer.';
+    }
+    return isArabic
+        ? 'لا يمكن تغيير هذه الحالة يدوياً.'
+        : 'This status cannot be changed manually.';
+  }
+
+  Future<void> _handleStrictStatusAction(bool isArabic) async {
+    final nextStatus = _nextStrictStatus();
+    if (nextStatus == null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(_strictActionHint(isArabic)),
+      ));
       return;
     }
 
@@ -277,9 +350,7 @@ class _AgentOrderManagementScreenState
       context: context,
       builder: (context) => AlertDialog(
         title: Text(isArabic ? 'تأكيد الحفظ' : 'Confirm Save'),
-        content: Text(isArabic
-            ? 'هل تريد حفظ الحالة الجديدة للطلب؟'
-            : 'Do you want to save the new order status?'),
+        content: Text(_strictActionHint(isArabic)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -297,26 +368,38 @@ class _AgentOrderManagementScreenState
     if (confirm == true) {
       setState(() => _isLoading = true);
       final bookingId = int.parse(widget.orderId);
-      if (_currentStatus == OrderStatus.washing ||
-          _currentStatus == OrderStatus.ironing) {
-        await _bookingRepository.startBooking(bookingId);
-      } else if (_currentStatus == OrderStatus.ready) {
-        await _bookingRepository.markReady(bookingId);
-      } else if (_currentStatus == OrderStatus.completed) {
-        await _bookingRepository.completeBooking(bookingId);
+      try {
+        if (nextStatus == OrderStatus.washing) {
+          await _bookingRepository.startBooking(bookingId);
+        } else if (nextStatus == OrderStatus.ready) {
+          await _bookingRepository.markReady(bookingId);
+        } else if (nextStatus == OrderStatus.completed) {
+          await _bookingRepository.completeBooking(bookingId);
+        }
+        if (!mounted) return;
+        setState(() {
+          _isLoading = false;
+          _currentStatus = nextStatus;
+          _hasChanges = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(isArabic
+              ? 'تم تحديث حالة الطلب بنجاح'
+              : 'Order status updated successfully'),
+          backgroundColor: AppColors.success,
+        ));
+        context.pop(_currentStatus);
+      } catch (e) {
+        if (!mounted) return;
+        setState(() => _isLoading = false);
+        final message = userMessageFromError(e);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(isArabic
+              ? 'فشل تحديث حالة الطلب: $message'
+              : 'Failed to update order status: $message'),
+          backgroundColor: AppColors.error,
+        ));
       }
-      if (!mounted) return;
-      setState(() {
-        _isLoading = false;
-        _hasChanges = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(isArabic
-            ? 'تم تحديث حالة الطلب بنجاح'
-            : 'Order status updated successfully'),
-        backgroundColor: AppColors.success,
-      ));
-      context.pop(_currentStatus);
     }
   }
 
@@ -547,46 +630,40 @@ class _AgentOrderManagementScreenState
                                         : 'Update Laundry Status',
                                     theme),
                                 const SizedBox(height: AppSpacing.md),
-                                DropdownButtonFormField<OrderStatus>(
-                                  initialValue: _currentStatus,
-                                  decoration: InputDecoration(
-                                    border: OutlineInputBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(16)),
-                                    filled: true,
-                                    fillColor: isDark
-                                        ? Colors.white.withValues(alpha: 0.05)
-                                        : Colors.white,
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(AppSpacing.md),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primary
+                                        .withValues(alpha: 0.06),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: AppColors.primary
+                                          .withValues(alpha: 0.18),
+                                    ),
                                   ),
-                                  items: OrderStatus.values
-                                      .where((s) =>
-                                          s != OrderStatus.pending &&
-                                          s !=
-                                              OrderStatus
-                                                  .rejected) // Exclude pending and rejected from dropdown
-                                      .where((s) =>
-                                          widget.order.requiresDelivery ||
-                                          s != OrderStatus.ready ||
-                                          _currentStatus == OrderStatus.ready)
-                                      .where((s) =>
-                                          !widget.order.requiresDelivery ||
-                                          s != OrderStatus.completed)
-                                      .map((status) => DropdownMenuItem(
-                                            value: status,
-                                            child: Text(isArabic
-                                                ? status.title
-                                                : status.englishTitle),
-                                          ))
-                                      .toList(),
-                                  onChanged: (OrderStatus? newStatus) {
-                                    if (newStatus != null &&
-                                        newStatus != _currentStatus) {
-                                      setState(() {
-                                        _currentStatus = newStatus;
-                                        _hasChanges = true;
-                                      });
-                                    }
-                                  },
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.lock_clock_rounded,
+                                        color: isDark
+                                            ? AppColors.lightBlue
+                                            : AppColors.primary,
+                                      ),
+                                      const SizedBox(width: AppSpacing.sm),
+                                      Expanded(
+                                        child: Text(
+                                          _strictActionHint(isArabic),
+                                          style: TextStyle(
+                                            color: isDark
+                                                ? Colors.white
+                                                : Colors.black87,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ],
                             ],
@@ -682,7 +759,8 @@ class _AgentOrderManagementScreenState
                                 : ElevatedButton(
                                     onPressed: _isLoading
                                         ? null
-                                        : () => _handleSaveChanges(isArabic),
+                                        : () =>
+                                            _handleStrictStatusAction(isArabic),
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: AppColors.primary,
                                       foregroundColor: Colors.white,
@@ -697,10 +775,7 @@ class _AgentOrderManagementScreenState
                                       shadowColor: AppColors.primary
                                           .withValues(alpha: 0.4),
                                     ),
-                                    child: Text(
-                                        isArabic
-                                            ? 'تأكيد وحفظ التغييرات'
-                                            : 'Confirm & Save Changes',
+                                    child: Text(_strictActionLabel(isArabic),
                                         style: const TextStyle(
                                             fontWeight: FontWeight.bold,
                                             fontSize: 16)),

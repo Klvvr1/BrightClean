@@ -18,4 +18,12 @@ void main() {
     expect(serviceIdColumn['notnull'], 1);
     expect(serviceIdColumn['dflt_value'], isNull);
   });
+
+  test('orders stores driver rating requirement explicitly', () async {
+    final db = await DatabaseHelper.instance.database;
+    final columns = await db.rawQuery('PRAGMA table_info(orders)');
+    final columnNames = columns.map((column) => column['name']).toSet();
+
+    expect(columnNames, contains('requiresDriverRating'));
+  });
 }

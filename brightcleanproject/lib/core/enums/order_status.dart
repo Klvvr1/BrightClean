@@ -5,7 +5,6 @@ enum OrderStatus {
   pending('قيد الانتظار', 'Pending', Colors.orange),
   received('تم استلام الطلب', 'Received', AppColors.primary),
   washing('قيد الغسيل', 'Washing', Colors.blue),
-  ironing('قيد الكوي', 'Ironing', Colors.purple),
   ready('جاهز للتسليم', 'Ready for Delivery', AppColors.success),
   completed('مكتمل', 'Completed', AppColors.secondary),
   rejected('مرفوض', 'Rejected', Colors.red);

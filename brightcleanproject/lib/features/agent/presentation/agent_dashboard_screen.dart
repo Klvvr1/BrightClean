@@ -328,7 +328,7 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
         id: '4001',
         laundryType: LaundryType.ac,
         services: ['تنظيف فلاتر', 'تعبئة فريون'],
-        status: OrderStatus.ironing,
+        status: OrderStatus.washing,
         customerLocation: 'حي النرجس',
         time: 'منذ ساعة',
         customerName: 'ياسر إبراهيم',
@@ -975,9 +975,7 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
               _buildStatCard(
                   isArabic ? 'قيد التنفيذ' : 'In Progress',
                   orders
-                      .where((o) =>
-                          o.status == OrderStatus.washing ||
-                          o.status == OrderStatus.ironing)
+                      .where((o) => o.status == OrderStatus.washing)
                       .length
                       .toString(),
                   AppColors.tertiary,
