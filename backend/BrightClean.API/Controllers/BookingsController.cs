@@ -921,7 +921,14 @@ namespace BrightClean.API.Controllers
                 return BadRequest(new { message = "تقييم التوصيل يجب أن يكون بين 1 و 5." });
             }
 
-            if (dto.DeliveryRating.HasValue && !booking.DeliveryTasks.Any())
+            var hasDeliveryTasks = booking.DeliveryTasks.Any();
+            if (hasDeliveryTasks && !dto.DeliveryRating.HasValue)
+            {
+                _logger.LogWarning("Rejected rating for booking {BookingID} by client {ClientID}: delivery rating is required because booking has delivery tasks.", id, clientId);
+                return BadRequest(new { message = "يجب إرسال تقييم المندوب لهذا الحجز لأنه يحتوي على مهمة توصيل." });
+            }
+
+            if (dto.DeliveryRating.HasValue && !hasDeliveryTasks)
             {
                 return BadRequest(new { message = "لا يمكن تقييم المندوب لهذا الحجز لأنه لا يحتوي على مهمة توصيل." });
             }
