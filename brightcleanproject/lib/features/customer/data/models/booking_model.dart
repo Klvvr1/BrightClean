@@ -14,6 +14,7 @@ class BookingModel {
   final String? paymentMethod;
   final String? paymentStatus;
   final bool isRated;
+  final bool hasDeliveryTasks;
 
   BookingModel({
     required this.bookingID,
@@ -31,6 +32,7 @@ class BookingModel {
     this.paymentMethod,
     this.paymentStatus,
     this.isRated = false,
+    this.hasDeliveryTasks = false,
   });
 
   factory BookingModel.fromJson(Map<String, dynamic> json) {
@@ -40,7 +42,8 @@ class BookingModel {
       parsedCreatedAt = DateTime.tryParse(rawCreatedAt);
     }
     if (parsedCreatedAt == null) {
-      throw const FormatException('Invalid or missing createdAt in BookingModel');
+      throw const FormatException(
+          'Invalid or missing createdAt in BookingModel');
     }
 
     final rawStatus = json['status'] ?? json['Status'];
@@ -76,17 +79,35 @@ class BookingModel {
     final rawItems = json['bookingItems'] ?? json['BookingItems'] ?? [];
     List<BookingItemModel> itemsList = [];
     if (rawItems is List) {
-      itemsList = rawItems.map((item) => BookingItemModel.fromJson(item as Map<String, dynamic>)).toList();
+      itemsList = rawItems
+          .map(
+              (item) => BookingItemModel.fromJson(item as Map<String, dynamic>))
+          .toList();
     }
 
     return BookingModel(
-      bookingID: json['bookingID'] as int? ?? json['bookingId'] as int? ?? json['BookingID'] as int? ?? 0,
-      clientID: json['clientID'] as int? ?? json['clientId'] as int? ?? json['ClientID'] as int? ?? 0,
-      laundryAgentID: json['laundryAgentID'] as int? ?? json['laundryAgentId'] as int? ?? json['LaundryAgentID'] as int? ?? 0,
-      addressID: json['addressID'] as int? ?? json['addressId'] as int? ?? json['AddressID'] as int? ?? 0,
-      offerID: json['offerID'] as int? ?? json['offerId'] as int? ?? json['OfferID'] as int?,
+      bookingID: json['bookingID'] as int? ??
+          json['bookingId'] as int? ??
+          json['BookingID'] as int? ??
+          0,
+      clientID: json['clientID'] as int? ??
+          json['clientId'] as int? ??
+          json['ClientID'] as int? ??
+          0,
+      laundryAgentID: json['laundryAgentID'] as int? ??
+          json['laundryAgentId'] as int? ??
+          json['LaundryAgentID'] as int? ??
+          0,
+      addressID: json['addressID'] as int? ??
+          json['addressId'] as int? ??
+          json['AddressID'] as int? ??
+          0,
+      offerID: json['offerID'] as int? ??
+          json['offerId'] as int? ??
+          json['OfferID'] as int?,
       status: parsedStatus,
-      finalTotal: (json['finalTotal'] ?? json['FinalTotal'] as num?)?.toDouble(),
+      finalTotal:
+          (json['finalTotal'] ?? json['FinalTotal'] as num?)?.toDouble(),
       createdAt: parsedCreatedAt,
       expiresAt: json['expiresAt'] != null
           ? DateTime.tryParse(json['expiresAt'] as String)
@@ -98,15 +119,28 @@ class BookingModel {
           : json['ScheduledAt'] != null
               ? DateTime.tryParse(json['ScheduledAt'] as String)
               : null,
-      specialInstructions: json['specialInstructions'] as String? ?? json['SpecialInstructions'] as String?,
+      specialInstructions: json['specialInstructions'] as String? ??
+          json['SpecialInstructions'] as String?,
       bookingItems: itemsList,
-      paymentMethod: _nestedString(json['payment'] ?? json['Payment'], 'method', 'Method'),
-      paymentStatus: _nestedString(json['payment'] ?? json['Payment'], 'status', 'Status'),
+      paymentMethod:
+          _nestedString(json['payment'] ?? json['Payment'], 'method', 'Method'),
+      paymentStatus:
+          _nestedString(json['payment'] ?? json['Payment'], 'status', 'Status'),
       isRated: json['rating'] != null || json['Rating'] != null,
+      hasDeliveryTasks:
+          _readBool(json['hasDeliveryTasks'] ?? json['HasDeliveryTasks']),
     );
   }
 
-  static String? _nestedString(Object? value, String camelKey, String pascalKey) {
+  static bool _readBool(Object? value) {
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    if (value is String) return value.toLowerCase() == 'true';
+    return false;
+  }
+
+  static String? _nestedString(
+      Object? value, String camelKey, String pascalKey) {
     if (value is Map<String, dynamic>) {
       return value[camelKey]?.toString() ?? value[pascalKey]?.toString();
     }
@@ -130,6 +164,7 @@ class BookingModel {
       'paymentMethod': paymentMethod,
       'paymentStatus': paymentStatus,
       'isRated': isRated,
+      'hasDeliveryTasks': hasDeliveryTasks,
     };
   }
 }
@@ -153,15 +188,29 @@ class BookingItemModel {
 
   factory BookingItemModel.fromJson(Map<String, dynamic> json) {
     return BookingItemModel(
-      bookingItemID: json['bookingItemID'] as int? ?? json['bookingItemId'] as int? ?? json['BookingItemID'] as int? ?? 0,
-      bookingID: json['bookingID'] as int? ?? json['bookingId'] as int? ?? json['BookingID'] as int? ?? 0,
-      serviceID: json['serviceID'] as int? ?? json['serviceId'] as int? ?? json['ServiceID'] as int? ?? 0,
+      bookingItemID: json['bookingItemID'] as int? ??
+          json['bookingItemId'] as int? ??
+          json['BookingItemID'] as int? ??
+          0,
+      bookingID: json['bookingID'] as int? ??
+          json['bookingId'] as int? ??
+          json['BookingID'] as int? ??
+          0,
+      serviceID: json['serviceID'] as int? ??
+          json['serviceId'] as int? ??
+          json['ServiceID'] as int? ??
+          0,
       quantity: json['quantity'] as int? ?? json['Quantity'] as int? ?? 0,
-      unitPriceAtTimeOfBooking: (json['unitPriceAtTimeOfBooking'] ?? json['UnitPriceAtTimeOfBooking'] as num?)?.toDouble() ?? 0.0,
+      unitPriceAtTimeOfBooking: (json['unitPriceAtTimeOfBooking'] ??
+                  json['UnitPriceAtTimeOfBooking'] as num?)
+              ?.toDouble() ??
+          0.0,
       serviceCatalogItem: json['serviceCatalogItem'] != null
-          ? ServiceCatalogItemModel.fromJson(json['serviceCatalogItem'] as Map<String, dynamic>)
+          ? ServiceCatalogItemModel.fromJson(
+              json['serviceCatalogItem'] as Map<String, dynamic>)
           : json['ServiceCatalogItem'] != null
-              ? ServiceCatalogItemModel.fromJson(json['ServiceCatalogItem'] as Map<String, dynamic>)
+              ? ServiceCatalogItemModel.fromJson(
+                  json['ServiceCatalogItem'] as Map<String, dynamic>)
               : null,
     );
   }
@@ -306,15 +355,24 @@ class ServiceCatalogItemModel {
     }
 
     return ServiceCatalogItemModel(
-      serviceID: json['serviceID'] as int? ?? json['serviceId'] as int? ?? json['ServiceID'] as int? ?? 0,
-      serviceName: json['serviceName'] as String? ?? json['ServiceName'] as String? ?? '',
+      serviceID: json['serviceID'] as int? ??
+          json['serviceId'] as int? ??
+          json['ServiceID'] as int? ??
+          0,
+      serviceName: json['serviceName'] as String? ??
+          json['ServiceName'] as String? ??
+          '',
       category: parsedCategory,
       type: parsedType,
       price: (json['price'] ?? json['Price'] as num?)?.toDouble() ?? 0.0,
       pricingModel: parsedPricing,
       deliveryModel: parsedDelivery,
-      isAvailable: json['isAvailable'] as bool? ?? json['IsAvailable'] as bool? ?? false,
-      adminID: json['adminID'] as int? ?? json['adminId'] as int? ?? json['AdminID'] as int? ?? 0,
+      isAvailable:
+          json['isAvailable'] as bool? ?? json['IsAvailable'] as bool? ?? false,
+      adminID: json['adminID'] as int? ??
+          json['adminId'] as int? ??
+          json['AdminID'] as int? ??
+          0,
     );
   }
 

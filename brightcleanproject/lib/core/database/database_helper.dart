@@ -23,7 +23,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 5,
+      version: 6,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
       onOpen: (db) async {
@@ -62,6 +62,18 @@ class DatabaseHelper {
       }
     }
 
+    if (oldVersion < 6) {
+      final columns = await db.rawQuery("PRAGMA table_info(orders)");
+      final columnNames =
+          columns.map((column) => column['name'] as String).toSet();
+
+      if (columnNames.isNotEmpty &&
+          !columnNames.contains('requiresDriverRating')) {
+        await db.execute(
+            "ALTER TABLE orders ADD COLUMN requiresDriverRating INTEGER NOT NULL DEFAULT 0;");
+      }
+    }
+
     // CRIT-008: Version 4 added serviceId to cart_items for real backend service IDs
     // Single rebuild check to avoid double migration
     if (oldVersion < 5) {
@@ -72,7 +84,8 @@ class DatabaseHelper {
       bool needsRebuild = false;
       if (cartColumnNames.isNotEmpty) {
         // Need rebuild if upgrading from v4 or earlier
-        needsRebuild = (oldVersion < 5) || (!cartColumnNames.contains('serviceId'));
+        needsRebuild =
+            (oldVersion < 5) || (!cartColumnNames.contains('serviceId'));
       }
 
       if (needsRebuild) {
@@ -130,7 +143,8 @@ CREATE TABLE IF NOT EXISTS orders (
   isRated INTEGER NOT NULL DEFAULT 0,
   pickupDate TEXT,
   pickupTimeSlot TEXT,
-  category TEXT
+  category TEXT,
+  requiresDriverRating INTEGER NOT NULL DEFAULT 0
 )
 ''');
 
@@ -218,17 +232,16 @@ CREATE TABLE IF NOT EXISTS cart_items (
     // Check for invalid serviceId rows before migration
     if (cartColumnNames.contains('serviceId')) {
       final invalidRows = await db.rawQuery(
-        'SELECT COUNT(*) as count FROM cart_items WHERE serviceId IS NULL OR serviceId <= 0'
-      );
+          'SELECT COUNT(*) as count FROM cart_items WHERE serviceId IS NULL OR serviceId <= 0');
       final invalidCount = invalidRows.first['count'] as int;
 
       if (invalidCount > 0) {
-        debugPrint('WARNING: Found $invalidCount cart items with invalid serviceId (NULL or <=0). Removing them to continue migration.');
+        debugPrint(
+            'WARNING: Found $invalidCount cart items with invalid serviceId (NULL or <=0). Removing them to continue migration.');
         try {
           // Remove invalid cart rows to allow migration to proceed
           await db.execute(
-            'DELETE FROM cart_items WHERE serviceId IS NULL OR serviceId <= 0'
-          );
+              'DELETE FROM cart_items WHERE serviceId IS NULL OR serviceId <= 0');
           debugPrint('Successfully removed $invalidCount invalid cart items.');
         } catch (e) {
           debugPrint('Error removing invalid cart items: $e');

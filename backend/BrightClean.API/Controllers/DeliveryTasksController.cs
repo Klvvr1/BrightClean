@@ -452,16 +452,25 @@ namespace BrightClean.API.Controllers
                 return BadRequest("Only assigned or in-progress tasks can be completed.");
             }
 
+            var maxStep = MaxStepForTask(task);
+            if (task.CurrentStep < maxStep)
+            {
+                return BadRequest(new { message = $"Task must reach step {maxStep} before it can be completed." });
+            }
+
             task.Status = DeliveryTaskStatus.Completed;
             task.CompletedAt = DateTime.UtcNow;
-            task.CurrentStep = MaxStepForTask(task);
+            task.CurrentStep = maxStep;
             task.LastProgressUpdatedAt = task.CompletedAt;
 
             // State Machine transitions based on logistics stage
             if (task.StageNumber == 1)
             {
                 // Stage 1 (Pickup completed): Clothes are now at the laundry agent, work starts
-                task.Booking.Status = BookingStatus.InProgress;
+                if (task.Booking.Status == BookingStatus.Accepted)
+                {
+                    task.Booking.Status = BookingStatus.InProgress;
+                }
             }
             else if (task.StageNumber == 2)
             {

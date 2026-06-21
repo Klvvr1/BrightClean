@@ -245,8 +245,8 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
       final message = userMessageFromError(e);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-              isAr ? 'فشل قبول الطلب: $message' : 'Failed to claim order'),
+          content:
+              Text(isAr ? 'فشل قبول الطلب: $message' : 'Failed to claim order'),
           backgroundColor: AppColors.error,
         ),
       );
@@ -287,6 +287,21 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
         ),
       );
     }
+  }
+
+  Future<void> _confirmAndCompleteTask(
+      DriverProvider provider, bool isAr) async {
+    final confirmed = await _showCompletionCodeDialog(isAr);
+    if (!mounted || confirmed != true) return;
+    await _completeTask(provider, isAr);
+  }
+
+  Future<bool?> _showCompletionCodeDialog(bool isAr) async {
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => _CompletionCodeDialog(isAr: isAr),
+    );
   }
 
   Future<void> _updateProgress(
@@ -759,7 +774,7 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
 
                     const SizedBox(height: AppSpacing.xl),
 
-                    // Status Selection Label
+                    // Status Action Label
                     Text(
                       isAr ? 'تحديث حالة الطلب:' : 'Update Order Status:',
                       style: TextStyle(
@@ -769,44 +784,74 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
                     ),
                     const SizedBox(height: AppSpacing.sm),
 
-                    // Status Dropdown
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(AppSpacing.md),
                       decoration: BoxDecoration(
                         color: AppColors.primary.withValues(alpha: 0.05),
                         borderRadius: BorderRadius.circular(15),
                         border: Border.all(
                             color: AppColors.primary.withValues(alpha: 0.2)),
                       ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<int>(
-                          value: displayStep,
-                          isExpanded: true,
-                          icon: const Icon(Icons.arrow_drop_down_circle,
+                      child: Row(
+                        children: [
+                          const Icon(Icons.route_rounded,
                               color: AppColors.primary),
-                          dropdownColor: theme.cardColor,
-                          items: List.generate(currentStatuses.length, (index) {
-                            return DropdownMenuItem(
-                              value: index,
-                              child: Text(
-                                currentStatuses[index],
-                                style: TextStyle(
-                                  color: isDark ? Colors.white : Colors.black87,
-                                  fontWeight: displayStep == index
-                                      ? FontWeight.bold
-                                      : FontWeight.normal,
-                                ),
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(
+                            child: Text(
+                              displayStep < currentStatuses.length - 1
+                                  ? '${isAr ? 'الخطوة التالية:' : 'Next step:'} ${currentStatuses[displayStep + 1]}'
+                                  : (isAr
+                                      ? 'وصلت إلى آخر خطوة. يمكنك إنهاء المهمة.'
+                                      : 'Last step reached. You can complete the task.'),
+                              style: TextStyle(
+                                color: isDark ? Colors.white : Colors.black87,
+                                fontWeight: FontWeight.w600,
                               ),
-                            );
-                          }),
-                          onChanged: (newValue) {
-                            if (newValue != null && isTaskEditable) {
-                              _updateProgress(provider, newValue, isAr);
-                            }
-                          },
-                        ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
+                    if (displayStep < currentStatuses.length - 1 &&
+                        isTaskEditable) ...[
+                      const SizedBox(height: AppSpacing.md),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 55,
+                        child: ElevatedButton.icon(
+                          onPressed: provider.isActionLoading
+                              ? null
+                              : () => _updateProgress(
+                                  provider, displayStep + 1, isAr),
+                          icon: provider.isActionLoading
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Icon(Icons.arrow_forward_rounded),
+                          label: Text(
+                            isAr ? 'تحديث للخطوة التالية' : 'Move to Next Step',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(15),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
 
                     const SizedBox(height: AppSpacing.xl),
 
@@ -897,7 +942,7 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
                         child: ElevatedButton(
                           onPressed: provider.isActionLoading
                               ? null
-                              : () => _completeTask(provider, isAr),
+                              : () => _confirmAndCompleteTask(provider, isAr),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.success,
                             shape: RoundedRectangleBorder(
@@ -921,6 +966,70 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _CompletionCodeDialog extends StatefulWidget {
+  final bool isAr;
+
+  const _CompletionCodeDialog({required this.isAr});
+
+  @override
+  State<_CompletionCodeDialog> createState() => _CompletionCodeDialogState();
+}
+
+class _CompletionCodeDialogState extends State<_CompletionCodeDialog> {
+  final TextEditingController _codeController = TextEditingController();
+  String? _errorText;
+
+  @override
+  void dispose() {
+    _codeController.dispose();
+    super.dispose();
+  }
+
+  void _confirm() {
+    if (_codeController.text.trim() != '1234') {
+      setState(() {
+        _errorText =
+            widget.isAr ? 'رمز التحقق غير صحيح' : 'Invalid verification code';
+      });
+      return;
+    }
+    Navigator.pop(context, true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.isAr ? 'رمز إكمال المهمة' : 'Completion Code'),
+      content: TextField(
+        controller: _codeController,
+        autofocus: true,
+        keyboardType: TextInputType.number,
+        maxLength: 4,
+        inputFormatters: [
+          FilteringTextInputFormatter.digitsOnly,
+          LengthLimitingTextInputFormatter(4),
+        ],
+        decoration: InputDecoration(
+          labelText: widget.isAr ? 'أدخل الرمز' : 'Enter code',
+          hintText: '1234',
+          errorText: _errorText,
+          counterText: '',
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: Text(widget.isAr ? 'إلغاء' : 'Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: _confirm,
+          child: Text(widget.isAr ? 'تأكيد' : 'Confirm'),
+        ),
+      ],
     );
   }
 }

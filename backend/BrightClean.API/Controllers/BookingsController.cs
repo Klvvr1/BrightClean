@@ -104,6 +104,15 @@ namespace BrightClean.API.Controllers
             return null;
         }
 
+        private async Task<bool> IsFirstDeliveryStageCompletedAsync(int bookingId)
+        {
+            return await _context.DeliveryTasks.AnyAsync(t =>
+                t.BookingID == bookingId &&
+                t.StageNumber == 1 &&
+                t.Type == TaskType.PickupFromClient &&
+                t.Status == DeliveryTaskStatus.Completed);
+        }
+
         // GET: /api/bookings
         [HttpGet]
         public async Task<IActionResult> GetBookings()
@@ -165,6 +174,7 @@ namespace BrightClean.API.Controllers
                     b.ExpiresAt,
                     b.ScheduledAt,
                     b.SpecialInstructions,
+                    hasDeliveryTasks = b.DeliveryTasks.Any(),
                     payment = b.Payment == null ? null : new
                     {
                         b.Payment.PaymentID,
@@ -663,7 +673,10 @@ namespace BrightClean.API.Controllers
         [Authorize(Roles = "LaundryAgent")]
         public async Task<IActionResult> StartBookingWork(int bookingId)
         {
-            var booking = await _context.Bookings.FindAsync(bookingId);
+            var booking = await _context.Bookings
+                .Include(b => b.BookingItems)
+                    .ThenInclude(bi => bi.ServiceCatalogItem)
+                .FirstOrDefaultAsync(b => b.BookingID == bookingId);
 
             if (booking == null)
             {
@@ -679,6 +692,13 @@ namespace BrightClean.API.Controllers
             if (booking.Status != BookingStatus.Accepted)
             {
                 return BadRequest("Only accepted bookings can be moved to in progress.");
+            }
+
+            if (booking.BookingItems.Any(bi => bi.ServiceCatalogItem.DeliveryModel == DeliveryModel.TwoStage) &&
+                !await IsFirstDeliveryStageCompletedAsync(booking.BookingID))
+            {
+                _logger.LogWarning("Laundry agent {AgentId} tried to start booking {BookingId} before pickup delivery completed.", agentId, booking.BookingID);
+                return BadRequest(new { message = "لا يمكن بدء معالجة الطلب قبل تسليم الملابس إلى المغسلة." });
             }
 
             booking.Status = BookingStatus.InProgress;
@@ -724,6 +744,12 @@ namespace BrightClean.API.Controllers
             if (!booking.BookingItems.Any(bi => bi.ServiceCatalogItem.DeliveryModel == DeliveryModel.TwoStage))
             {
                 return BadRequest("Technician dispatch bookings should be completed by the laundry agent, not marked ready for delivery.");
+            }
+
+            if (!await IsFirstDeliveryStageCompletedAsync(booking.BookingID))
+            {
+                _logger.LogWarning("Laundry agent {AgentId} tried to mark booking {BookingId} ready before pickup delivery completed.", agentId, booking.BookingID);
+                return BadRequest(new { message = "لا يمكن تجهيز الطلب للتسليم قبل وصول الملابس إلى المغسلة." });
             }
 
             booking.Status = BookingStatus.Ready;
@@ -857,6 +883,7 @@ namespace BrightClean.API.Controllers
             // Load booking with existing rating
             var booking = await _context.Bookings
                 .Include(b => b.Rating)
+                .Include(b => b.DeliveryTasks)
                 .FirstOrDefaultAsync(b => b.BookingID == id);
 
             if (booking == null)
@@ -892,6 +919,18 @@ namespace BrightClean.API.Controllers
             if (dto.DeliveryRating.HasValue && (dto.DeliveryRating.Value < 1 || dto.DeliveryRating.Value > 5))
             {
                 return BadRequest(new { message = "تقييم التوصيل يجب أن يكون بين 1 و 5." });
+            }
+
+            var hasDeliveryTasks = booking.DeliveryTasks.Any();
+            if (hasDeliveryTasks && !dto.DeliveryRating.HasValue)
+            {
+                _logger.LogWarning("Rejected rating for booking {BookingID} by client {ClientID}: delivery rating is required because booking has delivery tasks.", id, clientId);
+                return BadRequest(new { message = "يجب إرسال تقييم المندوب لهذا الحجز لأنه يحتوي على مهمة توصيل." });
+            }
+
+            if (dto.DeliveryRating.HasValue && !hasDeliveryTasks)
+            {
+                return BadRequest(new { message = "لا يمكن تقييم المندوب لهذا الحجز لأنه لا يحتوي على مهمة توصيل." });
             }
 
             var rating = new BookingRating
