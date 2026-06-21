@@ -104,15 +104,31 @@ namespace BrightClean.API.Controllers
                 return BadRequest(new { message = "Notification message cannot exceed 1000 characters." });
             }
 
-            if (!TryParseNotificationTargetRole(dto.TargetRole, out var targetRole))
+            var targetLabel = "All";
+            List<int> targetUserIds;
+            if (IsAllNotificationTarget(dto.TargetRole))
             {
-                return BadRequest(new { message = "Invalid notification target role." });
+                targetUserIds = await _context.Users
+                    .Where(u => u.IsApproved &&
+                        (u.Role == UserRole.Client ||
+                         u.Role == UserRole.DeliveryStaff ||
+                         u.Role == UserRole.LaundryAgent))
+                    .Select(u => u.UserID)
+                    .ToListAsync();
             }
+            else
+            {
+                if (!TryParseNotificationTargetRole(dto.TargetRole, out var targetRole))
+                {
+                    return BadRequest(new { message = "Invalid notification target role." });
+                }
 
-            var targetUserIds = await _context.Users
-                .Where(u => u.Role == targetRole && u.IsApproved)
-                .Select(u => u.UserID)
-                .ToListAsync();
+                targetLabel = targetRole.ToString();
+                targetUserIds = await _context.Users
+                    .Where(u => u.Role == targetRole && u.IsApproved)
+                    .Select(u => u.UserID)
+                    .ToListAsync();
+            }
 
             var trimmedTitle = dto.Title.Trim();
             var trimmedMessage = dto.Message.Trim();
@@ -135,19 +151,19 @@ namespace BrightClean.API.Controllers
                 Action = "SEND_NOTIFICATION",
                 TargetEntity = "Notification",
                 TargetID = 0,
-                Details = $"Sent notification to {targetRole}. Recipient count: {targetUserIds.Count}.",
+                Details = $"Sent notification to {targetLabel}. Recipient count: {targetUserIds.Count}.",
                 IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
                 PerformedAt = now
             });
 
             await _context.SaveChangesAsync();
 
-            _logger.LogInformation("Admin {AdminId} sent notification to {TargetRole}. Recipients: {RecipientCount}.", adminId.Value, targetRole, targetUserIds.Count);
+            _logger.LogInformation("Admin {AdminId} sent notification to {TargetRole}. Recipients: {RecipientCount}.", adminId.Value, targetLabel, targetUserIds.Count);
 
             return Ok(new
             {
                 message = "Notification sent successfully.",
-                targetRole = targetRole.ToString(),
+                targetRole = targetLabel,
                 recipientCount = targetUserIds.Count
             });
         }
@@ -1487,6 +1503,12 @@ namespace BrightClean.API.Controllers
             return false;
         }
 
+        private bool IsAllNotificationTarget(string? value)
+        {
+            return !string.IsNullOrWhiteSpace(value) &&
+                value.Trim().Equals("All", StringComparison.OrdinalIgnoreCase);
+        }
+
         private async Task<IActionResult?> ValidateOfferCreateDto(AdminOfferCreateDto? dto)
         {
             if (dto == null)
@@ -1579,6 +1601,12 @@ namespace BrightClean.API.Controllers
                 return BadRequest(new { message = "Invalid service type." });
             }
 
+            if (!IsGeneralServiceType((ServiceType)dto.Type))
+            {
+                _logger.LogWarning("Rejected service catalog upsert with retired service type {ServiceType}.", dto.Type);
+                return BadRequest(new { message = "Unsupported service type for the general service catalog." });
+            }
+
             if (!Enum.IsDefined(typeof(PricingModel), dto.PricingModel))
             {
                 return BadRequest(new { message = "Invalid pricing model." });
@@ -1590,6 +1618,17 @@ namespace BrightClean.API.Controllers
             }
 
             return null;
+        }
+
+        private bool IsGeneralServiceType(ServiceType type)
+        {
+            return type == ServiceType.WashAndIron ||
+                type == ServiceType.Carpets ||
+                type == ServiceType.HomeCleaning ||
+                type == ServiceType.ACCleaning ||
+                type == ServiceType.WaterTankCleaning ||
+                type == ServiceType.SolarPanelCleaning ||
+                type == ServiceType.CarWash;
         }
     }
 

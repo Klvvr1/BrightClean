@@ -6,6 +6,7 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_styles.dart';
 import '../../../../core/network/api_client.dart';
+import '../../../../core/utils/general_service_catalog.dart';
 import '../../../../core/widgets/app_snack_bars.dart';
 import '../data/models/booking_model.dart';
 import '../data/providers/cart_provider.dart';
@@ -683,6 +684,16 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
     };
 
     if (_catalogServices.isNotEmpty) {
+      final generalServiceId = resolveGeneralServiceId(
+        widget.serviceType,
+        selectedOption.id,
+        {
+          for (final service in _catalogServices.where((s) => s.isAvailable))
+            service.serviceID: service.serviceName,
+        },
+      );
+      if (generalServiceId > 0) return generalServiceId;
+
       final catalogName = arabicToServiceName[itemName];
       final targetType = _targetServiceType();
 
