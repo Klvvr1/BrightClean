@@ -75,99 +75,58 @@ namespace BrightClean.Infrastructure
             }
 
             context.SaveChanges();
+            Console.WriteLine("Service catalog seeded with 7 general services.");
         }
 
         private static IEnumerable<ServiceCatalogItem> DefaultServices()
         {
             yield return CreateService(
-                "غسيل وكي",
+                "الملابس",
                 ServiceCategory.Laundry,
                 ServiceType.WashAndIron,
                 1200m,
                 PricingModel.PerItem,
                 DeliveryModel.TwoStage);
             yield return CreateService(
-                "تنظيف جاف",
-                ServiceCategory.Laundry,
-                ServiceType.DryClean,
-                1800m,
-                PricingModel.PerItem,
-                DeliveryModel.TwoStage);
-            yield return CreateService(
-                "كي فقط",
-                ServiceCategory.Laundry,
-                ServiceType.IronOnly,
-                700m,
-                PricingModel.PerItem,
-                DeliveryModel.TwoStage);
-            yield return CreateService(
-                "ستائر",
-                ServiceCategory.HomeWovens,
-                ServiceType.Curtains,
-                2500m,
-                PricingModel.PerItem,
-                DeliveryModel.TwoStage);
-            yield return CreateService(
-                "مفارش",
-                ServiceCategory.HomeWovens,
-                ServiceType.Bedsheets,
-                1500m,
-                PricingModel.PerItem,
-                DeliveryModel.TwoStage);
-            yield return CreateService(
-                "بطانيات",
-                ServiceCategory.HomeWovens,
-                ServiceType.Blankets,
-                2000m,
-                PricingModel.PerItem,
-                DeliveryModel.TwoStage);
-            yield return CreateService(
-                "سجاد",
+                "السجاد والمفروشات",
                 ServiceCategory.HomeWovens,
                 ServiceType.Carpets,
                 2500m,
                 PricingModel.PerItem,
                 DeliveryModel.TwoStage);
             yield return CreateService(
-                "تنظيف منزل",
-                ServiceCategory.HomeServices,
-                ServiceType.HomeCleaning,
-                15000m,
-                PricingModel.FlatFee,
-                DeliveryModel.TechnicianDispatch);
-            yield return CreateService(
-                "تنظيف مكيفات",
-                ServiceCategory.HomeServices,
-                ServiceType.ACCleaning,
-                6000m,
-                PricingModel.FlatFee,
-                DeliveryModel.TechnicianDispatch);
-            yield return CreateService(
-                "تنظيف خزانات",
-                ServiceCategory.HomeServices,
-                ServiceType.WaterTankCleaning,
-                10000m,
-                PricingModel.FlatFee,
-                DeliveryModel.TechnicianDispatch);
-            yield return CreateService(
-                "تنظيف ألواح شمسية",
-                ServiceCategory.HomeServices,
-                ServiceType.SolarPanelCleaning,
-                12000m,
-                PricingModel.FlatFee,
-                DeliveryModel.TechnicianDispatch);
-            yield return CreateService(
-                "غسيل سيارة",
+                "السيارات",
                 ServiceCategory.VehicleWash,
                 ServiceType.CarWash,
                 5000m,
                 PricingModel.FlatFee,
                 DeliveryModel.TechnicianDispatch);
             yield return CreateService(
-                "غسيل دراجة",
-                ServiceCategory.VehicleWash,
-                ServiceType.MotorcycleWash,
-                2500m,
+                "تنظيف المكيفات",
+                ServiceCategory.HomeServices,
+                ServiceType.ACCleaning,
+                6000m,
+                PricingModel.FlatFee,
+                DeliveryModel.TechnicianDispatch);
+            yield return CreateService(
+                "عاملات النظافة",
+                ServiceCategory.HomeServices,
+                ServiceType.HomeCleaning,
+                15000m,
+                PricingModel.FlatFee,
+                DeliveryModel.TechnicianDispatch);
+            yield return CreateService(
+                "تنظيف الخزانات",
+                ServiceCategory.HomeServices,
+                ServiceType.WaterTankCleaning,
+                10000m,
+                PricingModel.FlatFee,
+                DeliveryModel.TechnicianDispatch);
+            yield return CreateService(
+                "غسيل الألواح الشمسية",
+                ServiceCategory.HomeServices,
+                ServiceType.SolarPanelCleaning,
+                12000m,
                 PricingModel.FlatFee,
                 DeliveryModel.TechnicianDispatch);
         }

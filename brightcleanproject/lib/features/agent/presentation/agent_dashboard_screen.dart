@@ -413,6 +413,10 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
           final activeCatalogServices =
               await _bookingRepository.getMyServices(agentId);
           for (final service in activeCatalogServices) {
+            final existing = servicesById[service.serviceID];
+            if (existing != null && existing.pendingActivation) {
+              continue;
+            }
             servicesById[service.serviceID] = AgentServiceModel(
               agentId: agentId,
               serviceId: service.serviceID,

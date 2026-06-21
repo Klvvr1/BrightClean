@@ -9,10 +9,12 @@ import 'package:flutter_test/flutter_test.dart';
 
 class _PostTrackingApiClient extends BaseApiClient {
   String? requestedEndpoint;
+  Map<String, dynamic>? requestedBody;
 
   @override
   Future<dynamic> post(String endpoint, {Map<String, dynamic>? body}) async {
     requestedEndpoint = endpoint;
+    requestedBody = body;
     return {'message': 'ok'};
   }
 }
@@ -67,6 +69,21 @@ void main() {
     await repository.rejectUser(42);
 
     expect(apiClient.requestedEndpoint, '/api/admin/reject/42');
+  });
+
+  test('AdminRepositoryImpl sends all-users notification target unchanged',
+      () async {
+    final apiClient = _PostTrackingApiClient();
+    final repository = AdminRepositoryImpl(apiClient: apiClient);
+
+    await repository.sendNotification({
+      'title': 'System notice',
+      'message': 'Hello',
+      'targetRole': 'All',
+    });
+
+    expect(apiClient.requestedEndpoint, '/api/admin/notifications');
+    expect(apiClient.requestedBody?['targetRole'], 'All');
   });
 
   test('AdminProvider refreshes pending, approved staff, and audit logs after approval',

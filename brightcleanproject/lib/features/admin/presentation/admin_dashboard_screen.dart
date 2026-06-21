@@ -48,19 +48,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   ];
 
   static const List<String> _serviceTypeLabels = [
-    'غسيل وكي',
-    'تنظيف جاف',
-    'كي فقط',
-    'ستائر',
-    'مفارش',
-    'بطانيات',
-    'سجاد',
-    'تنظيف منزل',
-    'تنظيف مكيفات',
-    'تنظيف خزانات',
-    'تنظيف ألواح شمسية',
-    'غسيل سيارة',
-    'غسيل دراجة',
+    'الملابس',
+    'غير مستخدم',
+    'غير مستخدم',
+    'غير مستخدم',
+    'غير مستخدم',
+    'غير مستخدم',
+    'السجاد والمفروشات',
+    'عاملات النظافة',
+    'تنظيف المكيفات',
+    'تنظيف الخزانات',
+    'غسيل الألواح الشمسية',
+    'السيارات',
+    'غير مستخدم',
   ];
 
   static const List<String> _pricingModelLabels = [
@@ -1126,6 +1126,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             'vehiclePlate': u.plateNumber ?? 'غير متوفر',
             'requestedServices': u.requestedServices
                 .map((service) => service.serviceName)
+                .where((name) => name.trim().isNotEmpty)
                 .toList(),
             'commercialRegisterImage': documentUrl('CommercialRegistration'),
             'nationalIdImage': documentUrl('NationalID'),
@@ -1861,6 +1862,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   laundry, ['id', 'userID', 'userId', 'UserID']);
               final selected = agentId == _selectedLaundryAgentId;
               final serviceIds = _agentServiceIds(laundry);
+              final serviceNames = _serviceNamesForIds(
+                serviceIds,
+                adminProvider.services,
+              );
               final businessName = AdminServiceModel.readString(
                 laundry,
                 ['businessName', 'BusinessName', 'name'],
@@ -1897,7 +1902,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   subtitle: Text(
-                    'ID: $agentId • الخدمات: ${serviceIds.length} • الحالة: ${storeClosed ? "مغلقة" : "متاحة"}',
+                    'ID: $agentId • الخدمات: ${serviceNames.length} • الحالة: ${storeClosed ? "مغلقة" : "متاحة"}',
                   ),
                   trailing: selected
                       ? const Icon(Icons.check_circle, color: AppColors.success)
@@ -1915,7 +1920,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     final assignableServices = adminProvider.services
         .where((service) => service.isAvailable && !service.isDeleted)
         .toList();
-
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: AppStyles.surface(context),
@@ -2200,6 +2204,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return 'غير معروف';
   }
 
+  List<String> _serviceNamesForIds(
+    Iterable<int> serviceIds,
+    Iterable<AdminServiceModel> services,
+  ) {
+    final ids = serviceIds.toSet();
+    return services
+        .where((service) => ids.contains(service.serviceID))
+        .map((service) => service.serviceName)
+        .where((name) => name.trim().isNotEmpty)
+        .toList();
+  }
+
   List<Map<dynamic, dynamic>> _serviceAwareLaundryAgents(
       AdminProvider adminProvider) {
     final serviceAwareAgents = adminProvider.laundryAgentsWithServices
@@ -2314,9 +2330,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         await _readRequestAgentServiceIds(provider, request);
     if (!mounted) return;
 
-    final currentServices = provider.services
-        .where((service) => currentServiceIds.contains(service.serviceID))
-        .toList();
+    final currentServiceNames = _serviceNamesForIds(
+      currentServiceIds,
+      provider.services,
+    );
     final isActivation =
         request.requestType == ActivationRequestType.activation;
     final resultingServices = isActivation
@@ -2325,10 +2342,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             request.serviceId,
           }
         : currentServiceIds.where((id) => id != request.serviceId).toSet();
-    final resultingServiceNames = provider.services
-        .where((service) => resultingServices.contains(service.serviceID))
-        .map((service) => service.serviceName)
-        .toList();
+    final resultingServiceNames = _serviceNamesForIds(
+      resultingServices,
+      provider.services,
+    );
+    final requestServiceNames = _serviceNamesForIds(
+      [request.serviceId],
+      provider.services,
+    );
+    final requestServiceName = requestServiceNames.isEmpty
+        ? request.serviceName
+        : requestServiceNames.first;
 
     showDialog<void>(
       context: context,
@@ -2351,7 +2375,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   _buildServiceNameWrap(
-                    currentServices.map((service) => service.serviceName),
+                    currentServiceNames,
                     emptyText: 'لا توجد خدمات مفعلة حالياً',
                   ),
                   const Divider(height: 24),
@@ -2359,7 +2383,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     isActivation
                         ? 'الخدمة التي ستتم إضافتها'
                         : 'الخدمة التي ستتم إزالتها',
-                    request.serviceName,
+                    requestServiceName,
                   ),
                   _buildRequestDetailRow(
                     'نوع الطلب',
@@ -3502,6 +3526,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 initialValue: selectedTargetRole,
                 decoration: const InputDecoration(labelText: 'المستلمون'),
                 items: const [
+                  DropdownMenuItem(value: 'All', child: Text('كل المستخدمين')),
                   DropdownMenuItem(value: 'Client', child: Text('العملاء')),
                   DropdownMenuItem(
                       value: 'DeliveryStaff', child: Text('المناديب')),
