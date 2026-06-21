@@ -246,7 +246,9 @@ namespace BrightClean.API.Migrations
                 FROM BookingItems bookingItem
                 INNER JOIN #ServiceMap serviceMap ON serviceMap.SourceServiceID = bookingItem.ServiceID;
 
-                DELETE service
+                UPDATE service
+                SET IsDeleted = CAST(1 AS bit),
+                    IsAvailable = CAST(0 AS bit)
                 FROM ServiceCatalogItems service
                 INNER JOIN #ServiceMap serviceMap ON serviceMap.SourceServiceID = service.ServiceID;
             ");
@@ -254,6 +256,12 @@ namespace BrightClean.API.Migrations
 
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.Sql(@"
+                UPDATE ServiceCatalogItems
+                SET IsDeleted = CAST(0 AS bit),
+                    IsAvailable = CAST(1 AS bit)
+                WHERE Type NOT IN (0, 6, 7, 8, 9, 10, 11);
+            ");
         }
     }
 }

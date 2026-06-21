@@ -1601,6 +1601,12 @@ namespace BrightClean.API.Controllers
                 return BadRequest(new { message = "Invalid service type." });
             }
 
+            if (!IsGeneralServiceType((ServiceType)dto.Type))
+            {
+                _logger.LogWarning("Rejected service catalog upsert with retired service type {ServiceType}.", dto.Type);
+                return BadRequest(new { message = "Unsupported service type for the general service catalog." });
+            }
+
             if (!Enum.IsDefined(typeof(PricingModel), dto.PricingModel))
             {
                 return BadRequest(new { message = "Invalid pricing model." });
@@ -1612,6 +1618,17 @@ namespace BrightClean.API.Controllers
             }
 
             return null;
+        }
+
+        private bool IsGeneralServiceType(ServiceType type)
+        {
+            return type == ServiceType.WashAndIron ||
+                type == ServiceType.Carpets ||
+                type == ServiceType.HomeCleaning ||
+                type == ServiceType.ACCleaning ||
+                type == ServiceType.WaterTankCleaning ||
+                type == ServiceType.SolarPanelCleaning ||
+                type == ServiceType.CarWash;
         }
     }
 

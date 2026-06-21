@@ -63,6 +63,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     'غير مستخدم',
   ];
 
+  static const List<int> _generalServiceTypeValues = [0, 6, 7, 8, 9, 10, 11];
+
   static const List<String> _pricingModelLabels = [
     'بالقطعة',
     'سعر ثابت',
@@ -2645,7 +2647,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       text: service == null ? '' : service.price.toStringAsFixed(2),
     );
     int category = service?.category ?? 0;
-    int type = service?.type ?? 0;
+    int type = _generalServiceTypeValues.contains(service?.type)
+        ? service!.type
+        : _generalServiceTypeValues.first;
     int pricingModel = service?.pricingModel ?? 0;
     int deliveryModel = service?.deliveryModel ?? 0;
     bool isAvailable = service?.isAvailable ?? true;
@@ -2687,6 +2691,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   value: type,
                   label: 'النوع',
                   labels: _serviceTypeLabels,
+                  allowedValues: _generalServiceTypeValues,
                   onChanged: (value) => setDialogState(() => type = value),
                 ),
                 const SizedBox(height: AppSpacing.sm),
@@ -2793,20 +2798,24 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     required String label,
     required List<String> labels,
     required ValueChanged<int> onChanged,
+    List<int>? allowedValues,
   }) {
+    final itemValues =
+        allowedValues ?? List<int>.generate(labels.length, (i) => i);
     return DropdownButtonFormField<int>(
-      initialValue: value >= 0 && value < labels.length ? value : 0,
+      initialValue: itemValues.contains(value) ? value : itemValues.first,
       decoration: InputDecoration(
         labelText: label,
         border: const OutlineInputBorder(),
       ),
-      items: List.generate(
-        labels.length,
-        (index) => DropdownMenuItem<int>(
-          value: index,
-          child: Text(labels[index]),
-        ),
-      ),
+      items: itemValues
+          .map(
+            (index) => DropdownMenuItem<int>(
+              value: index,
+              child: Text(labels[index]),
+            ),
+          )
+          .toList(),
       onChanged: (value) {
         if (value != null) onChanged(value);
       },
@@ -3157,8 +3166,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                 Navigator.pop(context);
                                 _rejectStaff(request);
                               },
-                        icon:
-                            const Icon(Icons.highlight_off, color: Colors.white),
+                        icon: const Icon(Icons.highlight_off,
+                            color: Colors.white),
                         label: const Text('رفض الطلب',
                             style: TextStyle(
                                 color: Colors.white,

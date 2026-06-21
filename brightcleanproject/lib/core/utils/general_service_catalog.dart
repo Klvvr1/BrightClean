@@ -53,7 +53,7 @@ int resolveGeneralServiceId(
   String optionId,
   Map<int, String> serviceNamesById,
 ) {
-  final targetName = generalServiceNameForDetail(serviceType, optionId);
+  final targetName = generalServiceNameForDetail(serviceType, optionId).trim();
   for (final entry in serviceNamesById.entries) {
     if (entry.value.trim() == targetName) {
       return entry.key;
