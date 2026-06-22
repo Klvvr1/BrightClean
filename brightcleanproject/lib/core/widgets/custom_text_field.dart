@@ -39,12 +39,19 @@ class _CustomTextFieldState extends State<CustomTextField> {
 
   @override
   Widget build(BuildContext context) {
+    final inputFormatters = widget.isPassword
+        ? [
+            ...?widget.inputFormatters,
+            FilteringTextInputFormatter.deny(RegExp(r'[\u0600-\u06FF]')),
+          ]
+        : widget.inputFormatters;
+
     return TextFormField(
       controller: widget.controller,
       obscureText: _obscureText,
       keyboardType: widget.keyboardType,
       validator: widget.validator,
-      inputFormatters: widget.inputFormatters,
+      inputFormatters: inputFormatters,
       maxLines: widget.maxLines,
       decoration: InputDecoration(
         hintText: widget.hintText,

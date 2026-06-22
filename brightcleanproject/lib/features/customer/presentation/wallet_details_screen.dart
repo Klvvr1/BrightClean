@@ -13,8 +13,8 @@ class WalletDetailsScreen extends StatelessWidget {
   final String balance;
   final VoidCallback? onDepositSuccess;
 
-  const WalletDetailsScreen({super.key, required this.balance, this.onDepositSuccess});
-
+  const WalletDetailsScreen(
+      {super.key, required this.balance, this.onDepositSuccess});
 
   @override
   Widget build(BuildContext context) {
@@ -44,7 +44,8 @@ class WalletDetailsScreen extends StatelessWidget {
                 ],
               ),
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxl, horizontal: AppSpacing.md),
+                padding: const EdgeInsets.symmetric(
+                    vertical: AppSpacing.xxl, horizontal: AppSpacing.md),
                 child: Column(
                   children: [
                     ClipRRect(
@@ -59,7 +60,8 @@ class WalletDetailsScreen extends StatelessWidget {
                     Text(
                       'الرصيد الحالي',
                       style: theme.textTheme.titleMedium?.copyWith(
-                        color: theme.colorScheme.onPrimary.withValues(alpha: 0.8),
+                        color:
+                            theme.colorScheme.onPrimary.withValues(alpha: 0.8),
                       ),
                     ),
                     const SizedBox(height: AppSpacing.sm),
@@ -77,13 +79,15 @@ class WalletDetailsScreen extends StatelessWidget {
             const SizedBox(height: AppSpacing.xxl),
             Text(
               'شحن الرصيد',
-              style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              style: theme.textTheme.titleLarge
+                  ?.copyWith(fontWeight: FontWeight.bold),
               textAlign: TextAlign.right,
             ),
             const SizedBox(height: AppSpacing.md),
             Text(
               'اختر وسيلة الإيداع المناسبة لك:',
-              style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
               textAlign: TextAlign.right,
             ),
             const SizedBox(height: AppSpacing.xl),
@@ -122,10 +126,13 @@ class WalletDetailsScreen extends StatelessWidget {
         leading: Icon(icon, color: theme.colorScheme.primary),
         title: Text(
           title,
-          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+          style: theme.textTheme.titleMedium
+              ?.copyWith(fontWeight: FontWeight.w600),
           textAlign: TextAlign.right,
         ),
-        trailing: Icon(Icons.arrow_forward_ios, size: 16, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
+        trailing: Icon(Icons.arrow_forward_ios,
+            size: 16,
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
         onTap: onTap,
       ),
     );
@@ -142,11 +149,13 @@ class WalletDetailsScreen extends StatelessWidget {
 
     showDialog(
       context: context,
-      builder: (context) => WillPopScope(
-        onWillPop: () async {
-          amountController.dispose();
-          operationNumberController.dispose();
-          return true;
+      builder: (context) => PopScope(
+        canPop: true,
+        onPopInvokedWithResult: (didPop, result) {
+          if (didPop) {
+            amountController.dispose();
+            operationNumberController.dispose();
+          }
         },
         child: StatefulBuilder(
           builder: (context, setState) {
@@ -163,174 +172,203 @@ class WalletDetailsScreen extends StatelessWidget {
             return Directionality(
               textDirection: TextDirection.rtl,
               child: AlertDialog(
-              title: Text('إيداع عبر $method'),
-              shape: RoundedRectangleBorder(borderRadius: AppRadius.card),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('يرجى تحويل المبلغ إلى الحساب التالي:', style: theme.textTheme.bodyMedium),
-                    const SizedBox(height: AppSpacing.sm),
-                    SelectableText(
-                      accountNumber,
-                      style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-
-                    // ── حقل المبلغ (جديد) ──
-                    TextField(
-                      controller: amountController,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
-                      ],
-                      decoration: InputDecoration(
-                        labelText: 'قيمة الإيداع',
-                        hintText: '0.00',
-                        suffixText: 'ريال',
-                        border: OutlineInputBorder(borderRadius: AppRadius.button),
-                        prefixIcon: const Icon(Icons.payments_outlined),
-                      ),
-                      onChanged: (_) => setState(() {}),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-
-                    Text('يجب إرفاق صورة السند أو ملف PDF/DOC لتأكيد العملية.', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.7))),
-                    const SizedBox(height: AppSpacing.md),
-                    ElevatedButton.icon(
-                      onPressed: () async {
-                        if (isPicking) return;
-                        setState(() => isPicking = true);
-
-                        try {
-                          final result = await FilePicker.pickFiles(
-                            type: FileType.any,
-                          );
-
-                          if (result != null && result.files.isNotEmpty) {
-                            final file = result.files.first;
-                            final ext = file.extension?.toLowerCase() ?? '';
-
-                            if (['jpg', 'jpeg', 'png', 'pdf', 'doc', 'docx'].contains(ext)) {
-                              setState(() {
-                                selectedFileName = file.name;
-                                selectedFilePath = file.path;
-                              });
-                            } else {
-                              setState(() {
-                                selectedFileName = null;
-                                selectedFilePath = null;
-                              });
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: const Text('يرجى اختيار صورة، ملف PDF، أو مستند DOC.'),
-                                    backgroundColor: theme.colorScheme.error,
-                                  ),
-                                );
-                              }
-                            }
-                          }
-                        } catch (e) {
-                          debugPrint('Error picking file: $e');
-                        } finally {
-                          setState(() => isPicking = false);
-                        }
-                      },
-                      icon: isPicking
-                          ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                          : const Icon(Icons.attach_file),
-                      label: const Text('إرفاق ملف'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: theme.colorScheme.primaryContainer,
-                        foregroundColor: theme.colorScheme.onPrimaryContainer,
-                      ),
-                    ),
-                    if (selectedFileName != null) ...[
+                title: Text('إيداع عبر $method'),
+                shape: RoundedRectangleBorder(borderRadius: AppRadius.card),
+                content: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('يرجى تحويل المبلغ إلى الحساب التالي:',
+                          style: theme.textTheme.bodyMedium),
                       const SizedBox(height: AppSpacing.sm),
-                      Text(
-                        'الملف المرفق: $selectedFileName',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: AppColors.success,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      SelectableText(
+                        accountNumber,
+                        style: theme.textTheme.titleLarge
+                            ?.copyWith(fontWeight: FontWeight.bold),
                       ),
-                    ],
-                    const SizedBox(height: AppSpacing.md),
-                    TextField(
-                      controller: operationNumberController,
-                      decoration: InputDecoration(
-                        hintText: 'رقم العملية (اختياري)',
-                        border: OutlineInputBorder(borderRadius: AppRadius.button),
-                      ),
-                      keyboardType: TextInputType.number,
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    amountController.dispose();
-                    operationNumberController.dispose();
-                    Navigator.pop(context);
-                  },
-                  child: Text('إلغاء', style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.6))),
-                ),
-                ElevatedButton(
-                  onPressed: canSubmit
-                      ? () async {
-                          if (!context.mounted) return;
-                          setState(() => isSubmitting = true);
+                      const SizedBox(height: AppSpacing.md),
 
-                          final depositAmount = double.parse(amountController.text.trim());
-                          final walletProvider = context.read<WalletProvider>();
+                      // ── حقل المبلغ (جديد) ──
+                      TextField(
+                        controller: amountController,
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
+                        inputFormatters: [
+                          FilteringTextInputFormatter.allow(
+                              RegExp(r'^\d+\.?\d{0,2}')),
+                        ],
+                        decoration: InputDecoration(
+                          labelText: 'قيمة الإيداع',
+                          hintText: '0.00',
+                          suffixText: 'ريال',
+                          border: OutlineInputBorder(
+                              borderRadius: AppRadius.button),
+                          prefixIcon: const Icon(Icons.payments_outlined),
+                        ),
+                        onChanged: (_) => setState(() {}),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+
+                      Text(
+                          'يجب إرفاق صورة السند أو ملف PDF/DOC لتأكيد العملية.',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurface
+                                  .withValues(alpha: 0.7))),
+                      const SizedBox(height: AppSpacing.md),
+                      ElevatedButton.icon(
+                        onPressed: () async {
+                          if (isPicking) return;
+                          setState(() => isPicking = true);
 
                           try {
-                            await walletProvider.submitDeposit(
-                              amount: depositAmount,
-                              proofFilePath: selectedFilePath!,
-                              operationNumber: operationNumberController.text.trim().isEmpty
-                                  ? null
-                                  : operationNumberController.text.trim(),
+                            final result = await FilePicker.pickFiles(
+                              type: FileType.any,
                             );
 
-                            amountController.dispose();
-                            operationNumberController.dispose();
+                            if (result != null && result.files.isNotEmpty) {
+                              final file = result.files.first;
+                              final ext = file.extension?.toLowerCase() ?? '';
 
-                            if (!context.mounted) return;
-                            Navigator.pop(context);
-
-                            onDepositSuccess?.call();
-
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('تم إيداع ${depositAmount.toStringAsFixed(2)} ريال في محفظتك بنجاح.'),
-                                backgroundColor: AppColors.success,
-                              ),
-                            );
+                              if (['jpg', 'jpeg', 'png', 'pdf', 'doc', 'docx']
+                                  .contains(ext)) {
+                                setState(() {
+                                  selectedFileName = file.name;
+                                  selectedFilePath = file.path;
+                                });
+                              } else {
+                                setState(() {
+                                  selectedFileName = null;
+                                  selectedFilePath = null;
+                                });
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: const Text(
+                                          'يرجى اختيار صورة، ملف PDF، أو مستند DOC.'),
+                                      backgroundColor: theme.colorScheme.error,
+                                    ),
+                                  );
+                                }
+                              }
+                            }
                           } catch (e) {
-                            if (!context.mounted) return;
-                            setState(() => isSubmitting = false);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(walletProvider.errorMessage ?? 'فشل الإيداع. يرجى المحاولة مرة أخرى.'),
-                                backgroundColor: theme.colorScheme.error,
-                              ),
-                            );
+                            debugPrint('Error picking file: $e');
+                          } finally {
+                            setState(() => isPicking = false);
                           }
-                        }
-                      : null,
-                  child: isSubmitting
-                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : const Text('إيداع'),
+                        },
+                        icon: isPicking
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2))
+                            : const Icon(Icons.attach_file),
+                        label: const Text('إرفاق ملف'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: theme.colorScheme.primaryContainer,
+                          foregroundColor: theme.colorScheme.onPrimaryContainer,
+                        ),
+                      ),
+                      if (selectedFileName != null) ...[
+                        const SizedBox(height: AppSpacing.sm),
+                        Text(
+                          'الملف المرفق: $selectedFileName',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: AppColors.success,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: AppSpacing.md),
+                      TextField(
+                        controller: operationNumberController,
+                        decoration: InputDecoration(
+                          hintText: 'رقم العملية (اختياري)',
+                          border: OutlineInputBorder(
+                              borderRadius: AppRadius.button),
+                        ),
+                        keyboardType: TextInputType.number,
+                      ),
+                    ],
+                  ),
                 ),
-              ],
-            ),
-          );
-        },
-      ),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      amountController.dispose();
+                      operationNumberController.dispose();
+                      Navigator.pop(context);
+                    },
+                    child: Text('إلغاء',
+                        style: TextStyle(
+                            color: theme.colorScheme.onSurface
+                                .withValues(alpha: 0.6))),
+                  ),
+                  ElevatedButton(
+                    onPressed: canSubmit
+                        ? () async {
+                            if (!context.mounted) return;
+                            setState(() => isSubmitting = true);
+
+                            final depositAmount =
+                                double.parse(amountController.text.trim());
+                            final walletProvider =
+                                context.read<WalletProvider>();
+
+                            try {
+                              await walletProvider.submitDeposit(
+                                amount: depositAmount,
+                                proofFilePath: selectedFilePath!,
+                                operationNumber: operationNumberController.text
+                                        .trim()
+                                        .isEmpty
+                                    ? null
+                                    : operationNumberController.text.trim(),
+                              );
+
+                              amountController.dispose();
+                              operationNumberController.dispose();
+
+                              if (!context.mounted) return;
+                              Navigator.pop(context);
+
+                              onDepositSuccess?.call();
+
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                      'تم إيداع ${depositAmount.toStringAsFixed(2)} ريال في محفظتك بنجاح.'),
+                                  backgroundColor: AppColors.success,
+                                ),
+                              );
+                            } catch (e) {
+                              if (!context.mounted) return;
+                              setState(() => isSubmitting = false);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(walletProvider.errorMessage ??
+                                      'فشل الإيداع. يرجى المحاولة مرة أخرى.'),
+                                  backgroundColor: theme.colorScheme.error,
+                                ),
+                              );
+                            }
+                          }
+                        : null,
+                    child: isSubmitting
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white))
+                        : const Text('إيداع'),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }
