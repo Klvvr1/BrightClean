@@ -13,6 +13,7 @@ abstract class AdminRepository {
   Future<void> warnUser(int userId, String reason);
   Future<List<dynamic>> getApprovedStaff();
   Future<AdminSummaryModel> getSummary();
+  Future<List<dynamic>> getLiveOrders();
   Future<List<dynamic>> getRecentOrders();
   Future<List<AdminAuditLogModel>> getAuditLogs();
   Future<void> toggleSystemStatus(bool loginEnabled, String? message);

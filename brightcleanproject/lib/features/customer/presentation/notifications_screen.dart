@@ -22,7 +22,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       try {
         await provider.fetchNotifications();
         if (provider.errorMessage == null) {
-          provider.markAllAsRead();
+          await provider.markAllAsRead();
         }
       } catch (e) {
         // Error already handled by provider

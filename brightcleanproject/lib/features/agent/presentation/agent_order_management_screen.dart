@@ -296,6 +296,10 @@ class _AgentOrderManagementScreenState
     }
   }
 
+  bool _isWaitingForDeliveryReceipt() {
+    return widget.order.requiresDelivery && _currentStatus == OrderStatus.received;
+  }
+
   String _strictActionLabel(bool isArabic) {
     final nextStatus = _nextStrictStatus();
     if (nextStatus == OrderStatus.washing) {
@@ -415,6 +419,8 @@ class _AgentOrderManagementScreenState
           final isArabic = locale.languageCode == 'ar';
           final isReadOnly = widget.isReadOnly ||
               widget.initialStatus == OrderStatus.completed;
+          final isStrictActionDisabled =
+              _isLoading || _isWaitingForDeliveryReceipt();
 
           return PopScope(
             canPop: !_hasChanges,
@@ -757,7 +763,7 @@ class _AgentOrderManagementScreenState
                                     ],
                                   )
                                 : ElevatedButton(
-                                    onPressed: _isLoading
+                                    onPressed: isStrictActionDisabled
                                         ? null
                                         : () =>
                                             _handleStrictStatusAction(isArabic),

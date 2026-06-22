@@ -419,8 +419,9 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
     final orderItems = _orderItems(task);
     final pickupLocation = _latLngFromAddress(task?.pickupAddress);
     final dropoffLocation = _latLngFromAddress(task?.dropoffAddress);
+    // Default to Mukalla, Yemen as the service area fallback when no valid coordinates are available
     final fallbackLocation =
-        pickupLocation ?? dropoffLocation ?? const LatLng(24.7136, 46.6753);
+        pickupLocation ?? dropoffLocation ?? const LatLng(14.493329, 49.057153);
     final isTaskUnassigned = task?.status == 0;
     final isTaskCompleted = task?.status == 3;
     final isTaskEditable =

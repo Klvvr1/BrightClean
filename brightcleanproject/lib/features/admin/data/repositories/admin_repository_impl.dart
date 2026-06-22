@@ -71,6 +71,16 @@ class AdminRepositoryImpl implements AdminRepository {
   }
 
   @override
+  Future<List<dynamic>> getLiveOrders() async {
+    final response = await _apiClient.get('/api/admin/live-orders');
+    if (response is List) {
+      return response;
+    }
+    throw ServerException(
+        message: invalidResponseUserMessage);
+  }
+
+  @override
   Future<List<dynamic>> getRecentOrders() async {
     final response = await _apiClient.get('/api/admin/recent-orders');
     if (response is List) {
