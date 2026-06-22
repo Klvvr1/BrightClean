@@ -1,3 +1,4 @@
+import 'dart:developer' as developer;
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -392,9 +393,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             scrollDirection: Axis.horizontal,
             itemCount: liveOrders.length,
             itemBuilder: (context, index) {
-              final order = liveOrders[index] is Map
-                  ? Map<dynamic, dynamic>.from(liveOrders[index] as Map)
-                  : <dynamic, dynamic>{};
+              Map<dynamic, dynamic> order;
+              try {
+                order = liveOrders[index] is Map
+                    ? Map<dynamic, dynamic>.from(liveOrders[index] as Map)
+                    : <dynamic, dynamic>{};
+              } catch (e) {
+                developer.log(
+                  'Failed to parse live order data at index $index',
+                  error: e,
+                  name: 'AdminDashboard',
+                );
+                developer.log('Problematic data: ${liveOrders[index]}', name: 'AdminDashboard');
+                order = <dynamic, dynamic>{};
+              }
               final bookingId = AdminServiceModel.readInt(
                 order,
                 ['bookingID', 'bookingId', 'BookingID'],

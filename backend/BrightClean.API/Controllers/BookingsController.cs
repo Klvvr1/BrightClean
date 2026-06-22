@@ -367,21 +367,11 @@ namespace BrightClean.API.Controllers
                     return BadRequest(new { message = "Selected service is not available for booking." });
                 }
 
-                var unitPrice = itemDto.UnitPriceAtTimeOfBooking.HasValue &&
-                    itemDto.UnitPriceAtTimeOfBooking.Value > 0m
-                    ? itemDto.UnitPriceAtTimeOfBooking.Value
-                    : service.Price;
-
-                if (itemDto.UnitPriceAtTimeOfBooking.HasValue)
-                {
-                    _logger.LogInformation("Booking create for client {ClientId} uses submitted unit price {UnitPrice} for service {ServiceID}.", clientId, unitPrice, service.ServiceID);
-                }
-
                 var bookingItem = new BookingItem
                 {
                     ServiceID = service.ServiceID,
                     Quantity = itemDto.Quantity,
-                    UnitPriceAtTimeOfBooking = unitPrice
+                    UnitPriceAtTimeOfBooking = service.Price
                 };
                 booking.BookingItems.Add(bookingItem);
             }
