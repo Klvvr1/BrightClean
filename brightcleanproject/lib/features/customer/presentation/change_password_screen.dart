@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_radius.dart';
@@ -226,6 +227,9 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     return TextFormField(
       controller: controller,
       obscureText: obscureText,
+      inputFormatters: [
+        FilteringTextInputFormatter.deny(RegExp(r'[\u0600-\u06FF]')),
+      ],
       decoration: InputDecoration(
         labelText: label,
         border: OutlineInputBorder(
