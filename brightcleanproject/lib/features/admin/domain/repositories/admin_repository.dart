@@ -9,6 +9,8 @@ abstract class AdminRepository {
   Future<List<PendingUserModel>> getPendingApprovals();
   Future<void> approveUser(int userId);
   Future<void> rejectUser(int userId);
+  Future<void> dismissUser(int userId);
+  Future<void> warnUser(int userId, String reason);
   Future<List<dynamic>> getApprovedStaff();
   Future<AdminSummaryModel> getSummary();
   Future<List<dynamic>> getRecentOrders();

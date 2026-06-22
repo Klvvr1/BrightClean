@@ -109,9 +109,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   // Dummy data for live orders
   final List<Map<String, dynamic>> _liveOrders = [];
 
-  // Dummy data for staff members
-  final List<Map<String, dynamic>> _staffMembers = [];
-
   void _logActivity(String title, String type, IconData icon, Color color) {
     debugPrint('Refreshing admin audit logs after $type: $title');
     context.read<AdminProvider>().fetchAuditLogs();
@@ -129,7 +126,21 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return _titles[_selectedIndex];
   }
 
-  void _showWarningDialog(String name) {
+  void _showWarningDialog(Map<String, dynamic> staff) {
+    final name = staff['name']?.toString() ?? '';
+    final userId = staff['id'] is int
+        ? staff['id'] as int
+        : int.tryParse(staff['id']?.toString() ?? '');
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('تعذر تحديد الموظف المطلوب تنبيهه'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
     final reasonController = TextEditingController();
     showDialog(
       context: context,
@@ -149,21 +160,30 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             child: const Text('إلغاء'),
           ),
           ElevatedButton(
-            onPressed: () {
-              final reason = reasonController.text;
+            onPressed: () async {
+              final reason = reasonController.text.trim();
+              final adminProvider = context.read<AdminProvider>();
+              final messenger = ScaffoldMessenger.of(context);
               reasonController.dispose();
               Navigator.pop(context);
-              _logActivity(
-                'تم إرسال تحذير لـ "$name"${reason.isNotEmpty ? " بسبب: $reason" : ""}',
-                'warning',
-                Icons.warning_amber_rounded,
-                AppColors.warning,
-              );
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                    content: Text(
-                        'تم إرسال التحذير لـ $name${reason.isNotEmpty ? ": $reason" : ""}')),
-              );
+              try {
+                await adminProvider.warnUser(userId, reason);
+                if (!mounted) return;
+                messenger.showSnackBar(
+                  SnackBar(
+                      content: Text(
+                          'تم إرسال التحذير لـ $name${reason.isNotEmpty ? ": $reason" : ""}')),
+                );
+              } catch (e) {
+                if (!mounted) return;
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: Text(adminProvider.errorMessage ??
+                        'حدث خطأ أثناء إرسال التنبيه'),
+                    backgroundColor: AppColors.error,
+                  ),
+                );
+              }
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.warning),
             child: const Text('إرسال', style: TextStyle(color: Colors.white)),
@@ -238,7 +258,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     }
   }
 
-  void _dismissStaff(String name, String type) {
+  void _dismissStaff(Map<String, dynamic> staff) {
+    final name = staff['name']?.toString() ?? '';
+    final type = staff['type']?.toString() ?? '';
+    final userId = staff['id'] is int
+        ? staff['id'] as int
+        : int.tryParse(staff['id']?.toString() ?? '');
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('تعذر تحديد الموظف المطلوب طرده'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -266,23 +301,29 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 style: TextStyle(color: AppColors.textLight)),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
-              setState(() {
-                _staffMembers.removeWhere((m) => m['name'] == name);
-              });
-              _logActivity(
-                'تم طرد $type "$name" وإلغاء تفعيل حسابه من النظام',
-                type == 'مغسلة' ? 'remove_laundry' : 'remove_driver',
-                Icons.person_remove,
-                AppColors.error,
-              );
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('تم طرد $name ($type) من النظام بنجاح'),
-                  backgroundColor: AppColors.error,
-                ),
-              );
+              final adminProvider = context.read<AdminProvider>();
+              final messenger = ScaffoldMessenger.of(context);
+              try {
+                await adminProvider.dismissUser(userId);
+                if (!mounted) return;
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: Text('تم طرد $name ($type) من النظام بنجاح'),
+                    backgroundColor: AppColors.error,
+                  ),
+                );
+              } catch (e) {
+                if (!mounted) return;
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: Text(adminProvider.errorMessage ??
+                        'حدث خطأ أثناء طرد الموظف'),
+                    backgroundColor: AppColors.error,
+                  ),
+                );
+              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.error,
@@ -1167,6 +1208,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   void _showStaffDetails(Map<String, dynamic> staff) {
+    final isLaundry = staff['role']?.toString().toLowerCase() == 'laundryagent';
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1198,7 +1240,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   radius: 35,
                   backgroundColor: AppColors.primary.withValues(alpha: 0.1),
                   child: Icon(
-                    staff['type'] == 'مغسلة'
+                    isLaundry
                         ? Icons.local_laundry_service
                         : _getVehicleIcon(staff['vehicleType'], staff['name']),
                     size: 40,
@@ -1248,7 +1290,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               child: ListView(
                 physics: const BouncingScrollPhysics(),
                 children: [
-                  if (staff['type'] == 'مغسلة') ...[
+                  if (isLaundry) ...[
                     _buildDetailRow(
                         Icons.business, 'اسم المغسلة', staff['name']),
                     _buildDetailRow(Icons.person, 'اسم المدير المسؤول',
@@ -1357,7 +1399,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   child: ElevatedButton.icon(
                     onPressed: () {
                       Navigator.pop(context);
-                      _dismissStaff(staff['name'], staff['type']);
+                      _dismissStaff(staff);
                     },
                     icon: const Icon(Icons.person_remove),
                     label: const Text('طرد الموظف'),
@@ -2851,6 +2893,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
       return {
         'id': staff['userID'] ?? staff['userId'] ?? staff['UserID'],
+        'role': role,
         'name': isLaundry &&
                 businessName != null &&
                 businessName.toString().isNotEmpty
@@ -3218,13 +3261,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             IconButton(
+              icon: const Icon(Icons.info_outline, color: AppColors.primary),
+              onPressed:
+                  staffData == null ? null : () => _showStaffDetails(staffData),
+              tooltip: 'عرض التفاصيل',
+            ),
+            IconButton(
               icon: const Icon(Icons.warning_amber_rounded,
                   color: AppColors.warning),
-              onPressed: () => _showWarningDialog(name),
+              onPressed: staffData == null
+                  ? null
+                  : () => _showWarningDialog(staffData),
               tooltip: 'إرسال تحذير',
             ),
             TextButton(
-              onPressed: () => _dismissStaff(name, type),
+              onPressed:
+                  staffData == null ? null : () => _dismissStaff(staffData),
               child:
                   const Text('طرد', style: TextStyle(color: AppColors.error)),
             ),

@@ -10,7 +10,6 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/error/user_error_message.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/controllers/language_controller.dart';
-import '../../../../core/controllers/theme_controller.dart';
 import '../../auth/data/providers/auth_provider.dart';
 import '../data/models/delivery_task_model.dart';
 import '../data/providers/driver_provider.dart';
@@ -483,67 +482,7 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
                   ),
                 ),
               ),
-              // Icons forced to the LEFT (absolute)
-              Positioned(
-                left: 60,
-                top: 0,
-                bottom: 0,
-                child: Directionality(
-                  textDirection: TextDirection.ltr,
-                  child: Row(
-                    children: [
-                      ValueListenableBuilder<Locale>(
-                        valueListenable: LanguageController().locale,
-                        builder: (context, locale, _) {
-                          return TextButton(
-                            onPressed: () =>
-                                LanguageController().toggleLanguage(),
-                            style: TextButton.styleFrom(
-                              minimumSize: Size.zero,
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 4),
-                              backgroundColor:
-                                  Colors.white.withValues(alpha: 0.15),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8)),
-                            ),
-                            child: Text(
-                              locale.languageCode == 'ar' ? 'EN' : 'عربي',
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                  fontSize: 12),
-                            ),
-                          );
-                        },
-                      ),
-                      const SizedBox(width: 6),
-                      ValueListenableBuilder<ThemeMode>(
-                        valueListenable: ThemeController().themeMode,
-                        builder: (context, themeMode, _) {
-                          return IconButton(
-                            icon: Icon(
-                                themeMode == ThemeMode.dark
-                                    ? Icons.light_mode
-                                    : Icons.dark_mode,
-                                color: Colors.white,
-                                size: 18),
-                            onPressed: () => ThemeController().toggleTheme(),
-                            constraints: const BoxConstraints(),
-                            padding: const EdgeInsets.all(AppSpacing.xs),
-                            style: IconButton.styleFrom(
-                              backgroundColor:
-                                  Colors.white.withValues(alpha: 0.15),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8)),
-                            ),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+
               // Centered Title
               Center(
                 child: Text(

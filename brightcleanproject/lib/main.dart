@@ -19,6 +19,7 @@ import 'features/driver/data/providers/driver_provider.dart';
 import 'features/auth/data/providers/auth_provider.dart';
 import 'features/admin/data/providers/admin_provider.dart';
 import 'features/customer/data/providers/notification_provider.dart';
+import 'features/customer/data/providers/wallet_provider.dart';
 import 'core/controllers/system_status_provider.dart';
 
 void main() async {
@@ -81,6 +82,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => DriverProvider()),
         ChangeNotifierProvider(create: (_) => AdminProvider()),
         ChangeNotifierProvider(create: (_) => NotificationProvider()),
+        ChangeNotifierProvider(create: (_) => WalletProvider()),
       ],
       child: const BrightCleanApp(),
     ),

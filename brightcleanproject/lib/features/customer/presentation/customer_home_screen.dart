@@ -9,6 +9,7 @@ import '../../../../core/theme/app_styles.dart';
 import 'service_details_screen.dart';
 import 'package:provider/provider.dart';
 import '../data/providers/cart_provider.dart';
+import '../data/providers/notification_provider.dart';
 import 'package:go_router/go_router.dart';
 
 class CustomerHomeScreen extends StatefulWidget {
@@ -120,6 +121,11 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
           curve: Curves.easeInOutCubic,
         );
       }
+    });
+
+    // Fetch notifications on screen load
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<NotificationProvider>().fetchNotifications();
     });
   }
 
@@ -368,9 +374,17 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
       appBar: AppBar(
         title: Text('برايت كلين', style: theme.textTheme.headlineSmall),
         actions: [
-          IconButton(
-              icon: const Icon(Icons.notifications_none),
-              onPressed: () => context.push('/notifications')),
+          Consumer<NotificationProvider>(
+            builder: (context, notifProvider, child) => Badge(
+              label: Text(notifProvider.unreadCount.toString()),
+              isLabelVisible: notifProvider.unreadCount > 0,
+              backgroundColor: AppColors.error,
+              child: IconButton(
+                icon: const Icon(Icons.notifications_none),
+                onPressed: () => context.push('/notifications'),
+              ),
+            ),
+          ),
           Consumer<CartProvider>(
             builder: (context, cart, child) => Badge(
               label: Text(cart.itemCount.toString()),

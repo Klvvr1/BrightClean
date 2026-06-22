@@ -12,6 +12,7 @@ import 'notifications_screen.dart';
 import 'my_orders_screen.dart';
 import 'models/user_profile.dart';
 import 'widgets/wallet_section.dart';
+import '../data/providers/wallet_provider.dart';
 import 'widgets/help_center_bottom_sheet.dart';
 import '../../../core/widgets/profile/profile_widgets.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -37,13 +38,15 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
   void initState() {
     super.initState();
     _loadUserFromPrefs();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<WalletProvider>().fetchBalance();
+    });
   }
 
   Future<void> _loadUserFromPrefs() async {
     final prefs = await SharedPreferences.getInstance();
     final name = prefs.getString('user_name') ?? 'أحمد محمد';
     final phone = prefs.getString('user_phone') ?? '+971 50 123 4567';
-    final walletBalance = prefs.getString('wallet_balance') ?? '0 ريال يمني';
     final imagePath = prefs.getString('profile_image_path');
 
     if (mounted) {
@@ -51,7 +54,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
         _currentUser = UserProfile(
           name: name,
           phone: phone,
-          walletBalance: walletBalance,
+          walletBalance: '',
           imagePath: imagePath,
         );
       });
@@ -117,7 +120,14 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
           _buildSettingsHeader('حسابي'),
           
           // Wallet section styled as a flat card or tile
-          WalletSection(balance: _currentUser.walletBalance),
+          Consumer<WalletProvider>(
+            builder: (context, walletProvider, child) => WalletSection(
+              balance: walletProvider.isLoading
+                  ? 'جارٍ التحميل...'
+                  : walletProvider.balanceFormatted,
+              onDepositSuccess: () => walletProvider.fetchBalance(),
+            ),
+          ),
           const SizedBox(height: AppSpacing.sm),
 
           _buildSettingsTile(

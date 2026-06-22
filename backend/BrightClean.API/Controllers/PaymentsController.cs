@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using BrightClean.Infrastructure;
@@ -16,21 +17,24 @@ namespace BrightClean.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "Client")]
+    [Authorize]
     public class PaymentsController : ControllerBase
     {
         private readonly AppDbContext _context;
         private readonly IWebHostEnvironment _environment;
+        private readonly ILogger<PaymentsController> _logger;
         private const long MAX_RECEIPT_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
 
-        public PaymentsController(AppDbContext context, IWebHostEnvironment environment)
+        public PaymentsController(AppDbContext context, IWebHostEnvironment environment, ILogger<PaymentsController> logger)
         {
             _context = context;
             _environment = environment;
+            _logger = logger;
         }
 
         // POST: /api/payments/upload-receipt
         [HttpPost("upload-receipt")]
+        [Authorize(Roles = "Client")]
         public async Task<IActionResult> UploadReceipt([FromForm] int bookingID, [FromForm] IFormFile receipt)
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
@@ -128,11 +132,13 @@ namespace BrightClean.API.Controllers
             };
 
             var fileStream = System.IO.File.OpenRead(filePath);
+            _logger.LogInformation("Payment receipt for booking {BookingId} downloaded by {Role} {UserId}.", bookingId, roleClaim?.Value, userId);
             return File(fileStream, contentType, fileName);
         }
 
         // POST: /api/payments
         [HttpPost]
+        [Authorize(Roles = "Client")]
         public async Task<IActionResult> CreatePayment([FromBody] CreatePaymentDto dto)
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");

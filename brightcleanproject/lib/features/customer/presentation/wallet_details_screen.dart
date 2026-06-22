@@ -1,15 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_styles.dart';
 import 'package:file_picker/file_picker.dart';
+import '../data/providers/wallet_provider.dart';
 import 'customer_bank_accounts.dart';
 
 class WalletDetailsScreen extends StatelessWidget {
   final String balance;
+  final VoidCallback? onDepositSuccess;
 
-  const WalletDetailsScreen({super.key, required this.balance});
+  const WalletDetailsScreen({super.key, required this.balance, this.onDepositSuccess});
+
 
   @override
   Widget build(BuildContext context) {
@@ -130,18 +135,34 @@ class WalletDetailsScreen extends StatelessWidget {
       BuildContext context, String method, String accountNumber) {
     String? selectedFileName;
     String? selectedFilePath;
-    List<int>? selectedFileBytes;
     bool isPicking = false;
+    bool isSubmitting = false;
+    final amountController = TextEditingController();
     final operationNumberController = TextEditingController();
 
     showDialog(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) {
-          final theme = Theme.of(context);
-          return Directionality(
-            textDirection: TextDirection.rtl,
-            child: AlertDialog(
+      builder: (context) => WillPopScope(
+        onWillPop: () async {
+          amountController.dispose();
+          operationNumberController.dispose();
+          return true;
+        },
+        child: StatefulBuilder(
+          builder: (context, setState) {
+            final theme = Theme.of(context);
+
+            // زر الإرسال يُفعَّل فقط عند توفر المبلغ والملف
+            final canSubmit = amountController.text.trim().isNotEmpty &&
+                double.tryParse(amountController.text.trim()) != null &&
+                (double.tryParse(amountController.text.trim()) ?? 0) > 0 &&
+                selectedFileName != null &&
+                selectedFilePath != null &&
+                !isSubmitting;
+
+            return Directionality(
+              textDirection: TextDirection.rtl,
+              child: AlertDialog(
               title: Text('إيداع عبر $method'),
               shape: RoundedRectangleBorder(borderRadius: AppRadius.card),
               content: SingleChildScrollView(
@@ -156,34 +177,50 @@ class WalletDetailsScreen extends StatelessWidget {
                       style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: AppSpacing.md),
+
+                    // ── حقل المبلغ (جديد) ──
+                    TextField(
+                      controller: amountController,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
+                      ],
+                      decoration: InputDecoration(
+                        labelText: 'قيمة الإيداع',
+                        hintText: '0.00',
+                        suffixText: 'ريال',
+                        border: OutlineInputBorder(borderRadius: AppRadius.button),
+                        prefixIcon: const Icon(Icons.payments_outlined),
+                      ),
+                      onChanged: (_) => setState(() {}),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+
                     Text('يجب إرفاق صورة السند أو ملف PDF/DOC لتأكيد العملية.', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.7))),
                     const SizedBox(height: AppSpacing.md),
                     ElevatedButton.icon(
                       onPressed: () async {
                         if (isPicking) return;
                         setState(() => isPicking = true);
-                        
+
                         try {
                           final result = await FilePicker.pickFiles(
-                            type: FileType.any, // Avoid native filter crash on Windows/Android
+                            type: FileType.any,
                           );
-                          
+
                           if (result != null && result.files.isNotEmpty) {
                             final file = result.files.first;
                             final ext = file.extension?.toLowerCase() ?? '';
-                            
-                            // Validate extension in Dart instead of native
+
                             if (['jpg', 'jpeg', 'png', 'pdf', 'doc', 'docx'].contains(ext)) {
                               setState(() {
                                 selectedFileName = file.name;
                                 selectedFilePath = file.path;
-                                selectedFileBytes = file.bytes;
                               });
                             } else {
                               setState(() {
                                 selectedFileName = null;
                                 selectedFilePath = null;
-                                selectedFileBytes = null;
                               });
                               if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
@@ -201,8 +238,8 @@ class WalletDetailsScreen extends StatelessWidget {
                           setState(() => isPicking = false);
                         }
                       },
-                      icon: isPicking 
-                          ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) 
+                      icon: isPicking
+                          ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
                           : const Icon(Icons.attach_file),
                       label: const Text('إرفاق ملف'),
                       style: ElevatedButton.styleFrom(
@@ -215,8 +252,8 @@ class WalletDetailsScreen extends StatelessWidget {
                       Text(
                         'الملف المرفق: $selectedFileName',
                         style: theme.textTheme.labelSmall?.copyWith(
-                          color: AppColors.success, 
-                          fontWeight: FontWeight.bold, 
+                          color: AppColors.success,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ],
@@ -235,42 +272,65 @@ class WalletDetailsScreen extends StatelessWidget {
               actions: [
                 TextButton(
                   onPressed: () {
+                    amountController.dispose();
                     operationNumberController.dispose();
                     Navigator.pop(context);
                   },
                   child: Text('إلغاء', style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.6))),
                 ),
                 ElevatedButton(
-                  onPressed: () {
-                    if (selectedFileName == null) {
-                      if (!context.mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: const Text('يجب إرفاق صورة السند أو ملف PDF/DOC أولاً.'),
-                          backgroundColor: theme.colorScheme.error,
-                        ),
-                      );
-                      return;
-                    }
-                    // Implement submission logic
-                    final operationNumber = operationNumberController.text.trim();
+                  onPressed: canSubmit
+                      ? () async {
+                          if (!context.mounted) return;
+                          setState(() => isSubmitting = true);
 
-                    debugPrint('Deposit submission initiated: path=$selectedFilePath, bytes=${selectedFileBytes?.length}, op=$operationNumber');
+                          final depositAmount = double.parse(amountController.text.trim());
+                          final walletProvider = context.read<WalletProvider>();
 
-                    // Note: Use selectedFilePath, selectedFileBytes, and operationNumber for actual upload
-                    operationNumberController.dispose();
-                    if (!context.mounted) return;
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: const Text('تم إرسال طلب الإيداع بنجاح، سيتم التأكد قريباً.'), backgroundColor: theme.colorScheme.primary),
-                    );
-                  },
-                  child: const Text('إرسال'),
+                          try {
+                            await walletProvider.submitDeposit(
+                              amount: depositAmount,
+                              proofFilePath: selectedFilePath!,
+                              operationNumber: operationNumberController.text.trim().isEmpty
+                                  ? null
+                                  : operationNumberController.text.trim(),
+                            );
+
+                            amountController.dispose();
+                            operationNumberController.dispose();
+
+                            if (!context.mounted) return;
+                            Navigator.pop(context);
+
+                            onDepositSuccess?.call();
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('تم إيداع ${depositAmount.toStringAsFixed(2)} ريال في محفظتك بنجاح.'),
+                                backgroundColor: AppColors.success,
+                              ),
+                            );
+                          } catch (e) {
+                            if (!context.mounted) return;
+                            setState(() => isSubmitting = false);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(walletProvider.errorMessage ?? 'فشل الإيداع. يرجى المحاولة مرة أخرى.'),
+                                backgroundColor: theme.colorScheme.error,
+                              ),
+                            );
+                          }
+                        }
+                      : null,
+                  child: isSubmitting
+                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : const Text('إيداع'),
                 ),
               ],
             ),
           );
-        }
+        },
+      ),
       ),
     );
   }

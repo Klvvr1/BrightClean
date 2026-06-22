@@ -36,5 +36,6 @@ void main() {
 
     expect(find.byType(DropdownButtonFormField<OrderStatus>), findsNothing);
     expect(find.text('بدء المعالجة'), findsOneWidget);
+    expect(find.text('لا توجد ملاحظات'), findsOneWidget);
   });
 }

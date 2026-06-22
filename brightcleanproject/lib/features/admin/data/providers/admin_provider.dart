@@ -322,6 +322,77 @@ class AdminProvider with ChangeNotifier {
     }
   }
 
+  Future<void> dismissUser(int userId) async {
+    _isActionLoading = true;
+    _errorMessage = null;
+    _refreshErrorMessage = null;
+    notifyListeners();
+
+    try {
+      await adminRepository.dismissUser(userId);
+    } on ServerException catch (e) {
+      _errorMessage = userMessageFromError(e,
+          fallback: 'حدث خطأ أثناء طرد الموظف');
+      _isActionLoading = false;
+      notifyListeners();
+      rethrow;
+    } catch (e) {
+      _errorMessage = userMessageFromError(e);
+      _isActionLoading = false;
+      notifyListeners();
+      rethrow;
+    }
+
+    try {
+      _approvedStaff = await adminRepository.getApprovedStaff();
+      _summary = await adminRepository.getSummary();
+      _auditLogs = await adminRepository.getAuditLogs();
+    } catch (e) {
+      debugPrint('Error refreshing admin data after staff dismissal: $e');
+      _refreshErrorMessage = userMessageFromError(e,
+          fallback:
+              'حدث خطأ أثناء تحديث البيانات بعد طرد الموظف');
+      notifyListeners();
+    } finally {
+      _isActionLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> warnUser(int userId, String reason) async {
+    _isActionLoading = true;
+    _errorMessage = null;
+    _refreshErrorMessage = null;
+    notifyListeners();
+
+    try {
+      await adminRepository.warnUser(userId, reason);
+    } on ServerException catch (e) {
+      _errorMessage =
+          userMessageFromError(e, fallback: 'حدث خطأ أثناء إرسال التنبيه');
+      _isActionLoading = false;
+      notifyListeners();
+      rethrow;
+    } catch (e) {
+      _errorMessage = userMessageFromError(e);
+      _isActionLoading = false;
+      notifyListeners();
+      rethrow;
+    }
+
+    try {
+      _auditLogs = await adminRepository.getAuditLogs();
+    } catch (e) {
+      debugPrint('Error refreshing admin data after staff warning: $e');
+      _refreshErrorMessage = userMessageFromError(e,
+          fallback: 'حدث خطأ أثناء تحديث البيانات بعد إرسال التنبيه');
+      notifyListeners();
+    } finally {
+      _isActionLoading = false;
+      notifyListeners();
+    }
+  }
+
   Future<void> toggleSystemStatus(bool loginEnabled, String? message) async {
     _isActionLoading = true;
     _errorMessage = null;

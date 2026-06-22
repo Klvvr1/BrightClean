@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_styles.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/localization/language_controller.dart';
+import '../../../../core/controllers/language_controller.dart';
 import '../data/providers/notification_provider.dart';
 
 class NotificationsScreen extends StatefulWidget {
@@ -17,8 +17,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<NotificationProvider>().fetchNotifications();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final provider = context.read<NotificationProvider>();
+      try {
+        await provider.fetchNotifications();
+        if (provider.errorMessage == null) {
+          provider.markAllAsRead();
+        }
+      } catch (e) {
+        // Error already handled by provider
+      }
     });
   }
 

@@ -94,7 +94,7 @@ class AppRouter {
         }
 
         // 4. Customer/Client Guard
-        final customerPaths = ['/customer_home', '/service_details', '/checkout', '/notifications', '/cart'];
+        final customerPaths = ['/customer_home', '/service_details', '/checkout', '/cart'];
         final isCustomerPath = customerPaths.any((path) => location.startsWith(path));
         if (isCustomerPath &&
             (role == null ||

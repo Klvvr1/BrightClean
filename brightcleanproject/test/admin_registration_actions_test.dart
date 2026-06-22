@@ -22,9 +22,13 @@ class _PostTrackingApiClient extends BaseApiClient {
 class _RegistrationRepository implements AdminRepository {
   int? approvedUserId;
   int? rejectedUserId;
+  int? dismissedUserId;
+  int? warnedUserId;
+  String? warningReason;
   int pendingRefreshCount = 0;
   int approvedStaffRefreshCount = 0;
   int auditRefreshCount = 0;
+  int summaryRefreshCount = 0;
 
   @override
   Future<void> approveUser(int userId) async {
@@ -34,6 +38,17 @@ class _RegistrationRepository implements AdminRepository {
   @override
   Future<void> rejectUser(int userId) async {
     rejectedUserId = userId;
+  }
+
+  @override
+  Future<void> dismissUser(int userId) async {
+    dismissedUserId = userId;
+  }
+
+  @override
+  Future<void> warnUser(int userId, String reason) async {
+    warnedUserId = userId;
+    warningReason = reason;
   }
 
   @override
@@ -55,7 +70,10 @@ class _RegistrationRepository implements AdminRepository {
   }
 
   @override
-  Future<AdminSummaryModel> getSummary() async => AdminSummaryModel.empty();
+  Future<AdminSummaryModel> getSummary() async {
+    summaryRefreshCount++;
+    return AdminSummaryModel.empty();
+  }
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -69,6 +87,25 @@ void main() {
     await repository.rejectUser(42);
 
     expect(apiClient.requestedEndpoint, '/api/admin/reject/42');
+  });
+
+  test('AdminRepositoryImpl dismisses users through admin endpoint', () async {
+    final apiClient = _PostTrackingApiClient();
+    final repository = AdminRepositoryImpl(apiClient: apiClient);
+
+    await repository.dismissUser(42);
+
+    expect(apiClient.requestedEndpoint, '/api/admin/dismiss/42');
+  });
+
+  test('AdminRepositoryImpl warns users through admin endpoint', () async {
+    final apiClient = _PostTrackingApiClient();
+    final repository = AdminRepositoryImpl(apiClient: apiClient);
+
+    await repository.warnUser(42, 'Late delivery');
+
+    expect(apiClient.requestedEndpoint, '/api/admin/warn/42');
+    expect(apiClient.requestedBody?['reason'], 'Late delivery');
   });
 
   test('AdminRepositoryImpl sends all-users notification target unchanged',
@@ -86,7 +123,8 @@ void main() {
     expect(apiClient.requestedBody?['targetRole'], 'All');
   });
 
-  test('AdminProvider refreshes pending, approved staff, and audit logs after approval',
+  test(
+      'AdminProvider refreshes pending, approved staff, and audit logs after approval',
       () async {
     final repository = _RegistrationRepository();
     final provider = AdminProvider(adminRepository: repository);
@@ -100,7 +138,8 @@ void main() {
     expect(provider.isActionLoading, isFalse);
   });
 
-  test('AdminProvider refreshes pending and audit logs after rejection', () async {
+  test('AdminProvider refreshes pending and audit logs after rejection',
+      () async {
     final repository = _RegistrationRepository();
     final provider = AdminProvider(adminRepository: repository);
 
@@ -109,6 +148,32 @@ void main() {
     expect(repository.rejectedUserId, 9);
     expect(repository.pendingRefreshCount, 1);
     expect(repository.approvedStaffRefreshCount, 0);
+    expect(repository.auditRefreshCount, 1);
+    expect(provider.isActionLoading, isFalse);
+  });
+
+  test('AdminProvider refreshes staff, summary, and audit logs after dismissal',
+      () async {
+    final repository = _RegistrationRepository();
+    final provider = AdminProvider(adminRepository: repository);
+
+    await provider.dismissUser(11);
+
+    expect(repository.dismissedUserId, 11);
+    expect(repository.approvedStaffRefreshCount, 1);
+    expect(repository.summaryRefreshCount, 1);
+    expect(repository.auditRefreshCount, 1);
+    expect(provider.isActionLoading, isFalse);
+  });
+
+  test('AdminProvider refreshes audit logs after warning', () async {
+    final repository = _RegistrationRepository();
+    final provider = AdminProvider(adminRepository: repository);
+
+    await provider.warnUser(12, 'Late delivery');
+
+    expect(repository.warnedUserId, 12);
+    expect(repository.warningReason, 'Late delivery');
     expect(repository.auditRefreshCount, 1);
     expect(provider.isActionLoading, isFalse);
   });

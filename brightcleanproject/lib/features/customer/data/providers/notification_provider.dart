@@ -15,6 +15,7 @@ class NotificationProvider with ChangeNotifier {
   List<AppNotification> get notifications => _notifications;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
+  int get unreadCount => _notifications.where((n) => !n.isRead).length;
 
   Future<void> fetchNotifications() async {
     _isLoading = true;
@@ -27,6 +28,7 @@ class NotificationProvider with ChangeNotifier {
         _notifications = response
             .map((json) => AppNotification.fromJson(json as Map<String, dynamic>))
             .toList();
+        debugPrint('🔔 NotificationProvider: fetched ${_notifications.length} notifications, unread: $unreadCount');
       }
     } catch (e) {
       _errorMessage = userMessageFromError(e);
@@ -35,5 +37,21 @@ class NotificationProvider with ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  void markAllAsRead() {
+    if (unreadCount == 0) return;
+    _notifications = _notifications
+        .map((n) => n.isRead ? n : AppNotification(
+              notificationID: n.notificationID,
+              userID: n.userID,
+              title: n.title,
+              message: n.message,
+              date: n.date,
+              isRead: true,
+            ))
+        .toList();
+    debugPrint('🔔 NotificationProvider: marked all as read');
+    notifyListeners();
   }
 }
