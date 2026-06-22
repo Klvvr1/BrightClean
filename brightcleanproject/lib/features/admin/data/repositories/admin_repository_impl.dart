@@ -39,6 +39,18 @@ class AdminRepositoryImpl implements AdminRepository {
   }
 
   @override
+  Future<void> dismissUser(int userId) async {
+    await _apiClient.post('/api/admin/dismiss/$userId');
+  }
+
+  @override
+  Future<void> warnUser(int userId, String reason) async {
+    await _apiClient.post('/api/admin/warn/$userId', body: {
+      'reason': reason,
+    });
+  }
+
+  @override
   Future<List<dynamic>> getApprovedStaff() async {
     final response = await _apiClient.get('/api/admin/staff');
     if (response is List) {

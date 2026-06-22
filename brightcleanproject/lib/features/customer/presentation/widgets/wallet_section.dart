@@ -5,8 +5,9 @@ import '../wallet_details_screen.dart';
 
 class WalletSection extends StatelessWidget {
   final String balance;
+  final VoidCallback? onDepositSuccess;
 
-  const WalletSection({super.key, required this.balance});
+  const WalletSection({super.key, required this.balance, this.onDepositSuccess});
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +28,10 @@ class WalletSection extends StatelessWidget {
         onTap: () {
           Navigator.of(context).push(
             MaterialPageRoute(
-              builder: (context) => WalletDetailsScreen(balance: balance),
+              builder: (context) => WalletDetailsScreen(
+                balance: balance,
+                onDepositSuccess: onDepositSuccess,
+              ),
             ),
           );
         },

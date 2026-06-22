@@ -874,6 +874,10 @@ class _AgentOrderManagementScreenState
   }
 
   Widget _buildNotesRow(bool isArabic, bool isDark, String note) {
+    final displayNote = note.trim().isEmpty
+        ? (isArabic ? 'لا توجد ملاحظات' : 'No notes')
+        : note.trim();
+
     return Container(
       margin: const EdgeInsets.only(top: 8),
       padding: const EdgeInsets.all(AppSpacing.sm),
@@ -889,7 +893,7 @@ class _AgentOrderManagementScreenState
           const SizedBox(width: AppSpacing.xs),
           Expanded(
             child: Text(
-              note,
+              displayNote,
               style: TextStyle(
                   fontSize: 13,
                   color:

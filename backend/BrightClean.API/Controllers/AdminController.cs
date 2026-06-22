@@ -64,8 +64,8 @@ namespace BrightClean.API.Controllers
             var summary = new AdminSummaryDto
             {
                 CustomersCount = await _context.Users.CountAsync(u => u.Role == UserRole.Client),
-                LaundryAgentsCount = await _context.Users.CountAsync(u => u.Role == UserRole.LaundryAgent && u.IsApproved),
-                DriversCount = await _context.Users.CountAsync(u => u.Role == UserRole.DeliveryStaff && u.IsApproved),
+                LaundryAgentsCount = await _context.Users.CountAsync(u => u.Role == UserRole.LaundryAgent && u.IsApproved && u.AccountStatus == AccountStatus.Active),
+                DriversCount = await _context.Users.CountAsync(u => u.Role == UserRole.DeliveryStaff && u.IsApproved && u.AccountStatus == AccountStatus.Active),
                 TotalOrders = await _context.Bookings.CountAsync(b => b.Status != BookingStatus.Draft),
                 PendingOrders = await _context.Bookings.CountAsync(b => b.Status == BookingStatus.Pending),
                 CompletedOrders = await _context.Bookings.CountAsync(b => b.Status == BookingStatus.Completed),
@@ -120,6 +120,7 @@ namespace BrightClean.API.Controllers
             {
                 if (!TryParseNotificationTargetRole(dto.TargetRole, out var targetRole))
                 {
+                    _logger.LogWarning("Admin {AdminId} tried to send notification to invalid target role '{TargetRole}'.", adminId.Value, dto.TargetRole);
                     return BadRequest(new { message = "Invalid notification target role." });
                 }
 
@@ -602,6 +603,145 @@ namespace BrightClean.API.Controllers
             await _context.SaveChangesAsync();
 
             return Ok(new { message = "تم رفض الحساب بنجاح.", userId = user.UserID, accountStatus = user.AccountStatus.ToString() });
+        }
+
+        // POST: /api/admin/dismiss/{userId}
+        [HttpPost("dismiss/{userId}")]
+        public async Task<IActionResult> DismissUser(int userId)
+        {
+            var adminId = GetAdminId();
+            if (adminId == null)
+            {
+                return Unauthorized(new { message = UnauthorizedAdminMessage });
+            }
+
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.UserID == userId);
+
+            if (user == null)
+            {
+                return NotFound(new { message = $"User {userId} was not found." });
+            }
+
+            if (user.Role != UserRole.LaundryAgent && user.Role != UserRole.DeliveryStaff)
+            {
+                return BadRequest(new { message = "Only laundry agents and delivery staff can be dismissed here." });
+            }
+
+            if (!user.IsApproved || user.AccountStatus == AccountStatus.Deactivated)
+            {
+                return BadRequest(new { message = "The staff account is not active or was already dismissed." });
+            }
+
+            user.IsApproved = false;
+            user.AccountStatus = AccountStatus.Deactivated;
+
+            if (user.Role == UserRole.LaundryAgent)
+            {
+                var agentServices = await _context.AgentServices
+                    .Where(service => service.LaundryAgentID == user.UserID)
+                    .ToListAsync();
+
+                foreach (var service in agentServices)
+                {
+                    service.IsActive = false;
+                    service.PendingActivation = false;
+                    service.RequestedAction = AgentServiceRequestedAction.None;
+                    service.Notes = "Deactivated as part of staff dismissal.";
+                }
+            }
+
+            string action = user.Role == UserRole.LaundryAgent ? "DISMISS_AGENT" : "DISMISS_DRIVER";
+            _context.AuditLogs.Add(new AuditLog
+            {
+                AdminID = adminId.Value,
+                Action = action,
+                TargetEntity = "User",
+                TargetID = user.UserID,
+                Details = $"Dismissed {user.Role} account.",
+                IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                PerformedAt = DateTime.UtcNow
+            });
+
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Admin {AdminId} dismissed {Role} user {UserId}.", adminId.Value, user.Role, user.UserID);
+
+            return Ok(new { message = "Staff account dismissed successfully.", userId = user.UserID, accountStatus = user.AccountStatus.ToString() });
+        }
+
+        // POST: /api/admin/warn/{userId}
+        [HttpPost("warn/{userId}")]
+        public async Task<IActionResult> WarnUser(int userId, [FromBody] AdminStaffWarningDto dto)
+        {
+            var adminId = GetAdminId();
+            if (adminId == null)
+            {
+                return Unauthorized(new { message = UnauthorizedAdminMessage });
+            }
+
+            var reason = dto.Reason?.Trim() ?? string.Empty;
+            if (reason.Length > 800)
+            {
+                return BadRequest(new { message = "Warning reason cannot exceed 800 characters." });
+            }
+
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.UserID == userId);
+
+            if (user == null)
+            {
+                return NotFound(new { message = $"User {userId} was not found." });
+            }
+
+            if (user.Role != UserRole.LaundryAgent && user.Role != UserRole.DeliveryStaff)
+            {
+                return BadRequest(new { message = "Only laundry agents and delivery staff can be warned here." });
+            }
+
+            if (!user.IsApproved || user.AccountStatus != AccountStatus.Active)
+            {
+                return BadRequest(new { message = "Only active staff accounts can be warned." });
+            }
+
+            const string title = "تنبيه إداري";
+            var message = string.IsNullOrWhiteSpace(reason)
+                ? "تم إرسال تنبيه إداري لحسابك. يرجى مراجعة الالتزام بسياسات المنصة."
+                : $"تم إرسال تنبيه إداري لحسابك بسبب: {reason}";
+
+            if (message.Length > 1000)
+            {
+                return BadRequest(new { message = "Warning message cannot exceed 1000 characters." });
+            }
+
+            var now = DateTime.UtcNow;
+            _context.Notifications.Add(new Notification
+            {
+                UserID = user.UserID,
+                Title = title,
+                Message = message,
+                Date = now
+            });
+
+            string action = user.Role == UserRole.LaundryAgent ? "WARN_AGENT" : "WARN_DRIVER";
+            _context.AuditLogs.Add(new AuditLog
+            {
+                AdminID = adminId.Value,
+                Action = action,
+                TargetEntity = "User",
+                TargetID = user.UserID,
+                Details = string.IsNullOrWhiteSpace(reason)
+                    ? $"Warned {user.Role} account."
+                    : $"Warned {user.Role} account. Reason: {reason}",
+                IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                PerformedAt = now
+            });
+
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Admin {AdminId} warned {Role} user {UserId}.", adminId.Value, user.Role, user.UserID);
+
+            return Ok(new { message = "Staff warning sent successfully.", userId = user.UserID });
         }
 
         // POST: /api/admin/agents/{agentId}/services
@@ -1365,7 +1505,9 @@ namespace BrightClean.API.Controllers
         public async Task<IActionResult> GetApprovedStaff()
         {
             var staff = await _context.Users
-                .Where(u => u.IsApproved && (u.Role == UserRole.LaundryAgent || u.Role == UserRole.DeliveryStaff))
+                .Where(u => u.IsApproved &&
+                    u.AccountStatus == AccountStatus.Active &&
+                    (u.Role == UserRole.LaundryAgent || u.Role == UserRole.DeliveryStaff))
                 .Select(u => new
                 {
                     u.UserID,
@@ -1505,8 +1647,18 @@ namespace BrightClean.API.Controllers
 
         private bool IsAllNotificationTarget(string? value)
         {
-            return !string.IsNullOrWhiteSpace(value) &&
-                value.Trim().Equals("All", StringComparison.OrdinalIgnoreCase);
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return false;
+            }
+
+            var normalized = value.Trim();
+            return normalized.Equals("All", StringComparison.OrdinalIgnoreCase) ||
+                normalized.Equals("AllUsers", StringComparison.OrdinalIgnoreCase) ||
+                normalized.Equals("All Users", StringComparison.OrdinalIgnoreCase) ||
+                normalized.Equals("Users", StringComparison.OrdinalIgnoreCase) ||
+                normalized.Equals("كل المستخدمين", StringComparison.OrdinalIgnoreCase) ||
+                normalized.Equals("الجميع", StringComparison.OrdinalIgnoreCase);
         }
 
         private async Task<IActionResult?> ValidateOfferCreateDto(AdminOfferCreateDto? dto)
@@ -1694,6 +1846,11 @@ namespace BrightClean.API.Controllers
         public string Title { get; set; } = string.Empty;
         public string Message { get; set; } = string.Empty;
         public string TargetRole { get; set; } = string.Empty;
+    }
+
+    public class AdminStaffWarningDto
+    {
+        public string? Reason { get; set; }
     }
 
     public class AdminOfferCreateDto

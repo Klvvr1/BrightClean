@@ -462,6 +462,10 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
     return basePrice * selectedOption.priceMultiplier * quantity;
   }
 
+  String _selectedCountUnit() {
+    return widget.serviceType.contains('عاملات') ? 'عاملات' : 'قطعة';
+  }
+
   Widget _buildCheckboxOption(ServiceOption option) {
     bool isSelected = selectedOption.id == option.id;
     final theme = Theme.of(context);
@@ -1157,7 +1161,7 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
                           style: theme.textTheme.titleMedium
                               ?.copyWith(fontWeight: FontWeight.bold)),
                       Text(
-                        '${widget.serviceType.contains('لابس') ? totalClothingPieces : (widget.serviceType.contains('سجاد') || widget.serviceType.contains('مفروشات') ? totalCarpetPieces : (widget.serviceType.contains('خزان') ? totalTankPieces : (widget.serviceType.contains('سيار') ? _carQuantities.values.fold<int>(0, (sum, q) => sum + q) : (widget.serviceType.contains('مكيف') ? _acQuantities.values.fold<int>(0, (sum, q) => sum + q) : (widget.serviceType.contains('شمس') ? _solarQuantities.values.fold<int>(0, (sum, q) => sum + q) : (widget.serviceType.contains('عاملات') ? maidPersons : 1))))))} قطعة',
+                        '${widget.serviceType.contains('لابس') ? totalClothingPieces : (widget.serviceType.contains('سجاد') || widget.serviceType.contains('مفروشات') ? totalCarpetPieces : (widget.serviceType.contains('خزان') ? totalTankPieces : (widget.serviceType.contains('سيار') ? _carQuantities.values.fold<int>(0, (sum, q) => sum + q) : (widget.serviceType.contains('مكيف') ? _acQuantities.values.fold<int>(0, (sum, q) => sum + q) : (widget.serviceType.contains('شمس') ? _solarQuantities.values.fold<int>(0, (sum, q) => sum + q) : (widget.serviceType.contains('عاملات') ? maidPersons : 1))))))} ${_selectedCountUnit()}',
                         style: theme.textTheme.titleLarge?.copyWith(
                             fontWeight: FontWeight.bold,
                             color: theme.colorScheme.primary),

@@ -29,7 +29,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
   bool _isOnline = false;
 
   // User profile is loaded from the API, with local values only as fallback.
-  String _userName = 'سائق برايت كلين';
+  String _userName = 'المندوب';
   String _userPhone = '0533333333';
   String _userEmail = '';
   String _vehicleType = '';
@@ -76,16 +76,17 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
           ? profile['lastName']?.toString() ?? ''
           : '';
       final serverName = '$serverFirstName $serverLastName'.trim();
-      final savedName =
-          serverName.isNotEmpty ? serverName : prefs.getString('user_name');
+      final savedName = prefs.getString('user_name');
       final isDefaultName = prefs.getBool('user_name_is_default') ?? true;
 
-      // Only localize if explicitly marked as default
-      if (savedName == null ||
+      if (serverName.isNotEmpty) {
+        _userName = serverName;
+        prefs.setBool('user_name_is_default', false);
+      } else if (savedName == null ||
           isDefaultName ||
-          savedName == 'سائق برايت كلين' ||
-          savedName == 'Bright Clean Driver') {
-        _userName = isAr ? 'سائق برايت كلين' : 'Bright Clean Driver';
+          savedName == 'المندوب' ||
+          savedName == 'BrightClean Driver') {
+        _userName = isAr ? 'المندوب' : 'BrightClean Driver';
         // Keep the flag set to true since we're using a default name
         prefs.setBool('user_name_is_default', true);
       } else {
@@ -1139,7 +1140,9 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.notifications_outlined, color: Colors.white),
-            onPressed: () {},
+            onPressed: () {
+              context.push('/notifications');
+            },
           ),
           const SizedBox(width: 8),
         ],

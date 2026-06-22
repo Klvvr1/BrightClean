@@ -4,6 +4,7 @@ class AppNotification {
   final String title;
   final String message;
   final DateTime date;
+  final bool isRead;
 
   AppNotification({
     required this.notificationID,
@@ -11,6 +12,7 @@ class AppNotification {
     required this.title,
     required this.message,
     required this.date,
+    this.isRead = false,
   });
 
   factory AppNotification.fromJson(Map<String, dynamic> json) {
@@ -20,6 +22,7 @@ class AppNotification {
       title: json['title'] as String? ?? '',
       message: json['message'] as String? ?? '',
       date: DateTime.parse(json['date'] as String? ?? DateTime.now().toIso8601String()),
+      isRead: json['isRead'] as bool? ?? json['IsRead'] as bool? ?? false,
     );
   }
 
@@ -30,6 +33,7 @@ class AppNotification {
       'title': title,
       'message': message,
       'date': date.toIso8601String(),
+      'isRead': isRead,
     };
   }
 }

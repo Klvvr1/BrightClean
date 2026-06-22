@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:brightcleanproject/core/theme/app_colors.dart';
 import 'package:brightcleanproject/core/controllers/language_controller.dart';
-
 import 'package:brightcleanproject/core/controllers/theme_controller.dart';
+import 'package:brightcleanproject/features/customer/data/providers/notification_provider.dart';
+import 'package:provider/provider.dart';
 
 class AgentAppBarActions extends StatelessWidget {
   final bool? isLaundryOpen;
@@ -51,9 +52,16 @@ class AgentAppBarActions extends StatelessWidget {
             ThemeController().toggleTheme();
           },
         ),
-        IconButton(
-          icon: const Icon(Icons.notifications_outlined),
-          onPressed: () {},
+        Consumer<NotificationProvider>(
+          builder: (context, notifProvider, child) => Badge(
+            label: Text(notifProvider.unreadCount.toString()),
+            isLabelVisible: notifProvider.unreadCount > 0,
+            backgroundColor: AppColors.error,
+            child: IconButton(
+              icon: const Icon(Icons.notifications_outlined),
+              onPressed: () {},
+            ),
+          ),
         ),
         if (onSettingsPressed != null)
           IconButton(

@@ -247,7 +247,9 @@ class OrderProvider extends ChangeNotifier {
     if (booking.bookingItems.isEmpty) return 'طلب فارغ';
     return booking.bookingItems.map((item) {
       final name = item.serviceCatalogItem?.serviceName ?? 'خدمة';
-      return '$name - ${item.quantity} قطعة';
+      final category = item.serviceCatalogItem?.category;
+      final unit = (category == 2) ? 'عاملة' : 'قطعة';
+      return '$name - ${item.quantity} $unit';
     }).join(', ');
   }
 

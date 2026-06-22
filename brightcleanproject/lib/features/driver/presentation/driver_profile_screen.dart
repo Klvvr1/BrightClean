@@ -16,7 +16,7 @@ class DriverProfileScreen extends StatefulWidget {
 }
 
 class _DriverProfileScreenState extends State<DriverProfileScreen> {
-  String _userName = 'سائق برايت كلين';
+  String _userName = 'المندوب';
   String _userPhone = '0533333333';
   String _userEmail = '';
   String _vehicle = '';
@@ -42,7 +42,7 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
     }
     if (mounted) {
       setState(() {
-        _userName = prefs.getString('user_name') ?? 'سائق برايت كلين';
+        _userName = prefs.getString('user_name') ?? 'المندوب';
         _userPhone = prefs.getString('user_phone') ?? '0533333333';
         final profile = profileResponse?['profile'];
         final driver = profileResponse?['driver'];
