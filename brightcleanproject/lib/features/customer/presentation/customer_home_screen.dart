@@ -122,6 +122,11 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
         );
       }
     });
+
+    // Fetch notifications on screen load
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<NotificationProvider>().fetchNotifications();
+    });
   }
 
   @override

@@ -59,7 +59,9 @@ class AgentAppBarActions extends StatelessWidget {
             backgroundColor: AppColors.error,
             child: IconButton(
               icon: const Icon(Icons.notifications_outlined),
-              onPressed: () {},
+              onPressed: () {
+                Navigator.pushNamed(context, '/notifications');
+              },
             ),
           ),
         ),

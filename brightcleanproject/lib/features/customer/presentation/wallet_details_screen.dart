@@ -142,20 +142,27 @@ class WalletDetailsScreen extends StatelessWidget {
 
     showDialog(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) {
-          final theme = Theme.of(context);
+      builder: (context) => WillPopScope(
+        onWillPop: () async {
+          amountController.dispose();
+          operationNumberController.dispose();
+          return true;
+        },
+        child: StatefulBuilder(
+          builder: (context, setState) {
+            final theme = Theme.of(context);
 
-          // زر الإرسال يُفعَّل فقط عند توفر المبلغ والملف
-          final canSubmit = amountController.text.trim().isNotEmpty &&
-              double.tryParse(amountController.text.trim()) != null &&
-              (double.tryParse(amountController.text.trim()) ?? 0) > 0 &&
-              selectedFileName != null &&
-              !isSubmitting;
+            // زر الإرسال يُفعَّل فقط عند توفر المبلغ والملف
+            final canSubmit = amountController.text.trim().isNotEmpty &&
+                double.tryParse(amountController.text.trim()) != null &&
+                (double.tryParse(amountController.text.trim()) ?? 0) > 0 &&
+                selectedFileName != null &&
+                selectedFilePath != null &&
+                !isSubmitting;
 
-          return Directionality(
-            textDirection: TextDirection.rtl,
-            child: AlertDialog(
+            return Directionality(
+              textDirection: TextDirection.rtl,
+              child: AlertDialog(
               title: Text('إيداع عبر $method'),
               shape: RoundedRectangleBorder(borderRadius: AppRadius.card),
               content: SingleChildScrollView(
@@ -323,6 +330,7 @@ class WalletDetailsScreen extends StatelessWidget {
             ),
           );
         },
+      ),
       ),
     );
   }

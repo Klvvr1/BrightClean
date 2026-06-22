@@ -332,7 +332,7 @@ class AdminProvider with ChangeNotifier {
       await adminRepository.dismissUser(userId);
     } on ServerException catch (e) {
       _errorMessage = userMessageFromError(e,
-          fallback: 'Ø­Ø¯Ø« Ø®Ø·Ø£ Ø£Ø«Ù†Ø§Ø¡ Ø·Ø±Ø¯ Ø§Ù„Ù…ÙˆØ¸Ù');
+          fallback: 'حدث خطأ أثناء طرد الموظف');
       _isActionLoading = false;
       notifyListeners();
       rethrow;
@@ -344,14 +344,14 @@ class AdminProvider with ChangeNotifier {
     }
 
     try {
-      await fetchApprovedStaff();
-      await fetchSummary();
-      await fetchAuditLogs();
+      _approvedStaff = await adminRepository.getApprovedStaff();
+      _summary = await adminRepository.getSummary();
+      _auditLogs = await adminRepository.getAuditLogs();
     } catch (e) {
       debugPrint('Error refreshing admin data after staff dismissal: $e');
       _refreshErrorMessage = userMessageFromError(e,
           fallback:
-              'Ø­Ø¯Ø« Ø®Ø·Ø£ Ø£Ø«Ù†Ø§Ø¡ ØªØ­Ø¯ÙŠØ« Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª Ø¨Ø¹Ø¯ Ø·Ø±Ø¯ Ø§Ù„Ù…ÙˆØ¸Ù');
+              'حدث خطأ أثناء تحديث البيانات بعد طرد الموظف');
       notifyListeners();
     } finally {
       _isActionLoading = false;
@@ -381,7 +381,7 @@ class AdminProvider with ChangeNotifier {
     }
 
     try {
-      await fetchAuditLogs();
+      _auditLogs = await adminRepository.getAuditLogs();
     } catch (e) {
       debugPrint('Error refreshing admin data after staff warning: $e');
       _refreshErrorMessage = userMessageFromError(e,

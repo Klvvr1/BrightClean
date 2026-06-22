@@ -42,7 +42,8 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
     }
     if (mounted) {
       setState(() {
-        _userName = prefs.getString('user_name') ?? 'المندوب';
+        final storedName = prefs.getString('user_name') ?? '';
+        _userName = storedName.trim().isEmpty ? 'المندوب' : storedName;
         _userPhone = prefs.getString('user_phone') ?? '0533333333';
         final profile = profileResponse?['profile'];
         final driver = profileResponse?['driver'];

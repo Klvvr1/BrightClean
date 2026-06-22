@@ -628,7 +628,7 @@ namespace BrightClean.API.Controllers
                 return BadRequest(new { message = "Only laundry agents and delivery staff can be dismissed here." });
             }
 
-            if (!user.IsApproved || user.AccountStatus == AccountStatus.Deactivated)
+            if (user.AccountStatus != AccountStatus.Active)
             {
                 return BadRequest(new { message = "The staff account is not active or was already dismissed." });
             }

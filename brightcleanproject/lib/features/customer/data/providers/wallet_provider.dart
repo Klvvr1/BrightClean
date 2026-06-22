@@ -37,14 +37,16 @@ class WalletProvider with ChangeNotifier {
       }
       // حفظ نسخة cache محلية لعرضها فوراً في الجلسة القادمة
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('wallet_balance', balanceFormatted);
+      final userId = prefs.getString('user_id') ?? '';
+      await prefs.setString('wallet_balance_$userId', balanceFormatted);
       debugPrint('💰 WalletProvider: balance fetched = $_balance ريال');
     } catch (e) {
       _errorMessage = userMessageFromError(e);
       debugPrint('💰 WalletProvider: fetchBalance failed: $e');
       // Fallback: اقرأ من الـ cache المحلي إذا فشل الـ API
       final prefs = await SharedPreferences.getInstance();
-      final cached = prefs.getString('wallet_balance');
+      final userId = prefs.getString('user_id') ?? '';
+      final cached = prefs.getString('wallet_balance_$userId');
       if (cached != null) {
         final match = RegExp(r'[\d.]+').firstMatch(cached);
         if (match != null) _balance = double.tryParse(match.group(0)!) ?? 0.0;
@@ -63,6 +65,14 @@ class WalletProvider with ChangeNotifier {
     required String proofFilePath,
     String? operationNumber,
   }) async {
+    if (_isSubmitting) return;
+
+    if (amount <= 0) {
+      _errorMessage = 'يجب أن يكون المبلغ أكبر من صفر';
+      notifyListeners();
+      return;
+    }
+
     _isSubmitting = true;
     _errorMessage = null;
     notifyListeners();
