@@ -15,6 +15,7 @@ class AdminProvider with ChangeNotifier {
 
   List<PendingUserModel> _pendingUsers = [];
   List<dynamic> _approvedStaff = [];
+  List<dynamic> _liveOrders = [];
   List<dynamic> _recentOrders = [];
   List<dynamic> _laundryAgentsWithServices = [];
   List<AdminServiceModel> _services = [];
@@ -34,6 +35,7 @@ class AdminProvider with ChangeNotifier {
 
   List<PendingUserModel> get pendingUsers => _pendingUsers;
   List<dynamic> get approvedStaff => _approvedStaff;
+  List<dynamic> get liveOrders => _liveOrders;
   List<dynamic> get recentOrders => _recentOrders;
   List<dynamic> get laundryAgentsWithServices => _laundryAgentsWithServices;
   List<AdminServiceModel> get services => _services;
@@ -95,6 +97,24 @@ class AdminProvider with ChangeNotifier {
     } on ServerException catch (e) {
       _errorMessage = userMessageFromError(e,
           fallback: 'حدث خطأ أثناء تحميل الطلبات الأخيرة');
+    } catch (e) {
+      _errorMessage = userMessageFromError(e);
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> fetchLiveOrders() async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      _liveOrders = await adminRepository.getLiveOrders();
+    } on ServerException catch (e) {
+      _errorMessage = userMessageFromError(e,
+          fallback: 'حدث خطأ أثناء تحميل الطلبات المباشرة');
     } catch (e) {
       _errorMessage = userMessageFromError(e);
     } finally {

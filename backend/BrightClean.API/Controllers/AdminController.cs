@@ -28,6 +28,37 @@ namespace BrightClean.API.Controllers
             _logger = logger;
         }
 
+        // GET: /api/admin/live-orders
+        [HttpGet("live-orders")]
+        public async Task<IActionResult> GetLiveOrders()
+        {
+            var orders = await _context.Bookings
+                .AsNoTracking()
+                .Include(b => b.Client)
+                .Include(b => b.LaundryAgent)
+                .Include(b => b.BookingItems)
+                .Where(b => b.Status != BookingStatus.Draft &&
+                            b.Status != BookingStatus.Completed &&
+                            b.Status != BookingStatus.Cancelled)
+                .OrderByDescending(b => b.CreatedAt)
+                .Take(10)
+                .Select(b => new
+                {
+                    b.BookingID,
+                    b.Status,
+                    b.FinalTotal,
+                    b.CreatedAt,
+                    ClientName = (b.Client.FirstName + " " + b.Client.LastName).Trim(),
+                    LaundryName = b.LaundryAgent.BusinessName,
+                    ItemCount = b.BookingItems.Count
+                })
+                .ToListAsync();
+
+            _logger.LogInformation("Loaded {OrderCount} live orders for admin dashboard.", orders.Count);
+
+            return Ok(orders);
+        }
+
         // GET: /api/admin/recent-orders
         [HttpGet("recent-orders")]
         public async Task<IActionResult> GetRecentOrders()
@@ -70,11 +101,13 @@ namespace BrightClean.API.Controllers
                 PendingOrders = await _context.Bookings.CountAsync(b => b.Status == BookingStatus.Pending),
                 CompletedOrders = await _context.Bookings.CountAsync(b => b.Status == BookingStatus.Completed),
                 TotalRevenue = await _context.Payments
-                    .Where(p => p.Status == PaymentStatus.Success || p.Status == PaymentStatus.Collected)
+                    .Where(p => p.Booking.Status == BookingStatus.Completed &&
+                                p.Status != PaymentStatus.Failed &&
+                                p.Status != PaymentStatus.Refunded)
                     .SumAsync(p => (decimal?)p.Amount) ?? 0
             };
 
-            _logger.LogInformation("Loaded admin dashboard summary metrics.");
+            _logger.LogInformation("Loaded admin dashboard summary metrics. Revenue includes completed bookings except failed or refunded payments.");
 
             return Ok(summary);
         }

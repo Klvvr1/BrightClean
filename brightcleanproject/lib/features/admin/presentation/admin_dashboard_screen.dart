@@ -93,6 +93,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       context.read<AdminProvider>().fetchApprovedStaff();
       context.read<AdminProvider>().fetchServices();
       context.read<AdminProvider>().fetchServiceActivationRequests();
+      context.read<AdminProvider>().fetchLiveOrders();
       context.read<AdminProvider>().fetchRecentOrders();
       context.read<AdminProvider>().fetchAuditLogs();
       context.read<AdminProvider>().fetchOffers();
@@ -106,8 +107,37 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     super.dispose();
   }
 
-  // Dummy data for live orders
-  final List<Map<String, dynamic>> _liveOrders = [];
+  Color _adminPrimaryColor(BuildContext context) {
+    final theme = Theme.of(context);
+    return theme.brightness == Brightness.dark
+        ? theme.colorScheme.primary
+        : AppColors.primary;
+  }
+
+  Color _adminMutedTextColor(BuildContext context) {
+    return Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.65);
+  }
+
+  Color _adminInputFillColor(BuildContext context) {
+    final theme = Theme.of(context);
+    return theme.inputDecorationTheme.fillColor ?? theme.colorScheme.surface;
+  }
+
+  Color _adminDividerColor(BuildContext context) {
+    return Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.12);
+  }
+
+  Color _adminSheetHandleColor(BuildContext context) {
+    return Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.18);
+  }
+
+  BoxDecoration _adminBottomSheetDecoration(BuildContext context) {
+    final theme = Theme.of(context);
+    return BoxDecoration(
+      color: theme.colorScheme.surface,
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+    );
+  }
 
   void _logActivity(String title, String type, IconData icon, Color color) {
     debugPrint('Refreshing admin audit logs after $type: $title');
@@ -339,7 +369,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  Widget _buildLiveOrdersSection() {
+  Widget _buildLiveOrdersSection(List<dynamic> liveOrders) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -349,13 +379,46 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 fontWeight: FontWeight.bold,
                 color: AppColors.primary)),
         const SizedBox(height: AppSpacing.sm),
+        if (liveOrders.isEmpty)
+          const AppEmptyState(
+            icon: Icons.local_shipping_outlined,
+            title: 'لا توجد طلبات مباشرة حالياً',
+            message: 'ستظهر هنا الطلبات النشطة قبل الإكمال أو الإلغاء.',
+          )
+        else
         SizedBox(
           height: 120,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
-            itemCount: _liveOrders.length,
+            itemCount: liveOrders.length,
             itemBuilder: (context, index) {
-              final order = _liveOrders[index];
+              final order = liveOrders[index] is Map
+                  ? Map<dynamic, dynamic>.from(liveOrders[index] as Map)
+                  : <dynamic, dynamic>{};
+              final bookingId = AdminServiceModel.readInt(
+                order,
+                ['bookingID', 'bookingId', 'BookingID'],
+              );
+              final clientName = AdminServiceModel.readString(
+                order,
+                ['clientName', 'ClientName'],
+                fallback: 'عميل',
+              );
+              final laundryName = AdminServiceModel.readString(
+                order,
+                ['laundryName', 'LaundryName'],
+                fallback: '',
+              );
+              final finalTotal = AdminServiceModel.readDouble(
+                order,
+                ['finalTotal', 'FinalTotal'],
+              );
+              final status = _liveOrderStatusLabel(order);
+              final createdAt = AdminServiceModel.readString(
+                order,
+                ['createdAt', 'CreatedAt'],
+                fallback: '',
+              );
               return Container(
                 width: 200,
                 margin: const EdgeInsets.only(left: AppSpacing.sm),
@@ -367,7 +430,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('طلب #${order['id']}',
+                        Text('طلب #$bookingId',
                             style:
                                 const TextStyle(fontWeight: FontWeight.bold)),
                         Container(
@@ -376,7 +439,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           decoration: BoxDecoration(
                               color: AppColors.secondary.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(10)),
-                          child: Text(order['status'],
+                          child: Text(status,
                               style: const TextStyle(
                                   fontSize: 10,
                                   color: AppColors.secondary,
@@ -385,13 +448,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       ],
                     ),
                     const Spacer(),
-                    Text(order['type'],
+                    Text('العميل: $clientName',
                         style: TextStyle(
                             color: AppColors.textLight, fontSize: 12)),
-                    Text(order['driver'] ?? order['laundry'] ?? '',
+                    Text(laundryName.isEmpty ? 'لم تحدد مغسلة' : laundryName,
                         style: const TextStyle(
                             fontSize: 11, fontWeight: FontWeight.w600)),
-                    Text(order['time'],
+                    Text(
+                        finalTotal > 0
+                            ? '${finalTotal.toStringAsFixed(0)} ر.ي'
+                            : _formatLiveOrderDate(createdAt),
                         style: const TextStyle(
                             fontSize: 10, color: AppColors.error)),
                   ],
@@ -402,6 +468,36 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         ),
       ],
     );
+  }
+
+  String _liveOrderStatusLabel(Map<dynamic, dynamic> order) {
+    final status = AdminServiceModel.readString(
+      order,
+      ['status', 'Status'],
+      fallback: '',
+    );
+    switch (status) {
+      case '1':
+      case 'Pending':
+        return 'بانتظار القبول';
+      case '2':
+      case 'Accepted':
+        return 'مقبول';
+      case '3':
+      case 'InProgress':
+        return 'قيد المعالجة';
+      case '4':
+      case 'Ready':
+        return 'جاهز';
+      default:
+        return status.isEmpty ? 'نشط' : status;
+    }
+  }
+
+  String _formatLiveOrderDate(String value) {
+    final parsed = DateTime.tryParse(value);
+    if (parsed == null) return '';
+    return _formatAdminDate(parsed.toLocal());
   }
 
   Widget _buildStatCard(String title, String value, IconData icon, Color color,
@@ -583,7 +679,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ],
           ),
           const SizedBox(height: AppSpacing.xl),
-          _buildLiveOrdersSection(),
+          _buildLiveOrdersSection(adminProvider.liveOrders),
           const SizedBox(height: AppSpacing.xl),
           const Text(
             'الطلبات الأخيرة',
@@ -696,14 +792,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: compact ? 13 : 14,
-                    color: AppColors.textMain,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   '${_formatAuditDateTime(activity.performedAt)} - ${activity.adminName}',
-                  style: const TextStyle(
-                    color: AppColors.textLight,
+                  style: TextStyle(
+                    color: _adminMutedTextColor(context),
                     fontSize: 11,
                   ),
                 ),
@@ -1037,10 +1133,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
         height: MediaQuery.of(context).size.height * 0.85,
-        decoration: const BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
-        ),
+        decoration: _adminBottomSheetDecoration(context),
         padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1050,7 +1143,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 width: 50,
                 height: 5,
                 decoration: BoxDecoration(
-                  color: Colors.grey[300],
+                  color: _adminSheetHandleColor(context),
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
@@ -1059,12 +1152,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
+                Text(
                   'سجل عمليات المشرف الكامل',
                   style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.primary),
+                      color: _adminPrimaryColor(context)),
                 ),
                 IconButton(
                   icon: const Icon(Icons.close, color: AppColors.error),
@@ -1072,7 +1165,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ),
               ],
             ),
-            const Divider(height: 30),
+            Divider(height: 30, color: _adminDividerColor(context)),
             Expanded(
               child: ListView.separated(
                 physics: const BouncingScrollPhysics(),
@@ -1096,11 +1189,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       length: 2,
       child: Column(
         children: [
-          const TabBar(
-            labelColor: AppColors.primary,
-            unselectedLabelColor: AppColors.textLight,
-            indicatorColor: AppColors.primary,
-            tabs: [
+          TabBar(
+            labelColor: _adminPrimaryColor(context),
+            unselectedLabelColor: _adminMutedTextColor(context),
+            indicatorColor: _adminPrimaryColor(context),
+            tabs: const [
               Tab(text: 'طلبات التوظيف'),
               Tab(text: 'إدارة الموظفين'),
             ],
@@ -1215,10 +1308,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
         height: MediaQuery.of(context).size.height * 0.75,
-        decoration: const BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
-        ),
+        decoration: _adminBottomSheetDecoration(context),
         padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1228,7 +1318,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 width: 50,
                 height: 5,
                 decoration: BoxDecoration(
-                  color: Colors.grey[300],
+                  color: _adminSheetHandleColor(context),
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
@@ -1256,7 +1346,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           style: const TextStyle(
                               fontSize: 22, fontWeight: FontWeight.bold)),
                       Text(staff['type'],
-                          style: TextStyle(color: AppColors.textLight)),
+                          style: TextStyle(
+                              color: _adminMutedTextColor(context))),
                     ],
                   ),
                 ),
@@ -1279,12 +1370,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ),
               ],
             ),
-            const Divider(height: 40),
-            const Text('المعلومات الشخصية والمهنية',
+            Divider(height: 40, color: _adminDividerColor(context)),
+            Text('المعلومات الشخصية والمهنية',
                 style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.primary)),
+                    color: _adminPrimaryColor(context))),
             const SizedBox(height: AppSpacing.sm),
             Expanded(
               child: ListView(
@@ -1307,11 +1398,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         'رقم السجل التجاري / الترخيص',
                         staff['commercialRegister'] ?? 'غير متوفر'),
                     const SizedBox(height: AppSpacing.md),
-                    const Text(
+                    Text(
                       'المستندات والوثائق المرفوعة',
                       style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          color: AppColors.primary,
+                          color: _adminPrimaryColor(context),
                           fontSize: 14),
                     ),
                     const SizedBox(height: AppSpacing.xs),
@@ -1335,11 +1426,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     _buildDetailRow(Icons.tag, 'رقم لوحة المركبة',
                         staff['vehiclePlate'] ?? 'غير متوفر'),
                     const SizedBox(height: AppSpacing.md),
-                    const Text(
+                    Text(
                       'المستندات والوثائق المرفوعة',
                       style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          color: AppColors.primary,
+                          color: _adminPrimaryColor(context),
                           fontSize: 14),
                     ),
                     const SizedBox(height: AppSpacing.xs),
@@ -1351,15 +1442,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         'صورة المركبة الخاصة بالتوصيل', staff['vehicleImage']),
                   ],
                   const SizedBox(height: AppSpacing.lg),
-                  const Text('الطلبات الحالية/السابقة',
+                  Text('الطلبات الحالية/السابقة',
                       style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: AppColors.primary)),
+                          color: _adminPrimaryColor(context))),
                   const SizedBox(height: AppSpacing.sm),
                   if (staff['orders'] == null || staff['orders'].isEmpty)
-                    const Text('لا توجد طلبات مسجلة حالياً',
-                        style: TextStyle(color: AppColors.textLight))
+                    Text('لا توجد طلبات مسجلة حالياً',
+                        style: TextStyle(
+                            color: _adminMutedTextColor(context)))
                   else
                     ...staff['orders']
                         .map<Widget>((order) => ListTile(
@@ -1425,9 +1517,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       padding: const EdgeInsets.only(bottom: 12.0),
       child: Row(
         children: [
-          Icon(icon, color: AppColors.textLight, size: 20),
+          Icon(icon, color: _adminMutedTextColor(context), size: 20),
           const SizedBox(width: AppSpacing.sm),
-          Text('$label: ', style: TextStyle(color: AppColors.textLight)),
+          Text('$label: ',
+              style: TextStyle(color: _adminMutedTextColor(context))),
           Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
         ],
       ),
@@ -1442,7 +1535,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           children: [
             const Icon(Icons.broken_image, color: Colors.grey, size: 20),
             const SizedBox(width: AppSpacing.sm),
-            Text('$label: ', style: TextStyle(color: AppColors.textLight)),
+            Text('$label: ',
+                style: TextStyle(color: _adminMutedTextColor(context))),
             const Text('غير متوفر', style: TextStyle(color: Colors.red)),
           ],
         ),
@@ -1507,10 +1601,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
-                      color: AppColors.primary,
+                      color: _adminPrimaryColor(context),
                     ),
                   ),
                   IconButton(
@@ -1543,9 +1637,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ),
               ),
               const SizedBox(height: AppSpacing.sm),
-              const Text(
+              Text(
                 'استخدم إصبعين للتكبير والتحريك 🔎',
-                style: TextStyle(fontSize: 12, color: AppColors.textLight),
+                style: TextStyle(
+                    fontSize: 12, color: _adminMutedTextColor(context)),
               ),
             ],
           ),
@@ -1573,7 +1668,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               hintText: 'بحث عن مغسلة أو مندوب...',
               prefixIcon: const Icon(Icons.search),
               filled: true,
-              fillColor: AppColors.white,
+              fillColor: _adminInputFillColor(context),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(15),
                 borderSide: BorderSide.none,
@@ -1761,7 +1856,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         margin: const EdgeInsets.only(bottom: AppSpacing.sm),
         padding: const EdgeInsets.all(AppSpacing.md),
         decoration: BoxDecoration(
-          color: AppColors.white,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: AppColors.primary.withValues(alpha: 0.08)),
         ),
@@ -1773,16 +1868,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 children: [
                   Text(
                     request.serviceName,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      color: AppColors.textMain,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     request.agentName,
-                    style: const TextStyle(
-                      color: AppColors.textLight,
+                    style: TextStyle(
+                      color: _adminMutedTextColor(context),
                       fontSize: 12,
                     ),
                   ),
@@ -1810,10 +1905,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           ),
                         ),
                       ),
-                      const Text(
+                      Text(
                         'اضغط لعرض التفاصيل',
                         style: TextStyle(
-                          color: AppColors.textLight,
+                          color: _adminMutedTextColor(context),
                           fontSize: 11,
                         ),
                       ),
@@ -1887,7 +1982,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               hintText: 'بحث باسم المغسلة...',
               prefixIcon: const Icon(Icons.search),
               filled: true,
-              fillColor: AppColors.white,
+              fillColor: _adminInputFillColor(context),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(15),
                 borderSide: BorderSide.none,
@@ -2099,7 +2194,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               hintText: 'بحث عن خدمة...',
               prefixIcon: const Icon(Icons.search),
               filled: true,
-              fillColor: AppColors.white,
+              fillColor: _adminInputFillColor(context),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(15),
                 borderSide: BorderSide.none,
@@ -3038,10 +3133,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
         height: MediaQuery.of(context).size.height * 0.75,
-        decoration: const BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
-        ),
+        decoration: _adminBottomSheetDecoration(context),
         padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -3051,7 +3143,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 width: 50,
                 height: 5,
                 decoration: BoxDecoration(
-                  color: Colors.grey[300],
+                  color: _adminSheetHandleColor(context),
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
@@ -3094,13 +3186,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ),
               ],
             ),
-            const Divider(height: 40),
-            const Text(
+            Divider(height: 40, color: _adminDividerColor(context)),
+            Text(
               'بيانات الحساب الشخصية والتسجيل',
               style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.primary),
+                  color: _adminPrimaryColor(context)),
             ),
             const SizedBox(height: AppSpacing.md),
             Expanded(
@@ -3125,11 +3217,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         'رقم السجل التجاري / الترخيص',
                         request['commercialRegister'] ?? 'غير متوفر'),
                     const SizedBox(height: AppSpacing.md),
-                    const Text(
+                    Text(
                       'المستندات والوثائق المرفوعة',
                       style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          color: AppColors.primary,
+                          color: _adminPrimaryColor(context),
                           fontSize: 14),
                     ),
                     const SizedBox(height: AppSpacing.xs),
@@ -3155,11 +3247,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     _buildDetailRow(Icons.tag, 'رقم لوحة المركبة',
                         request['vehiclePlate'] ?? 'غير متوفر'),
                     const SizedBox(height: AppSpacing.md),
-                    const Text(
+                    Text(
                       'المستندات والوثائق المرفوعة',
                       style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          color: AppColors.primary,
+                          color: _adminPrimaryColor(context),
                           fontSize: 14),
                     ),
                     const SizedBox(height: AppSpacing.xs),
@@ -3291,11 +3383,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       length: 2,
       child: Column(
         children: [
-          const TabBar(
-            labelColor: AppColors.primary,
-            unselectedLabelColor: AppColors.textLight,
-            indicatorColor: AppColors.primary,
-            tabs: [
+          TabBar(
+            labelColor: _adminPrimaryColor(context),
+            unselectedLabelColor: _adminMutedTextColor(context),
+            indicatorColor: _adminPrimaryColor(context),
+            tabs: const [
               Tab(text: 'العروض'),
               Tab(text: 'سجل الإشعارات'),
             ],
@@ -4061,19 +4153,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     if (_selectedIndex >= 5) {
       _selectedIndex = 0;
     }
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: _selectedIndex == 4
           ? null
           : AppBar(
               elevation: 0,
-              backgroundColor: AppColors.white,
+              backgroundColor: theme.colorScheme.surface,
               automaticallyImplyLeading: false,
               centerTitle: true,
               title: Text(
                 _currentTitle,
-                style: const TextStyle(
-                    color: AppColors.primary, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                    color: _adminPrimaryColor(context),
+                    fontWeight: FontWeight.bold),
               ),
             ),
       body: IndexedStack(
@@ -4106,9 +4201,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           currentIndex: _selectedIndex,
           onTap: (index) => setState(() => _selectedIndex = index),
           type: BottomNavigationBarType.fixed,
-          backgroundColor: AppColors.white,
-          selectedItemColor: AppColors.primary,
-          unselectedItemColor: AppColors.textLight,
+          backgroundColor: theme.cardColor,
+          selectedItemColor: _adminPrimaryColor(context),
+          unselectedItemColor:
+              isDark ? Colors.white70 : _adminMutedTextColor(context),
           selectedLabelStyle:
               const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
           unselectedLabelStyle:

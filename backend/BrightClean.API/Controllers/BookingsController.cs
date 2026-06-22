@@ -367,11 +367,21 @@ namespace BrightClean.API.Controllers
                     return BadRequest(new { message = "Selected service is not available for booking." });
                 }
 
+                var unitPrice = itemDto.UnitPriceAtTimeOfBooking.HasValue &&
+                    itemDto.UnitPriceAtTimeOfBooking.Value > 0m
+                    ? itemDto.UnitPriceAtTimeOfBooking.Value
+                    : service.Price;
+
+                if (itemDto.UnitPriceAtTimeOfBooking.HasValue)
+                {
+                    _logger.LogInformation("Booking create for client {ClientId} uses submitted unit price {UnitPrice} for service {ServiceID}.", clientId, unitPrice, service.ServiceID);
+                }
+
                 var bookingItem = new BookingItem
                 {
                     ServiceID = service.ServiceID,
                     Quantity = itemDto.Quantity,
-                    UnitPriceAtTimeOfBooking = service.Price
+                    UnitPriceAtTimeOfBooking = unitPrice
                 };
                 booking.BookingItems.Add(bookingItem);
             }
@@ -790,9 +800,10 @@ namespace BrightClean.API.Controllers
                 return BadRequest("Two-stage bookings are completed after the delivery-to-client task is completed.");
             }
 
-            if (booking.Status != BookingStatus.Accepted && booking.Status != BookingStatus.InProgress && booking.Status != BookingStatus.Ready)
+            if (booking.Status != BookingStatus.InProgress)
             {
-                return BadRequest("Only accepted, in-progress, or ready technician dispatch bookings can be completed.");
+                _logger.LogWarning("Laundry agent {AgentId} tried to complete booking {BookingId} from status {Status}.", agentId, booking.BookingID, booking.Status);
+                return BadRequest("Only in-progress technician dispatch bookings can be completed.");
             }
 
             booking.Status = BookingStatus.Completed;
@@ -975,6 +986,7 @@ namespace BrightClean.API.Controllers
     {
         public int ServiceID { get; set; }
         public int Quantity { get; set; }
+        public decimal? UnitPriceAtTimeOfBooking { get; set; }
     }
 
     public class RateBookingDto

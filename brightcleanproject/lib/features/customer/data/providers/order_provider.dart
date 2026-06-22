@@ -247,8 +247,9 @@ class OrderProvider extends ChangeNotifier {
     if (booking.bookingItems.isEmpty) return 'طلب فارغ';
     return booking.bookingItems.map((item) {
       final name = item.serviceCatalogItem?.serviceName ?? 'خدمة';
-      final category = item.serviceCatalogItem?.category;
-      final unit = (category == 2) ? 'عاملة' : 'قطعة';
+      final unit = (name.contains('عاملات') || name.contains('تنظيف منزل'))
+          ? 'عاملات'
+          : 'قطعة';
       return '$name - ${item.quantity} $unit';
     }).join(', ');
   }
@@ -425,7 +426,7 @@ class OrderProvider extends ChangeNotifier {
 
   Future<int> createBooking(
     int laundryAgentID,
-    List<Map<String, int>> items, {
+    List<Map<String, dynamic>> items, {
     int? addressID,
     DateTime? scheduledAt,
     String? specialInstructions,

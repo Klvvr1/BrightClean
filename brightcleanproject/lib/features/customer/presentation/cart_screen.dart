@@ -556,6 +556,8 @@ class _CartScreenState extends State<CartScreen> {
                                       return {
                                         'serviceID': item.serviceId,
                                         'quantity': item.quantity,
+                                        'unitPriceAtTimeOfBooking':
+                                            item.pricePerUnit,
                                       };
                                     }).toList();
                                     if (itemsDto.any((item) =>

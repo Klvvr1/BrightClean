@@ -974,12 +974,7 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen> {
                     color: isDark ? Colors.white : AppColors.primary,
                     fontWeight: FontWeight.bold)),
           ),
-          onTap: () {
-            setState(() {
-              LanguageController().toggleLanguage();
-              _loadUserData();
-            });
-          },
+          onTap: null,
         ),
         ValueListenableBuilder<ThemeMode>(
           valueListenable: ThemeController().themeMode,

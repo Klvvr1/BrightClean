@@ -353,6 +353,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             return {
               'serviceID': item.serviceId,
               'quantity': item.quantity,
+              'unitPriceAtTimeOfBooking': item.pricePerUnit,
             };
           }).toList();
           if (itemsDto.any((item) => (item['serviceID'] ?? 0) <= 0)) {
@@ -844,7 +845,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     final toHour = int.tryParse(toText);
 
     if (fromHour == null || toHour == null) return false;
-    if (fromHour < 1 || fromHour > 12 || toHour < 1 || toHour > 12) return false;
+    if (fromHour < 1 || fromHour > 12 || toHour < 1 || toHour > 12) {
+      return false;
+    }
 
     // Convert to 24-hour format
     int from24 = fromHour;
@@ -1622,8 +1625,11 @@ class _CheckoutBottomBarState extends State<_CheckoutBottomBar> {
             throw Exception('يرجى اختيار مغسلة (وكيل) أولاً');
           }
           final itemsDto = widget.directItems!
-              .map((item) =>
-                  {'serviceID': item.serviceId, 'quantity': item.quantity})
+              .map((item) => {
+                    'serviceID': item.serviceId,
+                    'quantity': item.quantity,
+                    'unitPriceAtTimeOfBooking': item.pricePerUnit,
+                  })
               .toList();
           if (itemsDto.any((item) => (item['serviceID'] ?? 0) <= 0)) {
             throw Exception(

@@ -206,12 +206,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                 )
               ),
             ),
-            onTap: () {
-              setState(() {
-                LanguageController().toggleLanguage();
-                _loadUserFromPrefs();
-              });
-            },
+            onTap: null,
           ),
           
           ValueListenableBuilder<ThemeMode>(

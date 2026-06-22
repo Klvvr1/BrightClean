@@ -5,6 +5,8 @@ import 'package:brightcleanproject/features/customer/domain/repositories/booking
 import 'package:flutter_test/flutter_test.dart';
 
 class _FakeBookingRepository implements BookingRepository {
+  List<Map<String, dynamic>>? createdItems;
+
   @override
   Future<List<BookingModel>> getMyBookings() async => [];
 
@@ -28,12 +30,14 @@ class _FakeBookingRepository implements BookingRepository {
   @override
   Future<int> createBooking(
     int laundryAgentID,
-    List<Map<String, int>> items, {
+    List<Map<String, dynamic>> items, {
     int? addressID,
     DateTime? scheduledAt,
     String? specialInstructions,
-  }) async =>
-      1001;
+  }) async {
+    createdItems = items;
+    return 1001;
+  }
 }
 
 class _TrackingCartProvider extends CartProvider {
@@ -64,5 +68,28 @@ void main() {
     expect(total, 42);
     expect(cartProvider.clearedSilently, isFalse);
     expect(orderProvider.currentBookingId, isNull);
+  });
+
+  test('createBooking preserves submitted item unit prices', () async {
+    final repository = _FakeBookingRepository();
+    final orderProvider = OrderProvider(
+      bookingRepository: repository,
+      cartProvider: _TrackingCartProvider(),
+      initialize: false,
+    );
+
+    await orderProvider.createBooking(
+      7,
+      [
+        {
+          'serviceID': 3,
+          'quantity': 2,
+          'unitPriceAtTimeOfBooking': 15.5,
+        },
+      ],
+      notifyOnStateChange: false,
+    );
+
+    expect(repository.createdItems?.single['unitPriceAtTimeOfBooking'], 15.5);
   });
 }

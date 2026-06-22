@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:brightcleanproject/core/theme/app_colors.dart';
 import 'package:brightcleanproject/core/controllers/language_controller.dart';
-import 'package:brightcleanproject/core/controllers/theme_controller.dart';
-import 'package:brightcleanproject/features/customer/data/providers/notification_provider.dart';
-import 'package:provider/provider.dart';
 
 class AgentAppBarActions extends StatelessWidget {
   final bool? isLaundryOpen;
@@ -20,7 +17,6 @@ class AgentAppBarActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isArabic = LanguageController().isArabic;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -45,26 +41,6 @@ class AgentAppBarActions extends StatelessWidget {
               ),
             ],
           ),
-        IconButton(
-          icon: Icon(isDark ? Icons.light_mode : Icons.dark_mode),
-          tooltip: isDark ? "Switch to light theme" : "Switch to dark theme",
-          onPressed: () {
-            ThemeController().toggleTheme();
-          },
-        ),
-        Consumer<NotificationProvider>(
-          builder: (context, notifProvider, child) => Badge(
-            label: Text(notifProvider.unreadCount.toString()),
-            isLabelVisible: notifProvider.unreadCount > 0,
-            backgroundColor: AppColors.error,
-            child: IconButton(
-              icon: const Icon(Icons.notifications_outlined),
-              onPressed: () {
-                Navigator.pushNamed(context, '/notifications');
-              },
-            ),
-          ),
-        ),
         if (onSettingsPressed != null)
           IconButton(
             icon: const Icon(Icons.settings_outlined),

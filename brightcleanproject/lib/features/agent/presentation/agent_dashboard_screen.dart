@@ -1166,11 +1166,7 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
                     color: isDark ? Colors.white : AppColors.primary,
                     fontWeight: FontWeight.bold)),
           ),
-          onTap: () {
-            setState(() {
-              langController.toggleLanguage();
-            });
-          },
+          onTap: null,
         ),
         ValueListenableBuilder<ThemeMode>(
           valueListenable: ThemeController().themeMode,

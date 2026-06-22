@@ -12,7 +12,7 @@ abstract class BookingRepository {
   });
   Future<int> createBooking(
     int laundryAgentID,
-    List<Map<String, int>> items, {
+    List<Map<String, dynamic>> items, {
     int? addressID,
     DateTime? scheduledAt,
     String? specialInstructions,

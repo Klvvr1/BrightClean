@@ -420,7 +420,7 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
     final pickupLocation = _latLngFromAddress(task?.pickupAddress);
     final dropoffLocation = _latLngFromAddress(task?.dropoffAddress);
     final fallbackLocation =
-        pickupLocation ?? dropoffLocation ?? const LatLng(24.7136, 46.6753);
+        pickupLocation ?? dropoffLocation ?? const LatLng(14.493329, 49.057153);
     final isTaskUnassigned = task?.status == 0;
     final isTaskCompleted = task?.status == 3;
     final isTaskEditable =
