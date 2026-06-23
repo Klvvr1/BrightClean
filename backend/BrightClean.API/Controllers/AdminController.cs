@@ -896,6 +896,8 @@ namespace BrightClean.API.Controllers
                 service.AgentServiceID,
                 AgentID = service.LaundryAgentID,
                 BusinessName = service.LaundryAgent.BusinessName,
+                AgentIsApproved = service.LaundryAgent.IsApproved,
+                AgentAccountStatus = service.LaundryAgent.AccountStatus.ToString(),
                 service.ServiceID,
                 ServiceName = service.ServiceCatalogItem.ServiceName,
                 RequestedAction = service.RequestedAction,
@@ -916,12 +918,19 @@ namespace BrightClean.API.Controllers
             }
 
             var agentService = await _context.AgentServices
+                .Include(service => service.LaundryAgent)
                 .Include(service => service.ServiceCatalogItem)
                 .FirstOrDefaultAsync(service => service.LaundryAgentID == agentId && service.ServiceID == serviceId);
 
             if (agentService == null)
             {
                 return NotFound(new { message = "Agent service request was not found." });
+            }
+
+            var approvalValidation = ValidateAgentServiceLaundryApproved(agentService, agentId, serviceId);
+            if (approvalValidation != null)
+            {
+                return approvalValidation;
             }
 
             if (!agentService.PendingActivation)
@@ -992,11 +1001,18 @@ namespace BrightClean.API.Controllers
             }
 
             var agentService = await _context.AgentServices
+                .Include(service => service.LaundryAgent)
                 .FirstOrDefaultAsync(service => service.LaundryAgentID == agentId && service.ServiceID == serviceId);
 
             if (agentService == null)
             {
                 return NotFound(new { message = "Agent service request was not found." });
+            }
+
+            var approvalValidation = ValidateAgentServiceLaundryApproved(agentService, agentId, serviceId);
+            if (approvalValidation != null)
+            {
+                return approvalValidation;
             }
 
             if (!agentService.PendingActivation)
@@ -1642,6 +1658,19 @@ namespace BrightClean.API.Controllers
             return adminIdClaim != null && int.TryParse(adminIdClaim.Value, out var adminId)
                 ? adminId
                 : null;
+        }
+
+        private IActionResult? ValidateAgentServiceLaundryApproved(AgentService agentService, int agentId, int serviceId)
+        {
+            if (agentService.LaundryAgent == null ||
+                !agentService.LaundryAgent.IsApproved ||
+                agentService.LaundryAgent.AccountStatus != AccountStatus.Active)
+            {
+                _logger.LogWarning("Rejected service request decision for unapproved laundry agent {AgentId}, service {ServiceId}.", agentId, serviceId);
+                return BadRequest(new { message = "يجب اعتماد المغسلة أولاً قبل تعديل خدماتها." });
+            }
+
+            return null;
         }
 
         private bool TryParseNotificationTargetRole(string? value, out UserRole role)

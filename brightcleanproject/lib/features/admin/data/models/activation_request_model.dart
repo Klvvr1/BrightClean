@@ -9,6 +9,8 @@ class ActivationRequestModel {
   final ActivationRequestType requestType;
   final DateTime? requestDate;
   final ActivationRequestStatus status;
+  final bool agentIsApproved;
+  final String agentAccountStatus;
 
   const ActivationRequestModel({
     required this.agentId,
@@ -18,7 +20,12 @@ class ActivationRequestModel {
     required this.requestType,
     required this.requestDate,
     required this.status,
+    required this.agentIsApproved,
+    required this.agentAccountStatus,
   });
+
+  bool get canShowDetails =>
+      agentIsApproved && agentAccountStatus.toLowerCase() == 'active';
 
   factory ActivationRequestModel.fromJson(Map<String, dynamic> json) {
     return ActivationRequestModel(
@@ -56,6 +63,11 @@ class ActivationRequestModel {
                 ? 'Pending'
                 : null),
       ),
+      agentIsApproved:
+          json.readFirstBool(['agentIsApproved', 'AgentIsApproved']),
+      agentAccountStatus: json.readFirstString(
+        ['agentAccountStatus', 'AgentAccountStatus'],
+      ),
     );
   }
 
@@ -68,6 +80,8 @@ class ActivationRequestModel {
       'requestType': requestType.name,
       'requestDate': requestDate?.toIso8601String(),
       'status': status.name,
+      'agentIsApproved': agentIsApproved,
+      'agentAccountStatus': agentAccountStatus,
     };
   }
 }

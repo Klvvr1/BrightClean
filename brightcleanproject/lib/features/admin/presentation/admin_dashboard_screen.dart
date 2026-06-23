@@ -387,97 +387,99 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             message: 'ستظهر هنا الطلبات النشطة قبل الإكمال أو الإلغاء.',
           )
         else
-        SizedBox(
-          height: 120,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: liveOrders.length,
-            itemBuilder: (context, index) {
-              Map<dynamic, dynamic> order;
-              try {
-                order = liveOrders[index] is Map
-                    ? Map<dynamic, dynamic>.from(liveOrders[index] as Map)
-                    : <dynamic, dynamic>{};
-              } catch (e) {
-                developer.log(
-                  'Failed to parse live order data at index $index',
-                  error: e,
-                  name: 'AdminDashboard',
+          SizedBox(
+            height: 120,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: liveOrders.length,
+              itemBuilder: (context, index) {
+                Map<dynamic, dynamic> order;
+                try {
+                  order = liveOrders[index] is Map
+                      ? Map<dynamic, dynamic>.from(liveOrders[index] as Map)
+                      : <dynamic, dynamic>{};
+                } catch (e) {
+                  developer.log(
+                    'Failed to parse live order data at index $index',
+                    error: e,
+                    name: 'AdminDashboard',
+                  );
+                  developer.log('Problematic data: ${liveOrders[index]}',
+                      name: 'AdminDashboard');
+                  order = <dynamic, dynamic>{};
+                }
+                final bookingId = AdminServiceModel.readInt(
+                  order,
+                  ['bookingID', 'bookingId', 'BookingID'],
                 );
-                developer.log('Problematic data: ${liveOrders[index]}', name: 'AdminDashboard');
-                order = <dynamic, dynamic>{};
-              }
-              final bookingId = AdminServiceModel.readInt(
-                order,
-                ['bookingID', 'bookingId', 'BookingID'],
-              );
-              final clientName = AdminServiceModel.readString(
-                order,
-                ['clientName', 'ClientName'],
-                fallback: 'عميل',
-              );
-              final laundryName = AdminServiceModel.readString(
-                order,
-                ['laundryName', 'LaundryName'],
-                fallback: '',
-              );
-              final finalTotal = AdminServiceModel.readDouble(
-                order,
-                ['finalTotal', 'FinalTotal'],
-              );
-              final status = _liveOrderStatusLabel(order);
-              final createdAt = AdminServiceModel.readString(
-                order,
-                ['createdAt', 'CreatedAt'],
-                fallback: '',
-              );
-              return Container(
-                width: 200,
-                margin: const EdgeInsets.only(left: AppSpacing.sm),
-                padding: const EdgeInsets.all(AppSpacing.sm),
-                decoration: AppStyles.surface(context),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('طلب #$bookingId',
-                            style:
-                                const TextStyle(fontWeight: FontWeight.bold)),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                              color: AppColors.secondary.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(10)),
-                          child: Text(status,
-                              style: const TextStyle(
-                                  fontSize: 10,
-                                  color: AppColors.secondary,
-                                  fontWeight: FontWeight.bold)),
-                        ),
-                      ],
-                    ),
-                    const Spacer(),
-                    Text('العميل: $clientName',
-                        style: TextStyle(
-                            color: AppColors.textLight, fontSize: 12)),
-                    Text(laundryName.isEmpty ? 'لم تحدد مغسلة' : laundryName,
-                        style: const TextStyle(
-                            fontSize: 11, fontWeight: FontWeight.w600)),
-                    Text(
-                        finalTotal > 0
-                            ? '${finalTotal.toStringAsFixed(0)} ر.ي'
-                            : _formatLiveOrderDate(createdAt),
-                        style: const TextStyle(
-                            fontSize: 10, color: AppColors.error)),
-                  ],
-                ),
-              );
-            },
+                final clientName = AdminServiceModel.readString(
+                  order,
+                  ['clientName', 'ClientName'],
+                  fallback: 'عميل',
+                );
+                final laundryName = AdminServiceModel.readString(
+                  order,
+                  ['laundryName', 'LaundryName'],
+                  fallback: '',
+                );
+                final finalTotal = AdminServiceModel.readDouble(
+                  order,
+                  ['finalTotal', 'FinalTotal'],
+                );
+                final status = _liveOrderStatusLabel(order);
+                final createdAt = AdminServiceModel.readString(
+                  order,
+                  ['createdAt', 'CreatedAt'],
+                  fallback: '',
+                );
+                return Container(
+                  width: 200,
+                  margin: const EdgeInsets.only(left: AppSpacing.sm),
+                  padding: const EdgeInsets.all(AppSpacing.sm),
+                  decoration: AppStyles.surface(context),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('طلب #$bookingId',
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.bold)),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                                color:
+                                    AppColors.secondary.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(10)),
+                            child: Text(status,
+                                style: const TextStyle(
+                                    fontSize: 10,
+                                    color: AppColors.secondary,
+                                    fontWeight: FontWeight.bold)),
+                          ),
+                        ],
+                      ),
+                      const Spacer(),
+                      Text('العميل: $clientName',
+                          style: TextStyle(
+                              color: AppColors.textLight, fontSize: 12)),
+                      Text(laundryName.isEmpty ? 'لم تحدد مغسلة' : laundryName,
+                          style: const TextStyle(
+                              fontSize: 11, fontWeight: FontWeight.w600)),
+                      Text(
+                          finalTotal > 0
+                              ? '${finalTotal.toStringAsFixed(0)} ر.ي'
+                              : _formatLiveOrderDate(createdAt),
+                          style: const TextStyle(
+                              fontSize: 10, color: AppColors.error)),
+                    ],
+                  ),
+                );
+              },
+            ),
           ),
-        ),
       ],
     );
   }
@@ -1358,8 +1360,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           style: const TextStyle(
                               fontSize: 22, fontWeight: FontWeight.bold)),
                       Text(staff['type'],
-                          style: TextStyle(
-                              color: _adminMutedTextColor(context))),
+                          style:
+                              TextStyle(color: _adminMutedTextColor(context))),
                     ],
                   ),
                 ),
@@ -1462,8 +1464,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   const SizedBox(height: AppSpacing.sm),
                   if (staff['orders'] == null || staff['orders'].isEmpty)
                     Text('لا توجد طلبات مسجلة حالياً',
-                        style: TextStyle(
-                            color: _adminMutedTextColor(context)))
+                        style: TextStyle(color: _adminMutedTextColor(context)))
                   else
                     ...staff['orders']
                         .map<Widget>((order) => ListTile(
@@ -1862,7 +1863,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     final isBusy = adminProvider.isActionLoading;
 
     return InkWell(
-      onTap: () => _showServiceActivationRequestDetails(request),
+      onTap: request.canShowDetails
+          ? () => _showServiceActivationRequestDetails(request)
+          : null,
       borderRadius: BorderRadius.circular(12),
       child: Container(
         margin: const EdgeInsets.only(bottom: AppSpacing.sm),
