@@ -31,13 +31,15 @@ class WalletProvider with ChangeNotifier {
       final response = await _apiClient.get('/api/wallet/balance');
       if (response is Map<String, dynamic>) {
         final raw = response['balance'] ?? response['Balance'] ?? 0;
-        _balance = (raw is num) ? raw.toDouble() : double.tryParse(raw.toString()) ?? 0.0;
+        _balance = (raw is num)
+            ? raw.toDouble()
+            : double.tryParse(raw.toString()) ?? 0.0;
       } else if (response is num) {
         _balance = response.toDouble();
       }
       // حفظ نسخة cache محلية لعرضها فوراً في الجلسة القادمة
       final prefs = await SharedPreferences.getInstance();
-      final userId = prefs.getString('user_id') ?? '';
+      final userId = _readCachedUserId(prefs);
       await prefs.setString('wallet_balance_$userId', balanceFormatted);
       debugPrint('💰 WalletProvider: balance fetched = $_balance ريال');
     } catch (e) {
@@ -45,7 +47,7 @@ class WalletProvider with ChangeNotifier {
       debugPrint('💰 WalletProvider: fetchBalance failed: $e');
       // Fallback: اقرأ من الـ cache المحلي إذا فشل الـ API
       final prefs = await SharedPreferences.getInstance();
-      final userId = prefs.getString('user_id') ?? '';
+      final userId = _readCachedUserId(prefs);
       final cached = prefs.getString('wallet_balance_$userId');
       if (cached != null) {
         final match = RegExp(r'[\d.]+').firstMatch(cached);
@@ -94,7 +96,8 @@ class WalletProvider with ChangeNotifier {
         files: files,
       );
 
-      debugPrint('💰 WalletProvider: deposit submitted: amount=$amount, op=$operationNumber');
+      debugPrint(
+          '💰 WalletProvider: deposit submitted: amount=$amount, op=$operationNumber');
 
       // تحديث الرصيد من الـ Backend بعد نجاح الإيداع
       await fetchBalance();
@@ -106,5 +109,16 @@ class WalletProvider with ChangeNotifier {
       _isSubmitting = false;
       notifyListeners();
     }
+  }
+
+  String _readCachedUserId(SharedPreferences prefs) {
+    final rawUserId = prefs.get('user_id');
+    if (rawUserId is int) {
+      return rawUserId.toString();
+    }
+    if (rawUserId is String) {
+      return rawUserId;
+    }
+    return '';
   }
 }

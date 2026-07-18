@@ -1861,6 +1861,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     final actionText = isActivation ? 'تفعيل' : 'إلغاء تفعيل';
     final actionColor = isActivation ? AppColors.success : AppColors.warning;
     final isBusy = adminProvider.isActionLoading;
+    final canDecide = request.canShowDetails;
 
     return InkWell(
       onTap: request.canShowDetails
@@ -1934,14 +1935,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ),
             const SizedBox(width: AppSpacing.sm),
             TextButton(
-              onPressed: isBusy
+              onPressed: isBusy || !canDecide
                   ? null
                   : () => _rejectServiceActivationRequest(request),
               child: const Text('رفض'),
             ),
             const SizedBox(width: AppSpacing.xs),
             ElevatedButton(
-              onPressed: isBusy
+              onPressed: isBusy || !canDecide
                   ? null
                   : () => _approveServiceActivationRequest(request),
               style: ElevatedButton.styleFrom(
@@ -2565,7 +2566,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               child: const Text('إغلاق'),
             ),
             TextButton(
-              onPressed: provider.isActionLoading
+              onPressed: provider.isActionLoading || !request.canShowDetails
                   ? null
                   : () {
                       Navigator.of(dialogContext).pop();
@@ -2574,7 +2575,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               child: const Text('رفض'),
             ),
             ElevatedButton(
-              onPressed: provider.isActionLoading
+              onPressed: provider.isActionLoading || !request.canShowDetails
                   ? null
                   : () {
                       Navigator.of(dialogContext).pop();
@@ -2674,6 +2675,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   Future<void> _approveServiceActivationRequest(
       ActivationRequestModel request) async {
+    if (!_canDecideServiceActivationRequest(request)) {
+      return;
+    }
+
     try {
       await context.read<AdminProvider>().approveServiceActivationRequest(
             request.agentId,
@@ -2694,6 +2699,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   Future<void> _rejectServiceActivationRequest(
       ActivationRequestModel request) async {
+    if (!_canDecideServiceActivationRequest(request)) {
+      return;
+    }
+
     try {
       await context.read<AdminProvider>().rejectServiceActivationRequest(
             request.agentId,
@@ -2710,6 +2719,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         SnackBar(content: Text('تعذر رفض طلب تعديل الخدمة: $message')),
       );
     }
+  }
+
+  bool _canDecideServiceActivationRequest(ActivationRequestModel request) {
+    if (request.canShowDetails) {
+      return true;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('يجب اعتماد المغسلة أولاً قبل تعديل خدماتها'),
+      ),
+    );
+    return false;
   }
 
   Future<void> _setServiceAvailability(
